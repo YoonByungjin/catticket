@@ -1,0 +1,158 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>공연 지도</title>
+  <style>
+    #map { width: 100%; height: 90vh; }
+  </style>
+  <!-- ✅ 네이버 지도 API 스크립트 -->
+  <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=ta91w6lydk"></script>
+</head>
+<body>
+  <h1>🎭 공연 위치 지도 (Naver)</h1>
+  <div id="map"></div>
+
+  <script>
+    const concerts = {{ concerts|safe }};
+    const nearbyLockersUrl = "/concerts/api/nearby-lockers/";
+
+    // ✅ 지도 생성
+    const map = new naver.maps.Map('map', {
+      center: new naver.maps.LatLng(37.5665, 126.9780),
+      zoom: 13
+    });
+
+    {% comment %} var markerSize = new naver.maps.Size(60,60);
+    var markerOrigin = new naver.maps.Point(0,0);
+    var markerAnchor = new naver.maps.Point(11,35);
+    
+    var concertIcon = {
+        url: '/static/img/concert.png',
+        size: markerSize,
+        origin: markerOrigin,
+        anchor: markerAnchor;
+    };
+
+    var lockerIcon = {
+        url: '/static/img/locker.png',
+        size: markerSize,
+        origin: markerOrigin,
+        anchor: markerAnchor;
+    }; {% endcomment %}
+
+
+    let openInfowindow = null;
+    let lockerMarkers = [];
+
+    concerts.forEach(concert => {
+      if (concert.lat && concert.lng) {
+        const position = new naver.maps.LatLng(concert.lat, concert.lng);
+
+        const marker = new naver.maps.Marker({
+          position: position,
+          map: map,
+          icon: {
+            url: '/static/img/concert.png',
+            size: new naver.maps.Size(60, 60),
+            origin: new naver.maps.Point(0, 0),
+            anchor: new naver.maps.Point(30, 60)
+          }
+        });
+
+        const contentString = `
+          <div style="width:220px; padding:10px; font-family:sans-serif; font-size:13px; border-radius:10px;
+                      box-shadow:0 2px 6px rgba(0,0,0,0.3); background:#fff;">
+            <div style="font-weight:bold; margin-bottom:5px; font-size:14px; color:#333;">
+              ${concert.title}
+            </div>
+            <img src="${concert.image_url}" alt="포스터" style="width:100%; height:auto; border-radius:5px; margin-bottom:5px;" />
+            <div style="color:#666; margin-bottom:3px;">📍 ${concert.location}</div>
+            <div style="color:#999;">📅 ${concert.date_start} ~ ${concert.date_end}</div>
+          </div>
+        `;
+
+        const infowindow = new naver.maps.InfoWindow({
+          content: contentString,
+          maxWidth: 300,
+          backgroundColor: "#fff",
+          borderColor: "#ccc",
+          borderWidth: 1,
+          anchorSize: new naver.maps.Size(30, 30)
+        });
+
+        naver.maps.Event.addListener(marker, 'click', function () {
+          if (openInfowindow) {
+            openInfowindow.close();
+          }
+
+          infowindow.open(map, marker);
+          openInfowindow = infowindow;
+
+          // 지도 중심 이동
+          map.setCenter(position);
+
+          onConcertMarkerClick(concert.lat, concert.lng);
+        });
+      }
+    });
+
+    function onConcertMarkerClick(lat, lng) {
+      fetch(nearbyLockersUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ lat: lat, lng: lng })
+      })
+      .then(response => response.json())
+      .then(data => {
+        showLockersOnMap(data.lockers);
+      });
+    }
+
+    function showLockersOnMap(lockers) {
+      // 기존 마커 제거
+      lockerMarkers.forEach(marker => marker.setMap(null));
+      lockerMarkers = [];
+
+      lockers.forEach(locker => {
+        const marker = new naver.maps.Marker({
+          position: new naver.maps.LatLng(locker.lat, locker.lng),
+          map: map,
+          icon: lockerIcon,
+          title: `${locker.station_name} - ${locker.detail_location}`
+        });
+
+        const infowindow = new naver.maps.InfoWindow({
+          content: `<div><strong>${locker.station_name}</strong><br>${locker.detail_location}</div>`
+        });
+
+        naver.maps.Event.addListener(marker, 'click', function () {
+          infowindow.open(map, marker);
+        });
+
+        lockerMarkers.push(marker);
+      });
+    }
+
+    // CSRF 토큰 가져오기
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          cookie = cookie.trim();
+          if (cookie.startsWith(name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+  </script>
+</body>
+</html>

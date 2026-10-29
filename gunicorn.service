@@ -1,0 +1,14 @@
+[Unit]
+Description=gunicorn daemon for Django Project
+Requires=gunicorn.socket
+After=network.target
+
+[Service]
+User=vagrant
+Group=vagrant
+WorkingDirectory=/home/vagrant/django4
+ExecStart=/home/vagrant/django/bin/gunicorn --access-logfile - --workers 3 --bind unix:/run/gunicorn.sock config.wsgi:application
+# ExecStart=/home/vagrant/django/bin/gunicorn --access-logfile - --workers 3 --bind 0.0.0.0:8080 config.wsgi:application
+
+[Install]
+WantedBy=multi-user.target

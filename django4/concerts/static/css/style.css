@@ -1,0 +1,77 @@
+#controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 20px;
+  padding-right: 80px; /* 오른쪽 버튼 침범 방지 여유 공간 */
+  position: relative;
+  z-index: 1100;
+}
+
+#searchInput {
+  flex-grow: 1;
+  justify-content: center;
+  min-width: 180px;
+  max-width: 600px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+/* 체크박스와 라벨 묶음은 따로 div로 감싸고 flex-shrink 0 주기 */
+#left-controls {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* 오른쪽 버튼 */
+#locationBtn {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  background: #4e73df;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+#left-controls input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+#left-controls label {
+  display: flex;
+  align-items: center;
+  font-size: 16px; /* 텍스트도 조금 키움 */
+  color: #444;
+  cursor: pointer;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background-color: #f5f5f5;
+}
+
+#header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#header-title h1 {
+  margin: 0;
+  font-size: 24px;
+}

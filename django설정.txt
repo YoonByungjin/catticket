@@ -1,0 +1,110 @@
+1. ubuntu server 설치
+
+  d: 드라이버 전환
+  
+  cd gpt-server
+  
+  vagrant up
+  
+2. ubuntu server 접근
+
+	vagrant ssh gpt-server
+	
+
+3. python3 설치
+
+3.1 django 가상환경 설치
+
+    sudo apt -y install python3.10-venv
+	
+	python3 -m venv django
+	
+	source django/bin/activate
+
+3.2 gunicorn service 설치
+	
+	pip install django gunicorn
+	
+	cp -R /vagrant/django4 .
+	
+3.3 gunicorn을 테스트 진행
+
+    cd /home/vagrant/django4
+	
+	gunicorn config.wsgi:application --bind 127.0.0.1:8000
+
+    ※ chrome browser에서 동작 확인
+   	http://192.168.1.20:8000/concerts/map	
+	
+	
+4. django 설정 변경
+	
+4.1 setting.py 수정
+
+    cd config 
+  	
+	# config/settings.py
+
+      ALLOWED_HOSTS = ['192.168.1.20', 'localhost', '127.0.0.1']  # 변경
+	  
+      STATIC_ROOT = BASE_DIR / 'staticfiles'  # 추가
+	  
+4.2 정적 파일 수집
+
+    cd /home/vagrant/django4
+
+	python manage.py collectstatic
+	
+	
+5. gunicorn systemd에 service 등록
+
+5.1 서비스 파일 생성
+
+    sudo cp /vagrant/gunicorn.service /etc/systemd/system/
+	sudo cp /vagrant/gunicorn.socket  /etc/systemd/system/
+
+5.2 서비스 등록 및 시작	
+
+    sudo systemctl daemon-reexec
+	sudo systemctl daemon-reload
+	sudo systemctl enable gunicorn
+	sudo systemctl start gunicorn
+	sudo systemctl status gunicorn
+	
+
+5.3 권한 설정
+
+    cd /home
+	
+	chmod 755 vagrant
+	
+	
+6 nginx 설정
+
+61 nginx 설치
+
+	sudo apt -y install nginx
+	
+6.2 nginx 사이트 설정
+    sudo cp /vagrant/nginx.conf  /etc/nginx/conf.d/ 
+
+6.3 nginx 서비스 시작 
+
+	sudo systemctl enable nginx
+	sudo systemctl start nginx
+	sudo systemctl status nginx
+	
+
+6.4 nginx 테스트
+
+    ※ chrome browser에서 동작 확인
+   	http://192.168.1.20
+
+
+7 nginx 와 gunicorn 연동 테스트
+
+    ※ chrome browser에서 동작 확인
+   	http://192.168.1.20:8000/conserts/map
+
+	
+	

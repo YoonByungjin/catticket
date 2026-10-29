@@ -1,0 +1,432 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>공연 지도</title>
+  <style>
+    #map { width: 100%; height: 90vh; }
+  </style>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/html.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+  </head>
+<body>
+  <header>
+    <div id="header-title">
+    <img src="{% static 'img/mainicon.png' %}" width="60" height="60"> 
+    <h1>CatTicket</h1>
+    </div>
+      <div id="controls">
+        <div id="left-controls">
+          <label><input type="checkbox" checked id="filter-concert">
+            <img src="{% static 'img/concert.png' %}" width="32" height="32"> 콘서트</label>
+          <label><input type="checkbox" checked id="filter-musical"> 
+            <img src="{% static 'img/musical.png' %}" width="32" height="32">뮤지컬</label>
+          <label><input type="checkbox" checked id="filter-exhibition"> 
+            <img src="{% static 'img/exhibition.png' %}" width="32" height="32">전시회</label>
+        </div>
+
+        <div id="center-controls">
+          <input type="text" id="searchInput" placeholder="공연 이름 검색..." />
+        </div>
+
+        <div id="right-controls">
+          <button id="locationBtn">📍 현재 위치</button>
+        </div>
+      </div>
+      <div id="legend-toggle" role="button" tabindex="0">
+        <img src="{% static 'img/help.png' %}" width="40" height="40" alt="도움말">
+      </div>
+      <div id="legend" class="hidden">
+        <ul>
+          <li><img src="{% static 'img/concert.png' %}" width="24" height="24"> 콘서트</li>
+          <li><img src="{% static 'img/musical.png' %}" width="24" height="24"> 뮤지컬</li>
+          <li><img src="{% static 'img/exhibition.png' %}" width="24" height="24"> 전시회</li>
+          <li><img src="{% static 'img/locker.png' %}" width="24" height="24"> 물품 보관함</li>
+        </ul>
+      </div>
+  </header>
+  <div id="map-container">
+    <div id="sidebar">공연 리스트 화면</div>
+    <div id="map"></div>
+  </div>
+
+  <!-- 카카오 지도 API -->
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=91b19b5079e24debd1f872cb78fd74c2"></script>
+
+  <script>
+    const concerts = {{ concerts|safe }};
+    const musicals = {{ musicals|safe }};
+    const exhibitions = {{ exhibitions|safe }};
+    
+    document.getElementById('filter-concert').addEventListener('change', () => toggleMarkers('concert'));
+    document.getElementById('filter-musical').addEventListener('change', () => toggleMarkers('musical'));
+    document.getElementById('filter-exhibition').addEventListener('change', () => toggleMarkers('exhibition'));
+
+    const concertMarkers = [];
+    const musicalMarkers = [];
+    const exhibitionMarkers = [];
+
+    {% comment %} let currentInfoWindow = null; {% endcomment %}
+
+    const container = document.getElementById('map');
+    const options = {
+      center: new kakao.maps.LatLng(37.5665, 126.9780), // 서울 중심
+      level: 7,
+      maxLevel: 9,
+    };
+    const map = new kakao.maps.Map(container, options);
+
+
+    fetch("{% static 'data/seoul_boundary.json' %}")
+  .then(res => res.json())
+  .then(data => {
+    const coords = data.features[0].geometry.coordinates[0];
+    const seoulPath = coords.map(([lng, lat]) => new kakao.maps.LatLng(lat, lng));
+    // 지도 전체를 덮는 사각형 (바깥 테두리)
+    const outer = [
+      new kakao.maps.LatLng(43.5, 122.5),
+      new kakao.maps.LatLng(43.5, 135.5),
+      new kakao.maps.LatLng(31.0, 135.5),
+      new kakao.maps.LatLng(31.0, 122.5)
+    ];
+    // 전체를 덮되, 서울은 구멍 내기
+    const mask = new kakao.maps.Polygon({
+      map: map,
+      path: [outer, seoulPath],
+      strokeWeight: 0,
+      fillColor: '#CCCCCC',
+      fillOpacity: 0.7
+    });
+    // 서울 경계선 강조 (선만)
+    const boundary = new kakao.maps.Polygon({
+      map: map,
+      path: seoulPath,
+      strokeWeight: 4,
+      strokeColor: '#FF0000',
+      strokeOpacity: 1,
+      fillOpacity: 0
+    });
+  })
+  .catch(err => console.error(err));
+
+
+
+    const usermarkerSize = new kakao.maps.Size(80,80);
+    const markerSize = new kakao.maps.Size(60,60);
+    const markerOffset = new kakao.maps.Point(20,40);
+    const concertIcon = new kakao.maps.MarkerImage(
+      "{% static 'img/concert.png' %}",
+      markerSize,
+      {offset : markerOffset}
+    );
+    const musicalIcon = new kakao.maps.MarkerImage(
+      "{% static 'img/musical.png' %}",
+      markerSize,
+      {offset : markerOffset}
+    );
+    const exhibitionIcon = new kakao.maps.MarkerImage(
+      "{% static 'img/exhibition.png' %}",
+      markerSize,
+      {offset : markerOffset}
+    );
+    const lockerIcon = new kakao.maps.MarkerImage(
+      "{% static 'img/locker.png' %}",
+      markerSize,
+      {offset : markerOffset}
+    );
+    const userIcon = new kakao.maps.MarkerImage(
+      "{% static 'img/user.png' %}",
+      usermarkerSize,
+      {offset : markerOffset}
+    );
+
+    let openInfowindow = null; // 현재 열린 인포윈도우 추적
+    let openInfowindow_locker = null;
+    let currentMarker = null;
+    let currentLockerMarker = null;
+
+    concerts.forEach(concert => {
+      if (concert.lat && concert.lng)  {
+        const markerPosition = new kakao.maps.LatLng(concert.lat, concert.lng);
+        const marker = new kakao.maps.Marker({
+          map: map,
+          position: markerPosition,
+          image: concertIcon,
+          title: concert.title
+        });
+        concert.marker = marker;
+        concertMarkers.push(marker);
+
+        kakao.maps.event.addListener(marker, 'click', function () {     
+          const proj = map.getProjection();
+          const point = proj.containerPointFromCoords(markerPosition);  // 위도/경도 → 픽셀
+          const newCenter = proj.coordsFromContainerPoint(point);  // 픽셀 → 위도/경도
+
+          map.panTo(newCenter);  // 부드럽게 이동
+
+          onAnyMarkerClick(concert.lat, concert.lng);
+        });
+      }
+    });
+
+        musicals.forEach(musical => {
+      if (musical.lat && musical.lng) {
+        const position = new kakao.maps.LatLng(musical.lat, musical.lng);
+        const marker = new kakao.maps.Marker({
+          map: map,
+          position: position,
+          image: musicalIcon,
+          title: musical.title
+        });
+        musical.marker = marker;
+        musicalMarkers.push(marker);
+
+        kakao.maps.event.addListener(marker, 'click', function () {
+
+          const proj = map.getProjection();
+          const point = proj.containerPointFromCoords(position);
+          const newCenter = proj.coordsFromContainerPoint(point);
+         map.panTo(newCenter);
+
+         onAnyMarkerClick(musical.lat, musical.lng);
+       });
+      }
+    });
+
+    exhibitions.forEach(exhibition => {
+  if (exhibition.lat && exhibition.lng) {
+    const position = new kakao.maps.LatLng(exhibition.lat, exhibition.lng);
+    const marker = new kakao.maps.Marker({
+      map: map,
+      position: position,
+      image: exhibitionIcon,
+      title: exhibition.title
+    });
+    exhibition.marker = marker;
+    exhibitionMarkers.push(marker);
+
+    kakao.maps.event.addListener(marker, 'click', function () {
+      const proj = map.getProjection();
+      const point = proj.containerPointFromCoords(position);
+      const newCenter = proj.coordsFromContainerPoint(point);
+      map.panTo(newCenter);
+
+      onAnyMarkerClick(exhibition.lat, exhibition.lng);
+    });
+  }
+});
+
+    const nearbyLockersUrl = "/concerts/api/nearby-lockers/";
+
+  function onConcertMarkerClick(lat, lng) {
+
+    if (openInfowindow_locker) {
+          openInfowindow_locker.close();
+          openInfowindow_locker = null;
+          currentLockerMarker = null;
+    }
+    
+    fetch(nearbyLockersUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({ lat: lat, lng: lng })
+    })
+    .then(response => response.json())
+    .then(data => {
+      showLockersOnMap(data.lockers);
+    });
+  }
+    let lockerMarkers = []
+    
+      function showLockersOnMap(lockers) {
+    // 기존 마커 제거
+    lockerMarkers.forEach(marker => marker.setMap(null));
+    lockerMarkers = [];
+
+    lockers.forEach(locker => {
+      const marker = new kakao.maps.Marker({
+        map: map,
+        position: new kakao.maps.LatLng(locker.lat, locker.lng),
+        image:lockerIcon,
+        title: `${locker.station_name} - ${locker.detail_location}`
+      });
+
+      const detailList = locker.detail_location
+        .split('/')
+        .map(item => `<li style="margin-bottom:6px;">:작은_파란색_다이아몬드: ${item.trim()}</li>`)
+        .join('');
+
+      // 마커 클릭 시 인포윈도우 표시
+      const content = `
+        <div style="font-family:'Segoe UI', sans-serif; max-width:260px; border-radius:12px;
+                    box-shadow:0 4px 12px rgba(0,0,0,0.15); overflow:hidden; background:#fff;">
+          <div style="background:#4e73df; color:white; padding:10px 16px; font-size:15px; font-weight:600;">
+            📦 ${locker.station_name}
+          </div>
+          <div style="padding:12px 16px; font-size:14px; color:#333;">
+            <ul style="list-style:none; padding:0; margin:0;">
+              ${detailList}
+            </ul>
+          </div>
+        </div>
+      `;
+
+      // 마커별로 InfoWindow 생성
+      const infowindow = new kakao.maps.InfoWindow({ content });
+
+      kakao.maps.event.addListener(marker, 'click', function() {
+        // 이전 인포윈도우 닫기
+        if (openInfowindow_locker) {
+          openInfowindow_locker.close();
+          openInfowindow_locker = null;
+          currentLockerMarker = null;
+          return;
+        }
+        
+
+        // 새 인포윈도우 열기
+        infowindow.open(map, marker);
+        openInfowindow_locker = infowindow;
+        currentLockerMarker = marker;
+      });
+
+      lockerMarkers.push(marker);
+    });
+  }
+
+  // CSRF 토큰 가져오기 (Django용)
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+   document.getElementById('legend-toggle').addEventListener('click', function(){
+    const lg = document.getElementById('legend');
+    lg.classList.toggle('hidden');
+  });
+    document.getElementById("locationBtn").addEventListener("click", () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const userLoc = new kakao.maps.LatLng(lat, lng);
+        map.panTo(userLoc);
+
+        new kakao.maps.Marker({
+          map: map,
+          position: userLoc,
+          image: userIcon,
+          title: "내 위치"
+        });
+      });
+    } else {
+      alert("GPS를 지원하지 않습니다.");
+    }
+  });
+
+  function toggleMarkers(type) {
+    let markers;
+
+    if (type === 'concert') markers = concertMarkers;
+    else if (type === 'musical') markers = musicalMarkers;
+    else if (type === 'exhibition') markers = exhibitionMarkers;
+    
+    const checked = document.getElementById(`filter-${type}`).checked;
+
+    markers.forEach(marker => {
+      marker.setMap(checked ? map : null);
+    });
+  }
+
+  document.getElementById("searchInput").addEventListener("input", function () {
+    const keyword = this.value.trim().toLowerCase();
+
+    const showConcert = document.getElementById("filter-concert").checked;
+    const showMusical = document.getElementById("filter-musical").checked;
+    const showExhibition = document.getElementById("filter-exhibition").checked;
+
+    concerts.forEach(concert => {
+      const isMatch = concert.title.toLowerCase().includes(keyword);
+      const shouldConcert = isMatch && showConcert;
+
+      if (concert.marker) {
+        concert.marker.setMap(shouldConcert ? map : null);
+      }
+    });
+    musicals.forEach(musical => {
+      const isMatch = musical.title.toLowerCase().includes(keyword);
+      const shouldMusical = isMatch && showMusical;
+
+      if (musical.marker) {
+        musical.marker.setMap(shouldMusical ? map : null);
+      }
+    });
+    exhibitions.forEach(exhibition => {
+      const isMatch = exhibition.title.toLowerCase().includes(keyword);
+      const shouldExhibition = isMatch && showExhibition;
+
+      if (exhibition.marker) {
+        exhibition.marker.setMap(shouldExhibition ? map : null);
+      }
+    });
+  });
+
+
+  function onAnyMarkerClick(lat, lng) {
+    showSidebarForLocation(lat, lng);
+    onConcertMarkerClick(lat, lng);
+  }
+
+  function showSidebarForLocation(lat, lng) {
+    const showConcert = document.getElementById("filter-concert").checked;
+      const showMusical = document.getElementById("filter-musical").checked;
+      const showExhibition = document.getElementById("filter-exhibition").checked;
+
+      let filteredConcerts = [];
+      let filteredMusicals = [];
+      let filteredExhibitions = [];
+
+      if (showConcert) {
+        filteredConcerts = concerts.filter(event => event.lat === lat && event.lng === lng);
+      }
+      if (showMusical) {
+        filteredMusicals = musicals.filter(event => event.lat === lat && event.lng === lng);
+      }
+      if (showExhibition) {
+        filteredExhibitions = exhibitions.filter(event => event.lat === lat && event.lng === lng);
+      }
+
+      const matchingEvents = [...filteredConcerts, ...filteredMusicals, ...filteredExhibitions];
+
+    const html = `
+  <div class="event-count">공연 리스트 ${matchingEvents.length}개</div>
+  ${matchingEvents.map(event => `
+    <div class="event-card">
+      <a href="${event.ticket_url}" target="_blank">
+        <img src="${event.image_url || '/static/img/default.jpg'}" alt="${event.title}" />
+      </a>
+      <h4>${event.title}</h4>
+      <p>${event.date_start} ~ ${event.date_end}</p>
+    </div>
+  `).join("")}
+`;
+
+    document.getElementById("sidebar").innerHTML = html;
+  }
+
+  </script>
+</body>
+</html>
