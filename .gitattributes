@@ -1,0 +1,9 @@
+# Store and check out every text file with LF line endings, whatever the
+# OS or the local core.autocrlf setting. Files run inside Linux containers
+# (shebangs, shell scripts) break on CRLF.
+* text=auto eol=lf
+
+# Binary files: never touch
+*.png binary
+*.jpg binary
+*.ico binary
