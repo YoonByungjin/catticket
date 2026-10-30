@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: catticket
+  config:
+    # Local runs read the repo-root .env (KEY=VALUE, same format as .properties).
+    # In Docker the file isn't there and the values arrive as environment variables.
+    import: optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+mybatis:
+  # SQL lives in XML files under src/main/resources/mapper/
+  mapper-locations: classpath:mapper/**/*.xml
+  configuration:
+    # venue_id (DB column) <-> venueId (Java field)
+    map-underscore-to-camel-case: true
+
+kopis:
+  api-key: ${KOPIS_API_KEY:}

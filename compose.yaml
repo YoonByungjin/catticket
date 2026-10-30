@@ -1,4 +1,6 @@
-# Local development: MySQL + Django dev server (backend/).
+# Local development.
+#   docker compose up -d                 -> MySQL only (run Spring Boot from the IDE)
+#   docker compose --profile app up -d   -> MySQL + Spring Boot container
 # The Angular app (frontend/) will be added as another service.
 # Values come from .env (see .env.example).
 services:
@@ -26,18 +28,16 @@ services:
       timeout: 3s
       retries: 20
 
-  web:
+  app:
     build: ./backend
-    command: python manage.py runserver 0.0.0.0:8000
+    # Not started by plain "docker compose up"; opt in with --profile app
+    profiles: ["app"]
     env_file: .env
     environment:
       # Inside the compose network the database is reached by its service name
       DB_HOST: db
     ports:
-      - "127.0.0.1:8000:8000"
-    volumes:
-      # Mount the source so code changes reload without rebuilding the image
-      - ./backend:/app
+      - "127.0.0.1:8080:8080"
     depends_on:
       db:
         condition: service_healthy

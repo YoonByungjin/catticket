@@ -1,19 +1,13 @@
-# Python
-__pycache__/
-*.py[cod]
-
-# Virtual environment
-.venv/
-
 # Secrets
 .env
-
-# Local database and collected static files
-db.sqlite3
-staticfiles/
 
 # Editor / OS
 .vscode/
 .idea/
 Thumbs.db
 .DS_Store
+
+# Leftover from the Django version (local venv, not used by the project)
+.venv/
+
+# backend/ and frontend/ have their own .gitignore for build output

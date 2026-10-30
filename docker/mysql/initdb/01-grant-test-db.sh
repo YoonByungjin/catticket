@@ -1,7 +1,7 @@
 #!/bin/sh
 # Runs once, when the MySQL volume is first created.
-# Django's test runner creates and drops "test_<DB_NAME>", so the app user
-# needs rights on that database too (it only gets <DB_NAME> by default).
+# Integration tests use a separate "test_<DB_NAME>" database so they never
+# touch development data; the app user only gets <DB_NAME> by default.
 set -e
 
 mysql --protocol=socket -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
