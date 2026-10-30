@@ -6,7 +6,8 @@ spring:
     # In Docker the file isn't there and the values arrive as environment variables.
     import: optional:file:../.env[.properties]
   datasource:
-    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME}
+    # createDatabaseIfNotExist: テスト用 DB（test_catticket）を初回に自動で作るため
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME}?createDatabaseIfNotExist=true
     username: ${DB_USER}
     password: ${DB_PASSWORD}
 

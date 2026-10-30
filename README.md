@@ -1,66 +1,51 @@
 # CatTicket
 
-ソウルで開催中のコンサート・ミュージカルを地図上に表示し、会場周辺（半径500m）の地下鉄コインロッカーを探せるWebサービスです。
+ソウルの公演情報を地図で探せる Web サービス（仮）。
 
-> **ステータス: 開発中**
-> 2025年に Django で作成した初期版を、Spring Boot + Angular で設計から作り直しています。初期版のコードは [`legacy`](../../tree/legacy) ブランチに残しています。
+> **ステータス: 企画中**
+> 2025年に Django で作成した初期版（[`legacy`](../../tree/legacy) ブランチ）をもとに、企画・設計からやり直しています。
+> サービスの内容は [`docs/design/`](docs/design/README.md) の企画書・要件定義書で決めます。
 
-## 主な機能（予定を含む）
+## 開発の進め方
 
-| 機能 | 状態 |
+実務と同じ工程（企画 → 要件定義 → 基本設計 → 詳細設計 → 実装 → テスト → リリース）で進め、各工程の最後にレビューの関門を置いています。
+設計・実装・テスト・レビューは、役割ごとに定義した AI エージェント（[`.claude/agents/`](.claude/agents/)）が担当し、人間（開発者）が要件の決定・レビュー・マージを行います。
+
+| 資料 | 内容 |
 |---|---|
-| 公演情報の自動収集（KOPIS Open API、毎日更新） | 予定 |
-| 公演・会場を地図上に表示（Google Maps） | 予定 |
-| ジャンル絞り込み・公演名検索 | 予定 |
-| 会場周辺のコインロッカー検索 | 予定 |
-| 日本語 / 韓国語の画面切り替え | 予定 |
+| [`CLAUDE.md`](CLAUDE.md) | 開発ルール（工程とゲート、エージェント体制、コーディング規約、Git の流れ） |
+| [`docs/design/`](docs/design/README.md) | 設計書（企画書・要件定義書・画面・API・テーブル・バッチ・クラス） |
+| [`docs/adr/`](docs/adr/README.md) | 技術選定の記録（なぜその技術にしたか） |
+| [Pull requests](../../pulls?q=is%3Apr) | 変更ごとの目的・内容・確認結果 |
 
 ## 技術スタック
 
 | 区分 | 技術 |
 |---|---|
 | バックエンド | Java 21, Spring Boot 4.1, MyBatis, Flyway, Gradle |
-| フロントエンド | Angular, Google Maps JavaScript API（予定） |
+| フロントエンド | Angular |
 | データベース | MySQL 8.4 |
-| 開発環境 | Docker, Docker Compose, VS Code |
-| デプロイ | Oracle Cloud, Nginx, GitHub Actions（予定） |
+| 開発環境 | Docker Compose, VS Code, GitHub Actions（CI） |
 
-## 構成
-
-```
-ブラウザ ── Angular（画面・地図）
-              │  REST API (JSON)
-              ▼
-     Spring Boot（Controller → Service → MyBatis Mapper）── MySQL
-              ▲
-     毎日の自動収集（@Scheduled → KOPIS Open API）
-```
+地図や外部データ API は要件定義の後で決めます。
 
 ## ディレクトリ構成
 
 ```
 catticket/
-├── backend/                         Spring Boot（API サーバー）
-│   ├── src/main/java/com/catticket/ Java コード
-│   └── src/main/resources/
-│       ├── application.yml          設定（DB 接続など）
-│       ├── db/migration/            Flyway のテーブル定義 SQL（V1__*.sql …）
-│       └── mapper/                  MyBatis の SQL（XML）
-├── frontend/                        Angular（予定）
-├── docker/mysql/initdb/             MySQL 初回起動時のスクリプト
-├── docs/                            設計・API メモ
-└── compose.yaml                     ローカル開発用
+├── backend/            Spring Boot（API サーバー）
+├── frontend/           Angular（予定）
+├── docs/
+│   ├── design/         設計書
+│   └── adr/            技術選定の記録
+├── .claude/agents/     AI エージェントの定義
+├── docker/mysql/       MySQL 初回起動時のスクリプト
+└── compose.yaml        ローカル開発用（MySQL）
 ```
 
 ## ローカルでの起動方法
 
-### 必要なもの
-
-- Docker Desktop
-- JDK 21（例: Eclipse Temurin）
-- KOPIS Open API の認証キー（データ収集を動かす場合のみ）: https://www.kopis.or.kr
-
-### 手順
+必要なもの: Docker Desktop、JDK 21（例: Eclipse Temurin）
 
 1. 環境変数ファイルを作成し、`DB_PASSWORD`・`DB_ROOT_PASSWORD` を任意のランダムな文字列に変更します。
 
@@ -74,91 +59,54 @@ catticket/
    docker compose up -d
    ```
 
-3. Spring Boot を起動します。テーブルは Flyway が起動時に自動で作成します。
+3. Spring Boot を起動します（Windows の PowerShell では `.\gradlew.bat bootRun`）。テーブルは Flyway が起動時に作成します。
 
    ```bash
    cd backend
    ./gradlew bootRun
    ```
 
-   Windows（PowerShell）では `.\gradlew.bat bootRun` です。API は http://127.0.0.1:8080 で動きます。
-
-Spring Boot もコンテナで動かす場合は、手順 2・3 の代わりに次を実行します。
-
-```bash
-docker compose --profile app up -d --build
-```
-
-### よく使うコマンド
-
-```bash
-cd backend && ./gradlew test          # テスト（MySQL の起動が必要）
-docker compose logs -f db             # MySQL のログ
-docker compose down                   # 停止（DB データは volume に残ります）
-```
-
-## データ出典
-
-公演情報は **(財)芸術経営支援センター 公演芸術統合電算網（KOPIS, www.kopis.or.kr）** の Open API を利用しています。
-
-출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)
+テストは `cd backend && ./gradlew test`（テスト専用 DB `test_catticket` を使います）。
 
 ---
 
 ## 한국어
 
-서울에서 열리는 콘서트·뮤지컬을 지도에 표시하고, 공연장 주변(반경 500m)의 지하철 물품보관함을 찾을 수 있는 웹 서비스입니다.
+서울의 공연 정보를 지도로 찾는 웹 서비스(가칭).
 
-> **상태: 개발 중**
-> 2025년에 Django로 만든 첫 버전을 Spring Boot + Angular로 설계부터 다시 만들고 있습니다. 첫 버전의 코드는 [`legacy`](../../tree/legacy) 브랜치에 남겨두었습니다.
+> **상태: 기획 중**
+> 2025년에 Django로 만든 첫 버전([`legacy`](../../tree/legacy) 브랜치)을 바탕으로 기획·설계부터 다시 하고 있습니다.
+> 서비스 내용은 [`docs/design/`](docs/design/README.md)의 기획서·요건정의서에서 정합니다.
 
-### 주요 기능 (예정 포함)
+### 개발 진행 방식
 
-| 기능 | 상태 |
+실무와 같은 공정(기획 → 요건정의 → 기본설계 → 상세설계 → 구현 → 테스트 → 릴리스)으로 진행하고, 각 공정 끝에 리뷰 관문을 둡니다.
+설계·구현·테스트·리뷰는 역할별로 정의한 AI 에이전트([`.claude/agents/`](.claude/agents/))가 맡고, 사람(개발자)이 요건 결정·리뷰·머지를 합니다.
+
+| 자료 | 내용 |
 |---|---|
-| 공연 정보 자동 수집 (KOPIS Open API, 매일 갱신) | 예정 |
-| 공연·공연장을 지도에 표시 (Google Maps) | 예정 |
-| 장르 필터·공연명 검색 | 예정 |
-| 공연장 주변 물품보관함 검색 | 예정 |
-| 일본어 / 한국어 화면 전환 | 예정 |
+| [`CLAUDE.md`](CLAUDE.md) | 개발 규칙 (공정과 관문, 에이전트 체제, 코딩 규약, Git 흐름) |
+| [`docs/design/`](docs/design/README.md) | 설계서 (기획서·요건정의서·화면·API·테이블·배치·클래스) |
+| [`docs/adr/`](docs/adr/README.md) | 기술 선정 기록 (왜 그 기술을 골랐는지) |
+| [Pull requests](../../pulls?q=is%3Apr) | 변경마다의 목적·내용·확인 결과 |
 
 ### 기술 스택
 
 | 구분 | 기술 |
 |---|---|
 | 백엔드 | Java 21, Spring Boot 4.1, MyBatis, Flyway, Gradle |
-| 프론트엔드 | Angular, Google Maps JavaScript API (예정) |
+| 프론트엔드 | Angular |
 | 데이터베이스 | MySQL 8.4 |
-| 개발 환경 | Docker, Docker Compose, VS Code |
-| 배포 | Oracle Cloud, Nginx, GitHub Actions (예정) |
+| 개발 환경 | Docker Compose, VS Code, GitHub Actions(CI) |
+
+지도와 외부 데이터 API는 요건정의 후에 정합니다.
 
 ### 로컬 실행 방법
 
-필요한 것: Docker Desktop, JDK 21, (데이터 수집을 돌릴 경우) KOPIS Open API 인증키
+필요한 것: Docker Desktop, JDK 21 (예: Eclipse Temurin)
 
-1. 환경변수 파일을 만들고 `DB_PASSWORD`, `DB_ROOT_PASSWORD`를 임의의 무작위 문자열로 바꿔주세요.
+1. `cp .env.example .env`로 환경변수 파일을 만들고 `DB_PASSWORD`, `DB_ROOT_PASSWORD`를 임의의 무작위 문자열로 바꿉니다.
+2. `docker compose up -d`로 MySQL을 실행합니다.
+3. `cd backend` 후 `./gradlew bootRun`으로 Spring Boot를 실행합니다(Windows PowerShell은 `.\gradlew.bat bootRun`). 테이블은 Flyway가 시작할 때 만듭니다.
 
-   ```bash
-   cp .env.example .env
-   ```
-
-2. MySQL을 실행합니다.
-
-   ```bash
-   docker compose up -d
-   ```
-
-3. Spring Boot를 실행합니다. 테이블은 Flyway가 시작할 때 자동으로 만듭니다.
-
-   ```bash
-   cd backend
-   ./gradlew bootRun
-   ```
-
-   Windows(PowerShell)에서는 `.\gradlew.bat bootRun`입니다. API는 http://127.0.0.1:8080 에서 동작합니다.
-
-Spring Boot도 컨테이너로 실행하려면 2·3단계 대신 `docker compose --profile app up -d --build`를 실행합니다.
-
-### 데이터 출처
-
-공연 정보는 (재)예술경영지원센터 공연예술통합전산망(KOPIS, www.kopis.or.kr)의 Open API를 이용합니다.
+테스트는 `cd backend && ./gradlew test` (테스트 전용 DB `test_catticket` 사용).
