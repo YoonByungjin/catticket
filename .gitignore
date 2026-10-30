@@ -11,3 +11,6 @@ Thumbs.db
 .venv/
 
 # backend/ and frontend/ have their own .gitignore for build output
+
+# Claude Code personal settings
+.claude/settings.local.json
