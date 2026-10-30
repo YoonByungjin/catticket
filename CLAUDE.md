@@ -85,6 +85,16 @@ AI（Claude Code とそのサブエージェント）と人間が同じルール
 - `legacy` ブランチ（2025年の Django 初期版）は保存用。変更・マージしない。
 - 設計書と違う実装をしない。設計を変えるときは先に設計書を更新する。
 
+### Orca での作業
+
+エージェントの実行・並行作業は [Orca](https://www.onorca.dev/)（git worktree 単位でエージェントを動かすデスクトップアプリ）で管理する。
+
+- 作業は worktree 単位。ブランチ名は上の規則に合わせ、作成ダイアログの Advanced で指定する。
+- `.env` は `.worktreeinclude` によって新しい worktree に自動でコピーされる。
+- **MySQL はメインのチェックアウト（`C:\workspace\catticket`）で1つだけ起動する。** worktree で `docker compose up` しない（ポートが衝突し、別の DB ができる）。各 worktree は `127.0.0.1:3306` の同じ MySQL に接続する。
+- テスト用 DB `test_catticket` は共有なので、**複数の worktree で同時に `./gradlew test` を実行しない**。並行実装（工程5）の前に worktree ごとの DB 名を決める。
+- Claude Code の自動メモリは作業フォルダ（worktree）ごとに別になる。続けて必要な情報は自動メモリに頼らず、`CLAUDE.md`・設計書・ADR に書く。
+
 ## コーディング規約（バックエンド）
 
 ### レイヤー
@@ -239,6 +249,16 @@ AI(Claude Code와 서브 에이전트)와 사람이 같은 규칙으로 개발�
 - 머지된 PR의 브랜치에 추가로 push하지 않는다. 이어지는 작업은 새 브랜치·PR로 한다.
 - `legacy` 브랜치(2025년 Django 첫 버전)는 보관용. 변경·머지하지 않는다.
 - 설계서와 다르게 구현하지 않는다. 설계를 바꿀 때는 먼저 설계서를 갱신한다.
+
+### Orca에서의 작업
+
+에이전트 실행·병렬 작업은 [Orca](https://www.onorca.dev/)(git worktree 단위로 에이전트를 돌리는 데스크톱 앱)로 관리한다.
+
+- 작업은 worktree 단위. 브랜치 이름은 위 규칙에 맞추고, 생성 화면의 Advanced에서 지정한다.
+- `.env`는 `.worktreeinclude`에 의해 새 worktree에 자동으로 복사된다.
+- **MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 하나만 실행한다.** worktree에서 `docker compose up`을 하지 않는다(포트가 충돌하고 다른 DB가 생김). 각 worktree는 `127.0.0.1:3306`의 같은 MySQL에 접속한다.
+- 테스트용 DB `test_catticket`은 공유이므로 **여러 worktree에서 동시에 `./gradlew test`를 실행하지 않는다**. 병렬 구현(공정 5) 전에 worktree별 DB 이름을 정한다.
+- Claude Code의 자동 메모리는 작업 폴더(worktree)마다 따로 생긴다. 계속 필요한 정보는 자동 메모리에 기대지 말고 `CLAUDE.md`·설계서·ADR에 쓴다.
 
 ## 코딩 규약 (백엔드)
 
