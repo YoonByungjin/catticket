@@ -14,3 +14,6 @@ Thumbs.db
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Temporary worktrees for isolated subagent runs
+.claude/worktrees/
