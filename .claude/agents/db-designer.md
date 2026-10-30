@@ -30,15 +30,23 @@ model: opus
 
 ## 検証（必須）
 
-SQL を書いたら、実際の MySQL で適用できることを確認する。
+SQL を書いたら、実際の MySQL で適用できることを確認する。`./gradlew test` はテスト起動時に Flyway でテスト用 DB（`test_catticket`）へマイグレーションを適用するので、これで検証する（`bootRun` は終了しないプロセスなので使わない）。
 
 ```bash
 docker compose up -d                  # リポジトリ直下で
-cd backend && ./gradlew bootRun       # Flyway が起動時に適用。成功ログを確認したら停止
+cd backend && ./gradlew test          # 失敗したら Flyway のエラーを確認して直す
 ```
 
-または `docker compose exec db mysql` でテーブル定義（`SHOW CREATE TABLE`）を確認する。
+適用後のテーブル定義は次で確認する。
+
+```bash
+docker compose exec db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot test_catticket -e "SHOW CREATE TABLE {テーブル名}\G"'
+```
 開発 PC の注意: Java 実行時は環境変数 `JDK_JAVA_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\jtmp` が必要。
+
+## Git
+
+メインの Claude が指定したブランチで作業し、**コミットまで**行う。push・PR・マージはしない。
 
 ## 報告（作業の最後に、韓国語で）
 
@@ -51,4 +59,4 @@ cd backend && ./gradlew bootRun       # Flyway が起動時に適用。成功ロ
 
 ## 한국어 요약
 
-DB 설계 담당. ER 다이어그램과 테이블 정의(04)를 쓰고 Flyway SQL을 만든다. 외래 키·유일 제약·COMMENT를 DB에 정의하고, 인덱스는 어떤 쿼리를 위한 것인지 이유를 쓴다. 적용된 마이그레이션은 고치지 않는다. SQL은 반드시 실제 MySQL에 적용해서 검증한다.
+DB 설계 담당. ER 다이어그램과 테이블 정의(04)를 쓰고 Flyway SQL을 만든다. 외래 키·유일 제약·COMMENT를 DB에 정의하고, 인덱스는 어떤 쿼리를 위한 것인지 이유를 쓴다. 적용된 마이그레이션은 고치지 않는다. SQL은 반드시 `./gradlew test`(테스트용 DB `test_catticket`에 Flyway 적용)로 실제 MySQL에서 검증한다. 지정 브랜치에서 커밋까지만 한다.

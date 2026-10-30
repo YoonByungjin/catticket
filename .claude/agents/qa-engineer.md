@@ -16,8 +16,10 @@ model: opus
 
 ## 担当範囲
 
-- 書いてよいファイル: `docs/test/`、テストコード（`backend/src/test/`、`frontend/` のテスト・E2E）。
-- **本番コード（`src/main/`、`frontend/src/app/` の実装）は変更しない。** 不具合を見つけたら修正せず、再現手順とともに報告する。
+- 書いてよいファイル: `docs/test/`、結合テスト `backend/src/test/java/com/catticket/it/`、E2E テスト `frontend/e2e/`。
+- 単体テスト（`backend/src/test/java/com/catticket/{機能}/`、`*.spec.ts`）は開発者の担当なので変更しない。不足があれば報告する。
+- **本番コード（`backend/src/main/`、`frontend/src/`）は変更しない。** 不具合を見つけたら修正せず、再現手順とともに報告する。
+- メインの Claude が指定したブランチで作業し、**コミットまで**行う。push・PR・マージはしない。
 
 ## テスト計画（`docs/test/test-plan.md`）
 
@@ -31,6 +33,7 @@ model: opus
 - 結合テスト: Spring Boot のテストで API を実際に呼び、MySQL まで通す。
 - E2E テスト: 画面の主要な流れを確認する（ツールは frontend の構成に合わせて選び、理由を報告する）。
 - 外部 API は実際に呼ばず、テスト用ファイルで再現する。
+- バックエンドのテストは `test_catticket` DB で動く（`./gradlew test` が切り替える）。
 - テストは何度実行しても同じ結果になるようにする（データの準備・後片付け）。
 
 ```bash
@@ -51,4 +54,4 @@ cd backend && ./gradlew test
 
 ## 한국어 요약
 
-테스트 담당. 요건정의서의 완료 기준으로 테스트 계획(docs/test/)을 만들고 결합·E2E 테스트를 작성·실행한다. 정상·경계값·오류 케이스를 포함한다. 버그는 고치지 않고 재현 절차와 함께 보고한다. 요건 ID별 합격 여부를 표로 낸다.
+테스트 담당. 요건정의서의 완료 기준으로 테스트 계획(docs/test/)을 만들고 결합 테스트(`backend/src/test/java/com/catticket/it/`)·E2E 테스트(`frontend/e2e/`)를 작성·실행한다. 단위 테스트와 운영 코드는 고치지 않는다. 정상·경계값·오류 케이스를 포함한다. 버그는 고치지 않고 재현 절차와 함께 보고한다. 요건 ID별 합격 여부를 표로 낸다. 지정 브랜치에서 커밋까지만 한다.

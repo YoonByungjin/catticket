@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+# 最小権限: リポジトリの読み取りだけ
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: Backend build & test
@@ -14,11 +18,11 @@ jobs:
         working-directory: backend
 
     services:
-      # Tests run against a real MySQL, same version as compose.yaml
+      # ローカルと同じ MySQL 8.4。テストは test_catticket を使う（CLAUDE.md「テスト」）
       mysql:
         image: mysql:8.4
         env:
-          MYSQL_DATABASE: catticket
+          MYSQL_DATABASE: test_catticket
           MYSQL_USER: catticket
           MYSQL_PASSWORD: ci-password
           MYSQL_ROOT_PASSWORD: ci-root-password
@@ -31,7 +35,7 @@ jobs:
           --health-retries=20
 
     env:
-      DB_NAME: catticket
+      DB_NAME: test_catticket
       DB_USER: catticket
       DB_PASSWORD: ci-password
       DB_HOST: 127.0.0.1
@@ -45,7 +49,7 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # Caches Gradle dependencies between runs
+      # Gradle の依存関係をキャッシュする
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build and test
@@ -57,3 +61,5 @@ jobs:
         with:
           name: test-report
           path: backend/build/reports/tests/test
+
+  # frontend ジョブ（lint / test / build）は frontend/ を作る PR で frontend-dev が追加する

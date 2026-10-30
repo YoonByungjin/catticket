@@ -36,6 +36,8 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// テストは開発用 DB を汚さないよう専用 DB を使う（環境変数は .env より優先される）
+	environment 'DB_NAME', 'test_catticket'
 }
 
 // Only build the executable boot jar (skip the extra "-plain" jar)
