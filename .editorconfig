@@ -13,5 +13,13 @@ indent_size = 4
 [*.{yaml,yml,json,html,css,scss,ts,js}]
 indent_size = 2
 
+# Spring Initializr generates Java/Gradle files with tabs
+[*.{java,gradle}]
+indent_style = tab
+
+# Windows batch files need CRLF
+[*.{bat,cmd}]
+end_of_line = crlf
+
 [*.md]
 trim_trailing_whitespace = false

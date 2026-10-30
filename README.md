@@ -3,7 +3,7 @@
 ソウルで開催中のコンサート・ミュージカルを地図上に表示し、会場周辺（半径500m）の地下鉄コインロッカーを探せるWebサービスです。
 
 > **ステータス: 開発中**
-> 2025年に作成した初期版を、設計から作り直しています。初期版のコードは [`legacy`](../../tree/legacy) ブランチに残しています。
+> 2025年に Django で作成した初期版を、Spring Boot + Angular で設計から作り直しています。初期版のコードは [`legacy`](../../tree/legacy) ブランチに残しています。
 
 ## 主な機能（予定を含む）
 
@@ -19,11 +19,11 @@
 
 | 区分 | 技術 |
 |---|---|
-| バックエンド | Python 3.12, Django 5.2, Django REST Framework |
+| バックエンド | Java 21, Spring Boot 4.1, MyBatis, Flyway, Gradle |
 | フロントエンド | Angular, Google Maps JavaScript API（予定） |
 | データベース | MySQL 8.4 |
-| 開発環境 | Docker, Docker Compose |
-| デプロイ | Oracle Cloud, Nginx, Gunicorn, GitHub Actions（予定） |
+| 開発環境 | Docker, Docker Compose, VS Code |
+| デプロイ | Oracle Cloud, Nginx, GitHub Actions（予定） |
 
 ## 構成
 
@@ -31,21 +31,25 @@
 ブラウザ ── Angular（画面・地図）
               │  REST API (JSON)
               ▼
-          Django + DRF ── MySQL
+     Spring Boot（Controller → Service → MyBatis Mapper）── MySQL
               ▲
-          毎日の自動収集（KOPIS Open API）
+     毎日の自動収集（@Scheduled → KOPIS Open API）
 ```
 
 ## ディレクトリ構成
 
 ```
 catticket/
-├── backend/        Django（API サーバー）
-│   ├── config/     プロジェクト設定
-│   └── events/     公演・会場・ロッカーのアプリ
-├── frontend/       Angular（予定）
-├── docs/           設計・API メモ
-└── compose.yaml    ローカル開発用（MySQL + Django）
+├── backend/                         Spring Boot（API サーバー）
+│   ├── src/main/java/com/catticket/ Java コード
+│   └── src/main/resources/
+│       ├── application.yml          設定（DB 接続など）
+│       ├── db/migration/            Flyway のテーブル定義 SQL（V1__*.sql …）
+│       └── mapper/                  MyBatis の SQL（XML）
+├── frontend/                        Angular（予定）
+├── docker/mysql/initdb/             MySQL 初回起動時のスクリプト
+├── docs/                            設計・API メモ
+└── compose.yaml                     ローカル開発用
 ```
 
 ## ローカルでの起動方法
@@ -53,43 +57,44 @@ catticket/
 ### 必要なもの
 
 - Docker Desktop
+- JDK 21（例: Eclipse Temurin）
 - KOPIS Open API の認証キー（データ収集を動かす場合のみ）: https://www.kopis.or.kr
 
 ### 手順
 
-1. 環境変数ファイルを作成し、値を設定します。
+1. 環境変数ファイルを作成し、`DB_PASSWORD`・`DB_ROOT_PASSWORD` を任意のランダムな文字列に変更します。
 
    ```bash
    cp .env.example .env
    ```
 
-   `DJANGO_SECRET_KEY`・`DB_PASSWORD`・`DB_ROOT_PASSWORD` は任意のランダムな文字列に変更してください。
-
-2. コンテナを起動します。
+2. MySQL を起動します。
 
    ```bash
-   docker compose up -d --build
+   docker compose up -d
    ```
 
-3. データベースのテーブルを作成します。
+3. Spring Boot を起動します。テーブルは Flyway が起動時に自動で作成します。
 
    ```bash
-   docker compose exec web python manage.py migrate
+   cd backend
+   ./gradlew bootRun
    ```
 
-4. ブラウザで確認します。
+   Windows（PowerShell）では `.\gradlew.bat bootRun` です。API は http://127.0.0.1:8080 で動きます。
 
-   | URL | 内容 |
-   |---|---|
-   | http://127.0.0.1:8000/admin/ | Django 管理画面 |
-   | http://127.0.0.1:8000/api-auth/login/ | DRF ログイン画面 |
+Spring Boot もコンテナで動かす場合は、手順 2・3 の代わりに次を実行します。
+
+```bash
+docker compose --profile app up -d --build
+```
 
 ### よく使うコマンド
 
 ```bash
-docker compose logs -f web      # Django のログ
-docker compose down             # 停止（DB データは volume に残ります）
-docker compose exec web python manage.py createsuperuser
+cd backend && ./gradlew test          # テスト（MySQL の起動が必要）
+docker compose logs -f db             # MySQL のログ
+docker compose down                   # 停止（DB データは volume に残ります）
 ```
 
 ## データ出典
@@ -105,7 +110,7 @@ docker compose exec web python manage.py createsuperuser
 서울에서 열리는 콘서트·뮤지컬을 지도에 표시하고, 공연장 주변(반경 500m)의 지하철 물품보관함을 찾을 수 있는 웹 서비스입니다.
 
 > **상태: 개발 중**
-> 2025년에 만든 첫 버전을 설계부터 다시 만들고 있습니다. 첫 버전의 코드는 [`legacy`](../../tree/legacy) 브랜치에 남겨두었습니다.
+> 2025년에 Django로 만든 첫 버전을 Spring Boot + Angular로 설계부터 다시 만들고 있습니다. 첫 버전의 코드는 [`legacy`](../../tree/legacy) 브랜치에 남겨두었습니다.
 
 ### 주요 기능 (예정 포함)
 
@@ -121,35 +126,38 @@ docker compose exec web python manage.py createsuperuser
 
 | 구분 | 기술 |
 |---|---|
-| 백엔드 | Python 3.12, Django 5.2, Django REST Framework |
+| 백엔드 | Java 21, Spring Boot 4.1, MyBatis, Flyway, Gradle |
 | 프론트엔드 | Angular, Google Maps JavaScript API (예정) |
 | 데이터베이스 | MySQL 8.4 |
-| 개발 환경 | Docker, Docker Compose |
-| 배포 | Oracle Cloud, Nginx, Gunicorn, GitHub Actions (예정) |
+| 개발 환경 | Docker, Docker Compose, VS Code |
+| 배포 | Oracle Cloud, Nginx, GitHub Actions (예정) |
 
 ### 로컬 실행 방법
 
-필요한 것: Docker Desktop, (데이터 수집을 돌릴 경우) KOPIS Open API 인증키
+필요한 것: Docker Desktop, JDK 21, (데이터 수집을 돌릴 경우) KOPIS Open API 인증키
 
-1. 환경변수 파일을 만들고 값을 설정합니다. `DJANGO_SECRET_KEY`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`는 임의의 무작위 문자열로 바꿔주세요.
+1. 환경변수 파일을 만들고 `DB_PASSWORD`, `DB_ROOT_PASSWORD`를 임의의 무작위 문자열로 바꿔주세요.
 
    ```bash
    cp .env.example .env
    ```
 
-2. 컨테이너를 실행합니다.
+2. MySQL을 실행합니다.
 
    ```bash
-   docker compose up -d --build
+   docker compose up -d
    ```
 
-3. DB 테이블을 만듭니다.
+3. Spring Boot를 실행합니다. 테이블은 Flyway가 시작할 때 자동으로 만듭니다.
 
    ```bash
-   docker compose exec web python manage.py migrate
+   cd backend
+   ./gradlew bootRun
    ```
 
-4. 브라우저에서 http://127.0.0.1:8000/admin/ (Django 관리자 화면)을 엽니다.
+   Windows(PowerShell)에서는 `.\gradlew.bat bootRun`입니다. API는 http://127.0.0.1:8080 에서 동작합니다.
+
+Spring Boot도 컨테이너로 실행하려면 2·3단계 대신 `docker compose --profile app up -d --build`를 실행합니다.
 
 ### 데이터 출처
 

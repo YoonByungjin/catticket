@@ -1,19 +1,19 @@
-FROM python:3.12-slim-bookworm
+# Stage 1: build the jar with the full JDK and the Gradle wrapper
+FROM eclipse-temurin:21-jdk AS build
+WORKDIR /workspace
 
-# Don't write .pyc files; flush logs straight to the container output
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+# Download dependencies first so this layer is cached until build files change
+COPY gradlew settings.gradle build.gradle ./
+COPY gradle gradle
+RUN ./gradlew --no-daemon dependencies > /dev/null
 
-# mysqlclient compiles against the MySQL client library
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential default-libmysqlclient-dev pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+COPY src src
+RUN ./gradlew --no-daemon bootJar -x test
 
+# Stage 2: run it on a smaller JRE-only image
+FROM eclipse-temurin:21-jre
 WORKDIR /app
+COPY --from=build /workspace/build/libs/*.jar app.jar
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-EXPOSE 8000
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
