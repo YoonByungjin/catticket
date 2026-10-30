@@ -6,8 +6,8 @@
 |---|---|---|
 | [0001](0001-backend-spring-boot.md) | バックエンドを Spring Boot 4.1 + Java 21 にする | 採用 |
 | [0002](0002-mybatis-flyway.md) | DB アクセスは MyBatis、スキーマ管理は Flyway | 採用 |
-| [0003](0003-data-source-kopis.md) | 公演データは KOPIS Open API から取得する | 採用 |
-| [0004](0004-map-google-maps.md) | 地図は Google Maps を使う | 採用 |
+| [0003](0003-data-source-kopis.md) | 公演データは KOPIS Open API から取得する | 提案 |
+| [0004](0004-map-google-maps.md) | 地図は Google Maps を使う | 提案 |
 | [0005](0005-dev-environment-docker.md) | 開発環境は Docker Compose の MySQL + IDE 実行 | 採用 |
 
 ## テンプレート
@@ -34,6 +34,6 @@
 |---|---|---|
 | 0001 | 백엔드를 Spring Boot 4.1 + Java 21로 한다 | 채택 |
 | 0002 | DB 접근은 MyBatis, 스키마 관리는 Flyway | 채택 |
-| 0003 | 공연 데이터는 KOPIS Open API에서 가져온다 | 채택 |
-| 0004 | 지도는 Google Maps를 쓴다 | 채택 |
+| 0003 | 공연 데이터는 KOPIS Open API에서 가져온다 | 제안 |
+| 0004 | 지도는 Google Maps를 쓴다 | 제안 |
 | 0005 | 개발 환경은 Docker Compose의 MySQL + IDE 실행 | 채택 |
