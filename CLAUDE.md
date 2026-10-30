@@ -20,7 +20,7 @@ AI（Claude Code とそのサブエージェント）と人間が同じルール
 | 開発環境 | Docker Compose（MySQL）, VS Code, GitHub Actions |
 
 選定理由は `docs/adr/`。地図・外部データ API は要件定義の後で決める（ADR 0003・0004 は「提案」）。
-新しいライブラリ・方式を入れるときは ADR を追加する。
+新しいライブラリ・方式は ADR を追加してから入れる。必要になったエージェントは自分で入れずに作業を止めて報告し、architect が ADR を書き、人間が承認してから導入する（E2E ツールの依存関係・設定は frontend-dev が入れる）。
 
 ## 開発プロセス
 
@@ -41,9 +41,24 @@ AI（Claude Code とそのサブエージェント）と人間が同じルール
 
 前の工程の成果物が変わったら、後ろの成果物も見直す。
 
+reviewer の判定とゲート:
+
+- **承認**: ゲート通過（人間の承認へ進む）。
+- **条件付き承認**: 重大な指摘がなく、軽微・提案だけが残っている。修正後、人間が確認すれば再レビューなしで通過。
+- **差し戻し**: 重大な指摘がある。修正後に再レビューを受ける。
+
+### 役割分担
+
+| 担当 | 役割 | 書き込んでよい場所 |
+|---|---|---|
+| 人間 | 決定、Orca での worktree 作成、ゲートの承認、マージ | すべて |
+| PM（Claude デスクトップの会話） | ロードマップ、要件のインタビュー、Issue の作成とブランチ名の決定、PR レビューの補助 | GitHub Issue（リポジトリのファイルは変更しない） |
+| 実行 Claude（Orca の Claude Code） | サブエージェントの呼び出し、コミット、push、PR の作成、CI の保守、リリース（工程7） | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `docs/ops/`, `README.md`, `docs/design/README.md` と `docs/adr/README.md` のルール・テンプレート部分（状態欄と ADR 一覧の行を除く） |
+| サブエージェント | 指定されたブランチで作業し、コミットまで | 下の表 |
+
 ### エージェント体制
 
-定義は `.claude/agents/`。メインの Claude は **PM・取りまとめ役**として作業を割り振り、結果を人間に報告する。
+定義は `.claude/agents/`。実行 Claude が作業を割り振り、結果を人間（と PM）に報告する。
 
 | 担当 | 工程 | 役割 | 書き込んでよい場所 |
 |---|---|---|---|
@@ -54,7 +69,6 @@ AI（Claude Code とそのサブエージェント）と人間が同じルール
 | `frontend-dev` | 5 | Angular の実装と単体テスト | `frontend/`（`frontend/e2e/` を除く）。`frontend/` を作る PR では `.github/workflows/ci.yml` に frontend ジョブを追加する |
 | `qa-engineer` | 6 | テスト計画、結合・E2E テスト | `docs/test/`, `backend/src/test/java/com/catticket/it/`, `frontend/e2e/` |
 | `reviewer` | 全ゲート | 設計書・ルールに照らした確認 | **なし（読み取りのみ）** |
-| メインの Claude | 全工程 | 割り振り、Issue・ブランチ・PR の作成、push、CI の保守、リリース（工程7） | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `docs/ops/`, `README.md` |
 
 テストの分担: **単体テスト**は実装したエージェントが書く（backend: `backend/src/test/java/com/catticket/{機能}/`、frontend: 実装の横の `*.spec.ts`）。**結合・E2E テスト**は qa-engineer が書く。
 
@@ -63,15 +77,15 @@ AI（Claude Code とそのサブエージェント）と人間が同じルール
 - エージェント同士は会話ではなく**ドキュメントで受け渡す**。必要な前提はすべて設計書・ADR に書く。
 - 作る役と確認する役を分ける。自分の成果物を自分でゲート通過させない。
 - 設計書の矛盾・不足に気づいたら、推測で埋めずに**作業を止めて報告**する。
-- 質問が多い工程（企画・要件定義）は、メインの Claude が人間と対話して情報を集め、エージェントは文書化を担当する。
+- 質問が多い工程（企画・要件定義）は、PM が人間と対話して情報を集め、エージェントは文書化を担当する。
 - 作業の最後に「変更したファイル / 確認したこと / 未決事項」を報告する。
 
 ### Git の流れ
 
-役割: **Issue・ブランチ・PR の作成と push はメインの Claude**。サブエージェントは、指示されたブランチでファイルを変更し、コミットまで行う（push しない）。**マージは人間**。
+役割: **Issue の作成とブランチ名の決定は PM、worktree（ブランチ）の作成は人間、コミット・push・PR の作成は実行 Claude**。サブエージェントは、指定されたブランチでファイルを変更し、コミットまで行う（push しない）。**マージは人間**。
 
 1. 設計書を書く・更新する
-2. GitHub Issue を作る（要件 ID と受け入れ基準を書く）
+2. GitHub Issue を作る（実装の Issue は要件 ID と受け入れ基準、設計書の Issue はゲートの通過条件を書く）
 3. ブランチを切る: 機能は `feature/{Issue番号}-{内容}`、設計書は `docs/{内容}`、環境・ルールは `chore/{内容}`
 4. 作業 + テスト
 5. PR を作る（`Closes #{Issue番号}`、確認した内容）。push する前に、そのブランチの PR がまだ開いているか確認する
@@ -89,10 +103,11 @@ AI（Claude Code とそのサブエージェント）と人間が同じルール
 
 エージェントの実行・並行作業は [Orca](https://www.onorca.dev/)（git worktree 単位でエージェントを動かすデスクトップアプリ）で管理する。
 
-- 作業は worktree 単位。ブランチ名は上の規則に合わせ、作成ダイアログの Advanced で指定する。
+- 作業は worktree 単位。worktree は人間が作り、ブランチ名（PM が決めたもの）を作成ダイアログの Advanced で指定する。
 - `.env` は `.worktreeinclude` によって新しい worktree に自動でコピーされる。
-- **MySQL はメインのチェックアウト（`C:\workspace\catticket`）で1つだけ起動する。** worktree で `docker compose up` しない（ポートが衝突し、別の DB ができる）。各 worktree は `127.0.0.1:3306` の同じ MySQL に接続する。
-- テスト用 DB `test_catticket` は共有なので、**複数の worktree で同時に `./gradlew test` を実行しない**。並行実装（工程5）の前に worktree ごとの DB 名を決める。
+- 実行 Claude がサブエージェントを worktree で隔離して動かすと、`.claude/worktrees/` に一時的な worktree ができる（Orca には表示されず、git の管理外）。用が済んだら実行 Claude が削除する。
+- **MySQL はメインのチェックアウト（`C:\workspace\catticket`）で1つだけ起動する。** worktree で `docker compose up` しない（別のコンテナを作ろうとしてポートが衝突する）。各 worktree は `127.0.0.1:3306` の同じ MySQL に接続する。`compose.yaml` の `name: catticket` により、worktree からの `docker compose ps` / `exec` も同じコンテナを指す。
+- テスト用 DB `test_catticket` は共有なので、**複数の worktree で同時に `./gradlew test` を実行しない**。実行 Claude は同時に1つだけ実行させる。並行実装（工程5）の前に worktree ごとの DB 名を決める。
 - Claude Code の自動メモリは作業フォルダ（worktree）ごとに別になる。続けて必要な情報は自動メモリに頼らず、`CLAUDE.md`・設計書・ADR に書く。
 
 ## コーディング規約（バックエンド）
@@ -136,7 +151,7 @@ AI（Claude Code とそのサブエージェント）と人間が同じルール
 ## コマンド
 
 ```bash
-docker compose up -d                        # MySQL 起動（開発時は DB だけコンテナ）
+docker compose up -d                        # MySQL 起動（メインのチェックアウトでのみ。開発時は DB だけコンテナ）
 cd backend && ./gradlew bootRun             # アプリ起動（http://127.0.0.1:8080）。終了しないプロセス
 cd backend && ./gradlew test                # テスト（MySQL の起動が必要。test_catticket を使う）
 cd backend && ./gradlew build               # ビルド + テスト（CI と同じ）
@@ -185,7 +200,7 @@ AI(Claude Code와 서브 에이전트)와 사람이 같은 규칙으로 개발�
 | 개발 환경 | Docker Compose(MySQL), VS Code, GitHub Actions |
 
 선정 이유는 `docs/adr/`. 지도·외부 데이터 API는 요건정의 후에 정한다(ADR 0003·0004는 "제안").
-새 라이브러리·방식을 도입할 때는 ADR을 추가한다.
+새 라이브러리·방식은 ADR을 추가한 뒤 도입한다. 필요해진 에이전트는 직접 넣지 말고 작업을 멈추고 보고하며, architect가 ADR을 쓰고 사람이 승인한 뒤 도입한다(E2E 도구의 의존성·설정은 frontend-dev가 넣는다).
 
 ## 개발 프로세스
 
@@ -206,9 +221,24 @@ AI(Claude Code와 서브 에이전트)와 사람이 같은 규칙으로 개발�
 
 앞 공정의 산출물이 바뀌면 뒤 산출물도 다시 검토한다.
 
+reviewer의 판정과 관문:
+
+- **승인**: 관문 통과(사람의 승인으로 넘어감).
+- **조건부 승인**: 중대 지적이 없고 경미·제안만 남음. 수정 후 사람이 확인하면 재리뷰 없이 통과.
+- **반려**: 중대 지적이 있음. 수정 후 재리뷰를 받는다.
+
+### 역할 분담
+
+| 담당 | 역할 | 써도 되는 곳 |
+|---|---|---|
+| 사람 | 결정, Orca에서 worktree 생성, 관문 승인, 머지 | 전부 |
+| PM(Claude 데스크톱 대화) | 로드맵, 요건 인터뷰, Issue 작성과 브랜치 이름 결정, PR 리뷰 보조 | GitHub Issue(저장소 파일은 바꾸지 않음) |
+| 실행 Claude(Orca의 Claude Code) | 서브 에이전트 호출, 커밋, push, PR 생성, CI 관리, 릴리스(공정 7) | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `docs/ops/`, `README.md`, `docs/design/README.md`와 `docs/adr/README.md`의 규칙·템플릿 부분(상태란과 ADR 목록의 행은 제외) |
+| 서브 에이전트 | 지정된 브랜치에서 작업하고 커밋까지 | 아래 표 |
+
 ### 에이전트 체제
 
-정의는 `.claude/agents/`. 메인 Claude는 **PM·조율자**로서 일을 나눠 맡기고 결과를 사람에게 보고한다.
+정의는 `.claude/agents/`. 실행 Claude가 일을 나눠 맡기고 결과를 사람(과 PM)에게 보고한다.
 
 | 담당 | 공정 | 역할 | 써도 되는 곳 |
 |---|---|---|---|
@@ -219,7 +249,6 @@ AI(Claude Code와 서브 에이전트)와 사람이 같은 규칙으로 개발�
 | `frontend-dev` | 5 | Angular 구현과 단위 테스트 | `frontend/` (`frontend/e2e/` 제외). `frontend/`를 만드는 PR에서 `.github/workflows/ci.yml`에 frontend 잡 추가 |
 | `qa-engineer` | 6 | 테스트 계획, 결합·E2E 테스트 | `docs/test/`, `backend/src/test/java/com/catticket/it/`, `frontend/e2e/` |
 | `reviewer` | 모든 관문 | 설계서·규칙 기준 검토 | **없음 (읽기 전용)** |
-| 메인 Claude | 전 공정 | 작업 분배, Issue·브랜치·PR 생성, push, CI 관리, 릴리스(공정 7) | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `docs/ops/`, `README.md` |
 
 테스트 분담: **단위 테스트**는 구현한 에이전트가 쓴다(backend: `backend/src/test/java/com/catticket/{기능}/`, frontend: 구현 옆의 `*.spec.ts`). **결합·E2E 테스트**는 qa-engineer가 쓴다.
 
@@ -228,15 +257,15 @@ AI(Claude Code와 서브 에이전트)와 사람이 같은 규칙으로 개발�
 - 에이전트끼리는 대화가 아니라 **문서로 주고받는다**. 필요한 전제는 모두 설계서·ADR에 쓴다.
 - 만드는 역할과 확인하는 역할을 나눈다. 자기 산출물을 스스로 관문 통과시키지 않는다.
 - 설계서의 모순·누락을 발견하면 추측으로 메우지 말고 **작업을 멈추고 보고**한다.
-- 질문이 많은 공정(기획·요건정의)은 메인 Claude가 사람과 대화해 정보를 모으고, 에이전트는 문서화를 맡는다.
+- 질문이 많은 공정(기획·요건정의)은 PM이 사람과 대화해 정보를 모으고, 에이전트는 문서화를 맡는다.
 - 작업 끝에 "변경한 파일 / 확인한 것 / 미결 사항"을 보고한다.
 
 ### Git 흐름
 
-역할: **Issue·브랜치·PR 생성과 push는 메인 Claude**. 서브 에이전트는 지정된 브랜치에서 파일을 바꾸고 커밋까지만 한다(push하지 않음). **머지는 사람**.
+역할: **Issue 작성과 브랜치 이름 결정은 PM, worktree(브랜치) 생성은 사람, 커밋·push·PR 생성은 실행 Claude**. 서브 에이전트는 지정된 브랜치에서 파일을 바꾸고 커밋까지만 한다(push하지 않음). **머지는 사람**.
 
 1. 설계서 작성·갱신
-2. GitHub Issue 생성 (요건 ID와 완료 기준 작성)
+2. GitHub Issue 생성 (구현 Issue는 요건 ID와 완료 기준, 설계서 Issue는 관문 통과 조건을 쓴다)
 3. 브랜치: 기능은 `feature/{Issue번호}-{내용}`, 설계서는 `docs/{내용}`, 환경·규칙은 `chore/{내용}`
 4. 작업 + 테스트
 5. PR 생성 (`Closes #{Issue번호}`, 확인한 내용). push 전에 그 브랜치의 PR이 아직 열려 있는지 확인한다
@@ -254,10 +283,11 @@ AI(Claude Code와 서브 에이전트)와 사람이 같은 규칙으로 개발�
 
 에이전트 실행·병렬 작업은 [Orca](https://www.onorca.dev/)(git worktree 단위로 에이전트를 돌리는 데스크톱 앱)로 관리한다.
 
-- 작업은 worktree 단위. 브랜치 이름은 위 규칙에 맞추고, 생성 화면의 Advanced에서 지정한다.
+- 작업은 worktree 단위. worktree는 사람이 만들고, 브랜치 이름(PM이 정한 것)을 생성 화면의 Advanced에서 지정한다.
 - `.env`는 `.worktreeinclude`에 의해 새 worktree에 자동으로 복사된다.
-- **MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 하나만 실행한다.** worktree에서 `docker compose up`을 하지 않는다(포트가 충돌하고 다른 DB가 생김). 각 worktree는 `127.0.0.1:3306`의 같은 MySQL에 접속한다.
-- 테스트용 DB `test_catticket`은 공유이므로 **여러 worktree에서 동시에 `./gradlew test`를 실행하지 않는다**. 병렬 구현(공정 5) 전에 worktree별 DB 이름을 정한다.
+- 실행 Claude가 서브 에이전트를 worktree로 격리해 실행하면 `.claude/worktrees/`에 임시 worktree가 생긴다(Orca에는 보이지 않고 git 관리 밖). 다 쓰면 실행 Claude가 지운다.
+- **MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 하나만 실행한다.** worktree에서 `docker compose up`을 하지 않는다(다른 컨테이너를 만들려다 포트가 충돌함). 각 worktree는 `127.0.0.1:3306`의 같은 MySQL에 접속한다. `compose.yaml`의 `name: catticket` 덕분에 worktree에서 실행한 `docker compose ps`/`exec`도 같은 컨테이너를 가리킨다.
+- 테스트용 DB `test_catticket`은 공유이므로 **여러 worktree에서 동시에 `./gradlew test`를 실행하지 않는다**. 실행 Claude는 한 번에 하나만 실행시킨다. 병렬 구현(공정 5) 전에 worktree별 DB 이름을 정한다.
 - Claude Code의 자동 메모리는 작업 폴더(worktree)마다 따로 생긴다. 계속 필요한 정보는 자동 메모리에 기대지 말고 `CLAUDE.md`·설계서·ADR에 쓴다.
 
 ## 코딩 규약 (백엔드)
@@ -301,7 +331,7 @@ AI(Claude Code와 서브 에이전트)와 사람이 같은 규칙으로 개발�
 ## 명령어
 
 ```bash
-docker compose up -d                        # MySQL 실행 (개발 중에는 DB만 컨테이너)
+docker compose up -d                        # MySQL 실행 (메인 체크아웃에서만. 개발 중에는 DB만 컨테이너)
 cd backend && ./gradlew bootRun             # 앱 실행 (http://127.0.0.1:8080). 끝나지 않는 프로세스
 cd backend && ./gradlew test                # 테스트 (MySQL 실행 필요. test_catticket 사용)
 cd backend && ./gradlew build               # 빌드 + 테스트 (CI와 같음)

@@ -8,12 +8,12 @@
 | 00 | [企画書](00-concept.md) | 1 企画 | requirements-analyst | 誰のどんな課題を解くか、提供価値、スコープ | 未着手 |
 | 01 | [要件定義書](01-requirements.md) | 2 要件定義 | requirements-analyst | 機能要件（優先度・受け入れ基準）、非機能要件、対象外 | 未着手 |
 | 02 | [画面設計書](02-screens.md) | 3 基本設計 | architect | 画面一覧、各画面の項目・操作・遷移 | 未着手 |
-| 03 | [API 設計書](03-api.md) | 3 基本設計 | architect | エンドポイント、リクエスト・レスポンス、エラー | 未着手 |
-| 04 | [テーブル設計書](04-tables.md) | 3 基本設計 | db-designer | ER 図、テーブル定義、インデックス | 未着手 |
+| 03 | [API 設計書](03-api.md) | 3〜4 基本設計・詳細設計 | architect | エンドポイント、リクエスト・レスポンス、エラー | 未着手 |
+| 04 | [テーブル設計書](04-tables.md) | 3〜4 基本設計・詳細設計 | db-designer | ER 図、テーブル定義、インデックス | 未着手 |
 | 05 | [バッチ設計書](05-batch.md) | 3 基本設計 | architect | 定期処理、外部データの取り込み | 未着手 |
 | 06 | [クラス設計書](06-classes.md) | 4 詳細設計 | architect | パッケージ、クラスと主なメソッド、例外の扱い | 未着手 |
 
-テストは `docs/test/`（工程6、qa-engineer）、運用手順は `docs/ops/`（工程7、メインの Claude）に置く。
+テストは `docs/test/`（工程6、qa-engineer）、運用手順は `docs/ops/`（工程7、実行 Claude）に置く。
 
 参考資料（企画前の調査）: [KOPIS Open API](../kopis-api.md)
 技術選定の記録: [ADR](../adr/README.md)
@@ -29,9 +29,9 @@
 | 00 | 기획서 | 1 기획 | requirements-analyst | 누구의 어떤 문제를 푸는지, 제공 가치, 범위 | 미착수 |
 | 01 | 요건정의서 | 2 요건정의 | requirements-analyst | 기능 요건(우선순위·완료 기준), 비기능 요건, 대상 외 | 미착수 |
 | 02 | 화면설계서 | 3 기본설계 | architect | 화면 목록, 각 화면의 항목·조작·전이 | 미착수 |
-| 03 | API 설계서 | 3 기본설계 | architect | 엔드포인트, 요청·응답, 오류 | 미착수 |
-| 04 | 테이블 설계서 | 3 기본설계 | db-designer | ER 다이어그램, 테이블 정의, 인덱스 | 미착수 |
+| 03 | API 설계서 | 3~4 기본설계·상세설계 | architect | 엔드포인트, 요청·응답, 오류 | 미착수 |
+| 04 | 테이블 설계서 | 3~4 기본설계·상세설계 | db-designer | ER 다이어그램, 테이블 정의, 인덱스 | 미착수 |
 | 05 | 배치 설계서 | 3 기본설계 | architect | 정기 처리, 외부 데이터 수집 | 미착수 |
 | 06 | 클래스 설계서 | 4 상세설계 | architect | 패키지, 클래스와 주요 메서드, 예외 처리 | 미착수 |
 
-테스트는 `docs/test/`(공정 6, qa-engineer), 운영 절차는 `docs/ops/`(공정 7, 메인 Claude)에 둔다.
+테스트는 `docs/test/`(공정 6, qa-engineer), 운영 절차는 `docs/ops/`(공정 7, 실행 Claude)에 둔다.

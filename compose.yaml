@@ -3,6 +3,10 @@
 #   docker compose --profile app up -d   -> MySQL + Spring Boot container
 # The Angular app (frontend/) will be added as another service.
 # Values come from .env (see .env.example).
+# Run "up" only in the main checkout. The fixed name makes ps/exec from any
+# git worktree target the same containers instead of a per-folder project.
+name: catticket
+
 services:
   db:
     image: mysql:8.4
