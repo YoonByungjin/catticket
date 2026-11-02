@@ -53,7 +53,7 @@ reviewer の判定とゲート:
 |---|---|---|
 | 人間 | 決定、Orca での worktree 作成、ゲートの承認、マージ | すべて |
 | PM（Claude デスクトップの会話） | ロードマップ、要件のインタビュー、Issue の作成とブランチ名の決定、PR レビューの補助 | GitHub Issue（リポジトリのファイルは変更しない） |
-| 実行 Claude（Orca の Claude Code） | サブエージェントの呼び出し、コミット、push、PR の作成、CI の保守、リリース（工程7） | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `docs/ops/`, `README.md`, `docs/design/README.md` と `docs/adr/README.md` のルール・テンプレート部分（状態欄と ADR 一覧の行を除く） |
+| 実行 Claude（Orca の Claude Code） | サブエージェントの呼び出し、コミット、push、PR の作成、CI の保守、リリース（工程7） | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `scripts/`, `docs/ops/`, `README.md`, `docs/design/README.md` と `docs/adr/README.md` のルール・テンプレート部分（状態欄と ADR 一覧の行を除く） |
 | サブエージェント | 指定されたブランチで作業し、コミットまで | 下の表 |
 
 ### エージェント体制
@@ -105,8 +105,10 @@ reviewer の判定とゲート:
 
 - 作業は worktree 単位。worktree は人間が作り、ブランチ名（PM が決めたもの）を作成ダイアログの Advanced で指定する。
 - `.env` は `.worktreeinclude` によって新しい worktree に自動でコピーされる。
-- 実行 Claude がサブエージェントを worktree で隔離して動かすと、`.claude/worktrees/` に一時的な worktree ができる（Orca には表示されず、git の管理外）。用が済んだら実行 Claude が削除する。
-- **MySQL はメインのチェックアウト（`C:\workspace\catticket`）で1つだけ起動する。** worktree で `docker compose up` しない（別のコンテナを作ろうとしてポートが衝突する）。各 worktree は `127.0.0.1:3306` の同じ MySQL に接続する。`compose.yaml` の `name: catticket` により、worktree からの `docker compose ps` / `exec` も同じコンテナを指す。
+- 実行 Claude がサブエージェントを worktree で隔離して動かすと、`.claude/worktrees/` に一時的な worktree ができる（Orca には表示されない。`.gitignore` の対象だが、git の worktree として登録され `worktree-agent-*` ブランチもできる）。用が済んだら実行 Claude が `git worktree unlock` → `git worktree remove` → ブランチ削除の順で消す。
+- 一時 worktree は実行中のブランチではなく `main` から作られる。**マージ前の変更（特にエージェント定義）を試すときは隔離を使わない。** 人間が Orca でそのブランチの worktree を作り、その worktree で Claude Code を起動（定義を変えた場合は再起動）してから試す。
+- サブエージェントはバックグラウンドで動くため、権限の承認を求められない。DB の確認は承認不要に設定した `scripts/db-inspect.sh`（読み取り専用）を使う。許可するコマンドは `.claude/settings.json` で管理する。
+- **MySQL はメインのチェックアウト（`C:\workspace\catticket`）で1つだけ起動する。** worktree で `docker compose up` しない（同じプロジェクトとして扱われ、メインの MySQL コンテナが作り直されることがある。他の worktree で実行中のテストが切れる）。各 worktree は `127.0.0.1:3306` の同じ MySQL に接続する。`compose.yaml` の `name: catticket` により、worktree からの `docker compose ps` / `exec` も同じコンテナを指す。
 - テスト用 DB `test_catticket` は共有なので、**複数の worktree で同時に `./gradlew test` を実行しない**。実行 Claude は同時に1つだけ実行させる。並行実装（工程5）の前に worktree ごとの DB 名を決める。
 - Claude Code の自動メモリは作業フォルダ（worktree）ごとに別になる。続けて必要な情報は自動メモリに頼らず、`CLAUDE.md`・設計書・ADR に書く。
 
@@ -156,6 +158,7 @@ cd backend && ./gradlew bootRun             # アプリ起動（http://127.0.0.1
 cd backend && ./gradlew test                # テスト（MySQL の起動が必要。test_catticket を使う）
 cd backend && ./gradlew build               # ビルド + テスト（CI と同じ）
 docker compose --profile app up -d --build  # アプリもコンテナで起動
+bash scripts/db-inspect.sh tables          # テスト用 DB のテーブル一覧（読み取り専用。worktree からも可）
 ```
 
 Windows（PowerShell）は `.\gradlew.bat`。
@@ -233,7 +236,7 @@ reviewer의 판정과 관문:
 |---|---|---|
 | 사람 | 결정, Orca에서 worktree 생성, 관문 승인, 머지 | 전부 |
 | PM(Claude 데스크톱 대화) | 로드맵, 요건 인터뷰, Issue 작성과 브랜치 이름 결정, PR 리뷰 보조 | GitHub Issue(저장소 파일은 바꾸지 않음) |
-| 실행 Claude(Orca의 Claude Code) | 서브 에이전트 호출, 커밋, push, PR 생성, CI 관리, 릴리스(공정 7) | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `docs/ops/`, `README.md`, `docs/design/README.md`와 `docs/adr/README.md`의 규칙·템플릿 부분(상태란과 ADR 목록의 행은 제외) |
+| 실행 Claude(Orca의 Claude Code) | 서브 에이전트 호출, 커밋, push, PR 생성, CI 관리, 릴리스(공정 7) | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `scripts/`, `docs/ops/`, `README.md`, `docs/design/README.md`와 `docs/adr/README.md`의 규칙·템플릿 부분(상태란과 ADR 목록의 행은 제외) |
 | 서브 에이전트 | 지정된 브랜치에서 작업하고 커밋까지 | 아래 표 |
 
 ### 에이전트 체제
@@ -285,8 +288,10 @@ reviewer의 판정과 관문:
 
 - 작업은 worktree 단위. worktree는 사람이 만들고, 브랜치 이름(PM이 정한 것)을 생성 화면의 Advanced에서 지정한다.
 - `.env`는 `.worktreeinclude`에 의해 새 worktree에 자동으로 복사된다.
-- 실행 Claude가 서브 에이전트를 worktree로 격리해 실행하면 `.claude/worktrees/`에 임시 worktree가 생긴다(Orca에는 보이지 않고 git 관리 밖). 다 쓰면 실행 Claude가 지운다.
-- **MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 하나만 실행한다.** worktree에서 `docker compose up`을 하지 않는다(다른 컨테이너를 만들려다 포트가 충돌함). 각 worktree는 `127.0.0.1:3306`의 같은 MySQL에 접속한다. `compose.yaml`의 `name: catticket` 덕분에 worktree에서 실행한 `docker compose ps`/`exec`도 같은 컨테이너를 가리킨다.
+- 실행 Claude가 서브 에이전트를 worktree로 격리해 실행하면 `.claude/worktrees/`에 임시 worktree가 생긴다(Orca에는 보이지 않음. `.gitignore` 대상이지만 git worktree로 등록되고 `worktree-agent-*` 브랜치도 생긴다). 다 쓰면 실행 Claude가 `git worktree unlock` → `git worktree remove` → 브랜치 삭제 순서로 지운다.
+- 임시 worktree는 실행 중인 브랜치가 아니라 `main`에서 만들어진다. **머지 전 변경(특히 에이전트 정의)을 시험할 때는 격리를 쓰지 않는다.** 사람이 Orca에서 그 브랜치의 worktree를 만들고, 그 worktree에서 Claude Code를 실행(정의를 바꿨으면 재시작)한 뒤 시험한다.
+- 서브 에이전트는 백그라운드에서 돌아서 권한 승인을 받을 수 없다. DB 확인은 승인 없이 쓰도록 설정한 `scripts/db-inspect.sh`(읽기 전용)를 쓴다. 허용하는 명령은 `.claude/settings.json`에서 관리한다.
+- **MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 하나만 실행한다.** worktree에서 `docker compose up`을 하지 않는다(같은 프로젝트로 인식되어 메인의 MySQL 컨테이너가 다시 만들어질 수 있음. 다른 worktree에서 실행 중인 테스트가 끊김). 각 worktree는 `127.0.0.1:3306`의 같은 MySQL에 접속한다. `compose.yaml`의 `name: catticket` 덕분에 worktree에서 실행한 `docker compose ps`/`exec`도 같은 컨테이너를 가리킨다.
 - 테스트용 DB `test_catticket`은 공유이므로 **여러 worktree에서 동시에 `./gradlew test`를 실행하지 않는다**. 실행 Claude는 한 번에 하나만 실행시킨다. 병렬 구현(공정 5) 전에 worktree별 DB 이름을 정한다.
 - Claude Code의 자동 메모리는 작업 폴더(worktree)마다 따로 생긴다. 계속 필요한 정보는 자동 메모리에 기대지 말고 `CLAUDE.md`·설계서·ADR에 쓴다.
 
@@ -336,6 +341,7 @@ cd backend && ./gradlew bootRun             # 앱 실행 (http://127.0.0.1:8080)
 cd backend && ./gradlew test                # 테스트 (MySQL 실행 필요. test_catticket 사용)
 cd backend && ./gradlew build               # 빌드 + 테스트 (CI와 같음)
 docker compose --profile app up -d --build  # 앱도 컨테이너로 실행
+bash scripts/db-inspect.sh tables          # 테스트용 DB의 테이블 목록(읽기 전용. worktree에서도 가능)
 ```
 
 Windows(PowerShell)는 `.\gradlew.bat`.

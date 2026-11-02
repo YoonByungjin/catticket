@@ -35,7 +35,7 @@ model: opus
 
 SQL を書いたら、実際の MySQL で適用できることを確認する。`./gradlew test` はテスト起動時に Flyway でテスト用 DB（`test_catticket`）へマイグレーションを適用するので、これで検証する（`bootRun` は終了しないプロセスなので使わない）。
 
-- MySQL はメインのチェックアウト（`C:\workspace\catticket`）で起動済みの前提。**`docker compose up` は実行しない**（worktree で実行するとポートが衝突する）。
+- MySQL はメインのチェックアウト（`C:\workspace\catticket`）で起動済みの前提。**`docker compose up` は実行しない**（worktree で実行すると、同じプロジェクトとして扱われ、メインの MySQL コンテナが作り直されることがある。実行中のテストが切れる）。
 - 起動しているかは `docker compose ps db` で確認する。起動していなければ作業を止めて報告する。
 - テスト用 DB `test_catticket` は全 worktree で共有。**他の worktree でテストが実行中かもしれないときは実行せず、実行 Claude に確認する。**
 
@@ -44,10 +44,12 @@ docker compose ps db                  # 起動確認（up はしない）
 cd backend && ./gradlew test          # 失敗したら Flyway のエラーを確認して直す
 ```
 
-適用後のテーブル定義は次で確認する（`compose.yaml` の `name: catticket` により、worktree からでもメインの MySQL コンテナを指す）。
+適用後のテーブル定義は読み取り専用の `scripts/db-inspect.sh` で確認する（承認なしで実行できるよう許可済み。`docker compose exec` は直接使わない）。
 
 ```bash
-docker compose exec db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot test_catticket -e "SHOW CREATE TABLE {テーブル名}\G"'
+bash scripts/db-inspect.sh tables             # テーブル一覧
+bash scripts/db-inspect.sh create {テーブル名}   # SHOW CREATE TABLE
+bash scripts/db-inspect.sh history            # Flyway の適用履歴
 ```
 
 開発 PC の注意: Java 実行時は環境変数 `JDK_JAVA_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\jtmp` が必要。
@@ -98,7 +100,7 @@ docker compose exec db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot test
 
 SQL을 쓰면 실제 MySQL에 적용되는지 확인한다. `./gradlew test`는 테스트 시작 시 Flyway로 테스트용 DB(`test_catticket`)에 마이그레이션을 적용하므로 이것으로 검증한다(`bootRun`은 끝나지 않는 프로세스라 쓰지 않는다).
 
-- MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 이미 실행 중이라고 전제한다. **`docker compose up`은 실행하지 않는다**(worktree에서 실행하면 포트가 충돌한다).
+- MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 이미 실행 중이라고 전제한다. **`docker compose up`은 실행하지 않는다**(worktree에서 실행하면 같은 프로젝트로 인식되어 메인의 MySQL 컨테이너가 다시 만들어질 수 있다. 실행 중인 테스트가 끊긴다).
 - 실행 중인지는 `docker compose ps db`로 확인한다. 실행 중이 아니면 작업을 멈추고 보고한다.
 - 테스트용 DB `test_catticket`은 모든 worktree가 공유한다. **다른 worktree에서 테스트가 실행 중일 수 있을 때는 실행하지 말고 실행 Claude에게 확인한다.**
 
@@ -107,10 +109,12 @@ docker compose ps db                  # 실행 확인 (up은 하지 않음)
 cd backend && ./gradlew test          # 실패하면 Flyway 오류를 확인해서 고친다
 ```
 
-적용 후의 테이블 정의는 다음으로 확인한다(`compose.yaml`의 `name: catticket` 덕분에 worktree에서도 메인의 MySQL 컨테이너를 가리킨다).
+적용 후의 테이블 정의는 읽기 전용 `scripts/db-inspect.sh`로 확인한다(승인 없이 실행되도록 허용해 둠. `docker compose exec`는 직접 쓰지 않는다).
 
 ```bash
-docker compose exec db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot test_catticket -e "SHOW CREATE TABLE {테이블명}\G"'
+bash scripts/db-inspect.sh tables             # 테이블 목록
+bash scripts/db-inspect.sh create {테이블명}     # SHOW CREATE TABLE
+bash scripts/db-inspect.sh history            # Flyway 적용 이력
 ```
 
 개발 PC 주의: Java 실행 시 환경변수 `JDK_JAVA_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\jtmp`가 필요하다.
