@@ -53,7 +53,7 @@ reviewer の判定とゲート:
 |---|---|---|
 | 人間 | 決定、Orca での worktree 作成、ゲートの承認、マージ | すべて |
 | PM（Claude デスクトップの会話） | ロードマップ、要件のインタビュー、Issue の作成とブランチ名の決定、PR レビューの補助 | GitHub Issue（リポジトリのファイルは変更しない） |
-| 実行 Claude（Orca の Claude Code） | サブエージェントの呼び出し、コミット、push、PR の作成、CI の保守、リリース（工程7） | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `scripts/`, `docs/ops/`, `docs/learning/`（人間に頼まれた下書き）, `README.md`, `docs/design/README.md` と `docs/adr/README.md` のルール・テンプレート部分（状態欄と ADR 一覧の行を除く） |
+| 実行 Claude（Orca の Claude Code） | サブエージェントの呼び出し、コミット、push、PR の作成、CI の保守、リリース（工程7） | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `scripts/`, `docs/ops/`, `docs/learning/`（README のルール・テンプレート部分と、人間に頼まれた下書き・一覧の行）, `README.md`, `docs/design/README.md` と `docs/adr/README.md` のルール・テンプレート部分（状態欄と ADR 一覧の行を除く） |
 | サブエージェント | 指定されたブランチで作業し、コミットまで | 下の表 |
 
 ### エージェント体制
@@ -177,12 +177,12 @@ Windows（PowerShell）は `.\gradlew.bat`。
 
 ### 学習記録
 
-Spring Boot・Angular などの学習の記録（企画書 U-03）。**サービスの仕様ではない**（設計書の代わりにしない）。
+Spring Boot・Angular などの学習の記録（企画書 D-13、Issue #7 の決定 U-03）。**サービスの仕様ではない**（設計書の代わりにしない）。
 
 - 置き場所: `docs/learning/`。1 回の学習につき 1 ファイル、名前は `{YYYY-MM-DD}-{内容}.md`（例: `2026-11-05-mybatis-mapper.md`）。
-- 書き方: `docs/learning/README.md` のテンプレート（学んだこと / つまずいたことと解決 / 関連する Issue・PR・コード / 次に調べること）に従い、README の一覧に1行追加する。
+- 書き方: `docs/learning/README.md` のテンプレート（冒頭に日付・分野・関連する Issue・PR・コード、本文は 学んだこと / つまずいたことと解決 / 次に調べること）に従い、README の一覧に1行追加する。
 - 書く人: 人間。実行 Claude は人間に頼まれたときに、作業の内容（Issue・PR・つまずき）から下書きを作る。サブエージェントは書かない。
-- コミット: 関係する作業のブランチに含めてよい。学習記録だけのときは `docs/learning-{内容}` ブランチで PR を作る。
+- コミット: 関係する作業のブランチに含めてよい。学習記録だけのときは、Git の流れの例外として **Issue なしで** `docs/learning-{内容}` ブランチ（名前は人間が決める）で PR を作る。
 
 ### 用語
 
@@ -246,7 +246,7 @@ reviewer의 판정과 관문:
 |---|---|---|
 | 사람 | 결정, Orca에서 worktree 생성, 관문 승인, 머지 | 전부 |
 | PM(Claude 데스크톱 대화) | 로드맵, 요건 인터뷰, Issue 작성과 브랜치 이름 결정, PR 리뷰 보조 | GitHub Issue(저장소 파일은 바꾸지 않음) |
-| 실행 Claude(Orca의 Claude Code) | 서브 에이전트 호출, 커밋, push, PR 생성, CI 관리, 릴리스(공정 7) | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `scripts/`, `docs/ops/`, `docs/learning/`(사람이 부탁한 초안), `README.md`, `docs/design/README.md`와 `docs/adr/README.md`의 규칙·템플릿 부분(상태란과 ADR 목록의 행은 제외) |
+| 실행 Claude(Orca의 Claude Code) | 서브 에이전트 호출, 커밋, push, PR 생성, CI 관리, 릴리스(공정 7) | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `scripts/`, `docs/ops/`, `docs/learning/`(README의 규칙·템플릿 부분과, 사람이 부탁한 초안·목록 행), `README.md`, `docs/design/README.md`와 `docs/adr/README.md`의 규칙·템플릿 부분(상태란과 ADR 목록의 행은 제외) |
 | 서브 에이전트 | 지정된 브랜치에서 작업하고 커밋까지 | 아래 표 |
 
 ### 에이전트 체제
@@ -370,12 +370,12 @@ Windows(PowerShell)는 `.\gradlew.bat`.
 
 ### 학습 기록
 
-Spring Boot·Angular 등의 학습 기록(기획서 U-03). **서비스의 사양이 아니다**(설계서 대신 쓰지 않는다).
+Spring Boot·Angular 등의 학습 기록(기획서 D-13, Issue #7 결정 U-03). **서비스의 사양이 아니다**(설계서 대신 쓰지 않는다).
 
 - 위치: `docs/learning/`. 학습 1회에 파일 1개, 이름은 `{YYYY-MM-DD}-{내용}.md` (예: `2026-11-05-mybatis-mapper.md`).
-- 쓰는 법: `docs/learning/README.md`의 템플릿(배운 것 / 막힌 것과 해결 / 관련 Issue·PR·코드 / 다음에 알아볼 것)을 따르고, README 목록에 한 줄 추가한다.
+- 쓰는 법: `docs/learning/README.md`의 템플릿(머리에 날짜·분야·관련 Issue·PR·코드, 본문은 배운 것 / 막힌 것과 해결 / 다음에 알아볼 것)을 따르고, README 목록에 한 줄 추가한다.
 - 쓰는 사람: 사람. 실행 Claude는 사람이 부탁할 때 작업 내용(Issue·PR·막힌 점)으로 초안을 만든다. 서브 에이전트는 쓰지 않는다.
-- 커밋: 관련 작업 브랜치에 포함해도 된다. 학습 기록만 있을 때는 `docs/learning-{내용}` 브랜치로 PR을 만든다.
+- 커밋: 관련 작업 브랜치에 포함해도 된다. 학습 기록만 있을 때는 Git 흐름의 예외로 **Issue 없이** `docs/learning-{내용}` 브랜치(이름은 사람이 정한다)로 PR을 만든다.
 
 ### 용어
 

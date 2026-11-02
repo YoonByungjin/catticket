@@ -1,6 +1,6 @@
 # 学習記録
 
-Spring Boot・Angular などの学習の記録（企画書 U-03）。**サービスの仕様ではない。** ルールは `CLAUDE.md` の「学習記録」を参照。
+Spring Boot・Angular などの学習の記録（企画書 D-13、Issue #7 の決定 U-03）。**サービスの仕様ではない。** ルールは `CLAUDE.md` の「学習記録」を参照。
 
 - 1 回の学習につき 1 ファイル: `{YYYY-MM-DD}-{内容}.md`（例: `2026-11-05-mybatis-mapper.md`）
 - 書いたら下の一覧に 1 行追加する（新しいものを上に）
@@ -37,7 +37,7 @@ Spring Boot・Angular などの学習の記録（企画書 U-03）。**サービ
 
 ## 한국어
 
-Spring Boot·Angular 등의 학습 기록(기획서 U-03). **서비스의 사양이 아니다.** 규칙은 `CLAUDE.md`의 "학습 기록" 참고.
+Spring Boot·Angular 등의 학습 기록(기획서 D-13, Issue #7 결정 U-03). **서비스의 사양이 아니다.** 규칙은 `CLAUDE.md`의 "학습 기록" 참고.
 
 - 학습 1회에 파일 1개: `{YYYY-MM-DD}-{내용}.md` (예: `2026-11-05-mybatis-mapper.md`)
 - 쓰면 위 목록에 한 줄 추가한다 (새 것을 위에)
