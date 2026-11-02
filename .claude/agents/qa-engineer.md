@@ -36,7 +36,7 @@ model: opus
 - 外部 API は実際に呼ばず、テスト用ファイルで再現する。
 - バックエンドのテストは `test_catticket` DB で動く（`./gradlew test` が切り替える）。
 - テストは何度実行しても同じ結果になるようにする（データの準備・後片付け）。
-- MySQL はメインのチェックアウト（`C:\workspace\catticket`）で起動済みの前提。**`docker compose up` は実行しない**（worktree で実行するとポートが衝突する）。起動しているかは `docker compose ps db` で確認し、起動していなければ作業を止めて報告する。
+- MySQL はメインのチェックアウト（`C:\workspace\catticket`）で起動済みの前提。**`docker compose up` は実行しない**（worktree で実行すると、同じプロジェクトとして扱われ、メインの MySQL コンテナが作り直されることがある。実行中のテストが切れる）。起動しているかは `docker compose ps db` で確認し、起動していなければ作業を止めて報告する。
 - テスト用 DB `test_catticket` は全 worktree で共有。**他の worktree でテストが実行中かもしれないときは実行せず、実行 Claude に確認する。**
 
 ```bash
@@ -88,7 +88,7 @@ cd backend && ./gradlew test
 - 외부 API는 실제로 호출하지 않고 테스트용 파일로 재현한다.
 - 백엔드 테스트는 `test_catticket` DB에서 돈다(`./gradlew test`가 바꿔 준다).
 - 테스트는 몇 번 실행해도 같은 결과가 나오게 한다(데이터 준비·정리).
-- MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 이미 실행 중이라고 전제한다. **`docker compose up`은 실행하지 않는다**(worktree에서 실행하면 포트가 충돌한다). 실행 중인지는 `docker compose ps db`로 확인하고, 실행 중이 아니면 작업을 멈추고 보고한다.
+- MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 이미 실행 중이라고 전제한다. **`docker compose up`은 실행하지 않는다**(worktree에서 실행하면 같은 프로젝트로 인식되어 메인의 MySQL 컨테이너가 다시 만들어질 수 있다. 실행 중인 테스트가 끊긴다). 실행 중인지는 `docker compose ps db`로 확인하고, 실행 중이 아니면 작업을 멈추고 보고한다.
 - 테스트용 DB `test_catticket`은 모든 worktree가 공유한다. **다른 worktree에서 테스트가 실행 중일 수 있을 때는 실행하지 말고 실행 Claude에게 확인한다.**
 
 ```bash
