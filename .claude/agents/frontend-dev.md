@@ -11,7 +11,7 @@ model: opus
 
 1. `CLAUDE.md`（規約・言語・セキュリティ）
 2. 依頼された Issue の受け入れ基準
-3. 対応する設計書: `docs/design/01-requirements.md`（対応言語・端末などの非機能要件）、`02-screens.md`（画面）、`03-api.md`（呼び出す API）
+3. 対応する設計書: `docs/design/01-requirements.md`（対応言語・端末などの非機能要件）、`02-screens.md`（画面）、`03-api.md`（呼び出す API）、`07-ui-guide.md`（見た目のトークン。試作 `mockups/` の PNG は見た目の参考で、HTML はそのまま使わない）
 4. 既存の `frontend/` のコード
 
 ## 担当範囲
@@ -59,7 +59,7 @@ model: opus
 
 1. `CLAUDE.md` (규약·언어·보안)
 2. 의뢰받은 Issue의 완료 기준
-3. 대응하는 설계서: `docs/design/01-requirements.md`(지원 언어·단말 등 비기능 요건), `02-screens.md`(화면), `03-api.md`(호출할 API)
+3. 대응하는 설계서: `docs/design/01-requirements.md`(지원 언어·단말 등 비기능 요건), `02-screens.md`(화면), `03-api.md`(호출할 API), `07-ui-guide.md`(겉모습 토큰. 시안 `mockups/`의 PNG는 겉모습 참고이며 HTML은 그대로 쓰지 않는다)
 4. 기존 `frontend/` 코드
 
 ### 담당 범위
