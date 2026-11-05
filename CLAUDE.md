@@ -33,11 +33,13 @@ AI（Claude Code とそのサブエージェント）と人間が同じルール
 | 0 | ハーネス構築 | ルール、エージェント、テンプレート、CI | ① 定義どうしに矛盾がない（reviewer 承認） ② 各エージェントを1回試し、担当外のファイルを変更せず、決められた形式で報告した ③ CI 通過 |
 | 1 | 企画 | `00-concept.md` | 誰のどんな課題を解くかが一文で書かれ、スコープ（やる / やらない）と未決事項がある |
 | 2 | 要件定義 | `01-requirements.md` | 全機能に ID・優先度（Must / Should / Could）・テストで確認できる受け入れ基準がある。未決事項が解消されている |
-| 3 | 基本設計 | `02`〜`05`（画面・API・テーブル・バッチ）、ADR | 要件 ID → 画面 → API → テーブルの対応表に漏れ・余分がない |
+| 3 | 基本設計 | `02`〜`05`（画面・API・テーブル・バッチ）、`07-ui-guide.md`（UI デザインガイド）と試作（`docs/design/mockups/`）、ADR | 要件 ID → 画面 → API → テーブルの対応表に漏れ・余分がない。`02` の画面 ID ごとに試作または `07` の該当箇所との対応があり、`07` が UI ライブラリの ADR と矛盾しない。人間が試作を確認し、決定が Issue に記録されている |
 | 4 | 詳細設計 | `04`（テーブル定義）、`03`（API 仕様の詳細）、`06-classes.md`（クラス設計） | 実装者が質問せずに作れる粒度 |
 | 5 | 実装 | Issue 単位の PR（コード + テスト） | CI 通過 + reviewer 承認 + 人間のマージ |
 | 6 | テスト | `docs/test/`、結合・E2E テスト | 要件の全項目の合否が出ている |
 | 7 | リリース | デプロイ、`docs/ops/`（運用手順） | 本番 URL で動作する |
+
+工程3の順番: ADR → `02`・`03`・`05`（architect）→ `07`・試作（ui-designer）→ `04`（db-designer）。
 
 前の工程の成果物が変わったら、後ろの成果物も見直す。
 
@@ -52,7 +54,7 @@ reviewer の判定とゲート:
 | 担当 | 役割 | 書き込んでよい場所 |
 |---|---|---|
 | 人間 | 決定、Orca での worktree 作成、ゲートの承認、マージ | すべて |
-| PM（Claude デスクトップの会話） | ロードマップ、要件のインタビュー、Issue の作成とブランチ名の決定、PR レビューの補助 | GitHub Issue（リポジトリのファイルは変更しない） |
+| PM（Claude デスクトップの会話） | ロードマップ、要件のインタビュー、Issue の作成とブランチ名の決定、PR レビューの補助、試作を人間に見せて確認を取り、決定を Issue にコメントする | GitHub Issue（リポジトリのファイルは変更しない） |
 | 実行 Claude（Orca の Claude Code） | サブエージェントの呼び出し、コミット、push、PR の作成、CI の保守、リリース（工程7） | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `scripts/`, `docs/ops/`, `docs/learning/`（README のルール・テンプレート部分と、人間に頼まれた下書き・一覧の行）, `README.md`, `docs/design/README.md` と `docs/adr/README.md` のルール・テンプレート部分（状態欄と ADR 一覧の行を除く） |
 | サブエージェント | 指定されたブランチで作業し、コミットまで | 下の表 |
 
@@ -64,6 +66,7 @@ reviewer の判定とゲート:
 |---|---|---|---|
 | `requirements-analyst` | 1〜2 | 企画書・要件定義書 | `docs/design/00-concept.md`, `01-requirements.md`, `docs/design/README.md` の状態欄 |
 | `architect` | 3〜4 | アーキテクチャ、画面・API・バッチ・クラス設計、ADR | `docs/design/02`, `03`, `05`, `06`, `docs/design/README.md` の状態欄, `docs/adr/` |
+| `ui-designer` | 3 | UI デザインガイド、画面の試作（Google Stitch。手順は `.claude/skills/stitch-workflow/`） | `docs/design/07-ui-guide.md`, `docs/design/mockups/`, `docs/design/README.md` の状態欄 |
 | `db-designer` | 3〜4 | ER 図、テーブル定義、Flyway SQL | `docs/design/04-tables.md`, `docs/design/README.md` の状態欄, `backend/src/main/resources/db/migration/` |
 | `backend-dev` | 5 | Spring Boot + MyBatis の実装と単体テスト | `backend/`（`db/migration/` と `src/test/java/com/catticket/it/` を除く） |
 | `frontend-dev` | 5 | Angular の実装と単体テスト | `frontend/`（`frontend/e2e/` を除く）。`frontend/` を作る PR では `.github/workflows/ci.yml` に frontend ジョブを追加する |
@@ -140,6 +143,7 @@ reviewer の判定とゲート:
 
 - 秘密情報（DB パスワード、API キーなど）はコードに書かない。`.env` → 環境変数で渡す。
 - サーバー用の API キーはフロントエンドに出さない。ブラウザに出るキーは提供元の管理画面で利用制限をかける。
+- 開発ツールの API キー（Stitch など）は Claude Code の**ユーザー設定（`claude mcp add -s user`）にだけ**置く。リポジトリは公開されているので、`.mcp.json`（プロジェクト設定）・`.claude/settings.json`・ドキュメントにキーを書かない。
 
 ## テスト
 
@@ -226,11 +230,13 @@ AI(Claude Code와 서브 에이전트)와 사람이 같은 규칙으로 개발�
 | 0 | 하네스 구축 | 규칙, 에이전트, 템플릿, CI | ① 정의 간 모순 없음(reviewer 승인) ② 각 에이전트를 한 번씩 시험해 담당 밖 파일을 바꾸지 않고 정해진 형식으로 보고함 ③ CI 통과 |
 | 1 | 기획 | `00-concept.md` | 누구의 어떤 문제를 푸는지 한 문장으로 쓰여 있고, 범위(하는 것/안 하는 것)와 미결 사항이 있음 |
 | 2 | 요건정의 | `01-requirements.md` | 모든 기능에 ID·우선순위(Must/Should/Could)·테스트로 확인 가능한 완료 기준이 있음. 미결 사항이 해소됨 |
-| 3 | 기본설계 | `02`~`05`(화면·API·테이블·배치), ADR | 요건 ID → 화면 → API → 테이블 대응표에 누락·불필요한 것이 없음 |
+| 3 | 기본설계 | `02`~`05`(화면·API·테이블·배치), `07-ui-guide.md`(UI 디자인 가이드)와 시안(`docs/design/mockups/`), ADR | 요건 ID → 화면 → API → 테이블 대응표에 누락·불필요한 것이 없음. `02`의 화면 ID마다 시안 또는 `07`의 해당 부분과의 대응이 있고, `07`이 UI 라이브러리 ADR과 모순되지 않음. 사람이 시안을 확인했고 결정이 Issue에 기록되어 있음 |
 | 4 | 상세설계 | `04`(테이블 정의), `03`(API 사양 상세), `06-classes.md`(클래스 설계) | 구현자가 질문 없이 만들 수 있는 수준 |
 | 5 | 구현 | Issue 단위 PR (코드 + 테스트) | CI 통과 + reviewer 승인 + 사람의 머지 |
 | 6 | 테스트 | `docs/test/`, 결합·E2E 테스트 | 요건 전 항목의 합격 여부가 나옴 |
 | 7 | 릴리스 | 배포, `docs/ops/`(운영 절차) | 운영(프로덕션) URL에서 동작 |
+
+공정 3의 순서: ADR → `02`·`03`·`05`(architect) → `07`·시안(ui-designer) → `04`(db-designer).
 
 앞 공정의 산출물이 바뀌면 뒤 산출물도 다시 검토한다.
 
@@ -245,7 +251,7 @@ reviewer의 판정과 관문:
 | 담당 | 역할 | 써도 되는 곳 |
 |---|---|---|
 | 사람 | 결정, Orca에서 worktree 생성, 관문 승인, 머지 | 전부 |
-| PM(Claude 데스크톱 대화) | 로드맵, 요건 인터뷰, Issue 작성과 브랜치 이름 결정, PR 리뷰 보조 | GitHub Issue(저장소 파일은 바꾸지 않음) |
+| PM(Claude 데스크톱 대화) | 로드맵, 요건 인터뷰, Issue 작성과 브랜치 이름 결정, PR 리뷰 보조, 시안을 사람에게 보여주고 확인을 받아 결정을 Issue에 코멘트한다 | GitHub Issue(저장소 파일은 바꾸지 않음) |
 | 실행 Claude(Orca의 Claude Code) | 서브 에이전트 호출, 커밋, push, PR 생성, CI 관리, 릴리스(공정 7) | `.github/`, `CLAUDE.md`, `.claude/`, `compose.yaml`, `.gitignore`, `.worktreeinclude`, `scripts/`, `docs/ops/`, `docs/learning/`(README의 규칙·템플릿 부분과, 사람이 부탁한 초안·목록 행), `README.md`, `docs/design/README.md`와 `docs/adr/README.md`의 규칙·템플릿 부분(상태란과 ADR 목록의 행은 제외) |
 | 서브 에이전트 | 지정된 브랜치에서 작업하고 커밋까지 | 아래 표 |
 
@@ -257,6 +263,7 @@ reviewer의 판정과 관문:
 |---|---|---|---|
 | `requirements-analyst` | 1~2 | 기획서·요건정의서 | `docs/design/00-concept.md`, `01-requirements.md`, `docs/design/README.md`의 상태란 |
 | `architect` | 3~4 | 아키텍처, 화면·API·배치·클래스 설계, ADR | `docs/design/02`, `03`, `05`, `06`, `docs/design/README.md`의 상태란, `docs/adr/` |
+| `ui-designer` | 3 | UI 디자인 가이드, 화면 시안(Google Stitch. 절차는 `.claude/skills/stitch-workflow/`) | `docs/design/07-ui-guide.md`, `docs/design/mockups/`, `docs/design/README.md`의 상태란 |
 | `db-designer` | 3~4 | ER 다이어그램, 테이블 정의, Flyway SQL | `docs/design/04-tables.md`, `docs/design/README.md`의 상태란, `backend/src/main/resources/db/migration/` |
 | `backend-dev` | 5 | Spring Boot + MyBatis 구현과 단위 테스트 | `backend/` (`db/migration/`와 `src/test/java/com/catticket/it/` 제외) |
 | `frontend-dev` | 5 | Angular 구현과 단위 테스트 | `frontend/` (`frontend/e2e/` 제외). `frontend/`를 만드는 PR에서 `.github/workflows/ci.yml`에 frontend 잡 추가 |
@@ -333,6 +340,7 @@ reviewer의 판정과 관문:
 
 - 비밀 정보(DB 비밀번호, API 키 등)는 코드에 쓰지 않는다. `.env` → 환경변수로 전달.
 - 서버용 API 키는 프론트엔드에 노출하지 않는다. 브라우저에 노출되는 키는 제공처 관리 화면에서 사용 제한을 건다.
+- 개발 도구의 API 키(Stitch 등)는 Claude Code의 **사용자 설정(`claude mcp add -s user`)에만** 둔다. 저장소가 공개되어 있으므로 `.mcp.json`(프로젝트 설정)·`.claude/settings.json`·문서에 키를 쓰지 않는다.
 
 ## 테스트
 

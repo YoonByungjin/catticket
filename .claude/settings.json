@@ -2,7 +2,21 @@
   "permissions": {
     "allow": [
       "Bash(docker compose ps:*)",
-      "Bash(bash scripts/db-inspect.sh:*)"
+      "Bash(bash scripts/db-inspect.sh:*)",
+      "Bash(python -I scripts/stitch-save.py:*)",
+      "mcp__stitch__create_project",
+      "mcp__stitch__get_project",
+      "mcp__stitch__list_projects",
+      "mcp__stitch__list_screens",
+      "mcp__stitch__get_screen",
+      "mcp__stitch__create_design_system",
+      "mcp__stitch__update_design_system",
+      "mcp__stitch__list_design_systems",
+      "mcp__stitch__apply_design_system",
+      "mcp__stitch__generate_screen_from_text",
+      "mcp__stitch__edit_screens",
+      "mcp__stitch__generate_variants",
+      "mcp__stitch__download_file"
     ]
   }
 }

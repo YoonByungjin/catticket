@@ -28,7 +28,7 @@ labels: design
 
 ## 担当
 
-<!-- requirements-analyst / architect / db-designer -->
+<!-- requirements-analyst / architect / ui-designer / db-designer -->
 
 ---
 
@@ -56,4 +56,4 @@ labels: design
 
 ## 담당
 
-<!-- requirements-analyst / architect / db-designer -->
+<!-- requirements-analyst / architect / ui-designer / db-designer -->
