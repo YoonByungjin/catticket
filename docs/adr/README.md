@@ -23,8 +23,8 @@
 | [0011](0011-bot-check-recaptcha.md) | 自動操作ではないことの確認は Google reCAPTCHA（課金を有効にしない専用プロジェクト）で行う | 採用 |
 | [0012](0012-mail-gmail-smtp.md) | メールは専用の Gmail アカウントから SMTP（アプリパスワード）で送る | 採用 |
 | [0013](0013-auth-server-session.md) | 認証はサーバーのセッション（Spring Security）で行う | 採用 |
-| [0014](0014-ui-angular-material.md) | UI コンポーネントライブラリは Angular Material（+ Angular CDK）を使う | 提案 |
-| [0015](0015-ui-design-google-stitch-mcp.md) | 画面のデザインは Google Stitch を公式の MCP サーバー経由で使い、使えないときは Angular Material の標準の見た目で作る | 提案 |
+| [0014](0014-ui-angular-material.md) | UI コンポーネントライブラリは Angular Material（+ Angular CDK）を使う | 採用 |
+| [0015](0015-ui-design-google-stitch-mcp.md) | 画面のデザインは Google Stitch を公式の MCP サーバー経由で使い、使えないときは Angular Material の標準の見た目で作る | 採用 |
 
 ## テンプレート
 
@@ -73,5 +73,5 @@
 | 0011 | 자동 조작이 아님을 확인하는 것은 Google reCAPTCHA(결제를 켜지 않은 전용 프로젝트)로 한다 | 채택 |
 | 0012 | 메일은 전용 Gmail 계정에서 SMTP(앱 비밀번호)로 보낸다 | 채택 |
 | 0013 | 인증은 서버 세션(Spring Security)으로 한다 | 채택 |
-| 0014 | UI 컴포넌트 라이브러리는 Angular Material(+ Angular CDK)을 쓴다 | 제안 |
-| 0015 | 화면 디자인은 Google Stitch를 공식 MCP 서버를 통해 쓰고, 쓸 수 없을 때는 Angular Material 기본 겉모습으로 만든다 | 제안 |
+| 0014 | UI 컴포넌트 라이브러리는 Angular Material(+ Angular CDK)을 쓴다 | 채택 |
+| 0015 | 화면 디자인은 Google Stitch를 공식 MCP 서버를 통해 쓰고, 쓸 수 없을 때는 Angular Material 기본 겉모습으로 만든다 | 채택 |
