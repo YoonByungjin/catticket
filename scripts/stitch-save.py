@@ -23,7 +23,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 MOCKUPS = (ROOT / "docs" / "design" / "mockups").resolve()
 # 画像は PNG、HTML はそのまま。ほかの形式は想定しない
 ALLOWED = {".png": "image", ".html": "html"}
-# リポジトリを重くしないための上限（写真の入った試作は 1MB を超える。07 の方針で写真を使わない）
+# リポジトリを重くしないための上限（写真の入った試作は 1MB を超える。stitch-workflow スキルの方針で写真を使わない）
 MAX_BYTES = 1_000_000
 
 

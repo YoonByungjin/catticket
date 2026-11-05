@@ -73,7 +73,7 @@ Do not add any element not listed above (no search bar, back button, tab bar, ad
 
 ### 2.4 生成して確認する
 
-1. `generate_screen_from_text`（`projectId`、`designSystem`、`deviceType`、`prompt`）。**タイムアウトしても再実行しない**。`get_screen` を 30 秒おきに最大 10 回確認する
+1. `generate_screen_from_text`（`projectId`、`designSystem`、`deviceType`、`prompt`）。**タイムアウトしても再実行しない**。画面 ID が返っていれば `get_screen`、返っていなければ `list_screens`（`projectId`）で、30 秒おきに最大 10 回確認する。それでも画面が見つからない、またはエラーで失敗したときは、**作業を止めて報告する**
 2. `download_file` で画像を取り出し、保存（3章）してから `Read` で画像を見る
 3. 確認: 02 にない要素がないか / 02 の要素が欠けていないか / 07 の色が使われているか / 文言が韓国語か
 4. 直すところがあれば `edit_screens` で、**直すことを全部1回のプロンプトにまとめて**頼む（例: 「戻る矢印を消す。ボタンの色を #3B5BDB にする。ほかの要素を足さない」）
@@ -101,6 +101,7 @@ docs/design/mockups/
   ```
   python -I scripts/stitch-save.py {結果の JSON ファイルのパス} docs/design/mockups/S-01/S-01-mobile.png
   ```
+- 画像が base64 のまま結果に直接返り、ファイルに保存されなかったときは、`Write` ではバイナリを保存できないので、止めて報告する。
 - **HTML**: 結果に `html` が文字列で返ったときは、その内容を `Write` で `.html` に保存する。ファイルに保存されたときは上と同じスクリプトで `.html` を指定する。
 - HTML は Tailwind の CDN と Google Fonts を読み込み、画像は `lh3.googleusercontent.com` の URL を参照する（期限が切れる可能性がある）。**HTML は参考であり、frontend-dev は実装にそのまま使わない**（Tailwind は ADR にない）。見た目の正は PNG と 07。
 - `mockups/README.md` の一覧には、画面 ID・端末・状態・ファイル・Stitch の画面 ID・生成日・使ったプロンプト（Stitch が書き換えた後の `prompt`）・人間の確認（未 / 済・Issue コメントへのリンク）を書く。
@@ -115,9 +116,9 @@ Stitch には利用回数の上限がある。無駄に使わない。
 |---|---|
 | `create_project` / `create_design_system` | 作業全体で 1 回ずつ（失敗したときを除く） |
 | `generate_screen_from_text` | 画面 ID × 端末 × 状態 ごとに 1 回 |
-| `edit_screens` | 同じ画面に 2 回まで（直すことを1回にまとめる） |
+| `edit_screens` | 画面 ID × 端末 × 状態 ごとに 2 回まで（編集で Stitch の画面 ID が変わっても、02 の画面 ID で数える。直すことを1回にまとめる） |
 | `generate_variants` | 人間（PM 経由）が別案を求めたときだけ。`variantCount` は 2 以下 |
-| 失敗・タイムアウト | 再生成しない。`get_screen` で確認する |
+| 失敗・タイムアウト | 再生成しない。2.4 の手順で確認し、見つからなければ止めて報告する |
 
 - 上限に達しても直らないときは、作業を止めて「何を頼んだか・何が直らなかったか」を報告する。
 - 作業全体の生成・編集の回数を数え、報告に書く。
@@ -204,7 +205,7 @@ Do not add any element not listed above (no search bar, back button, tab bar, ad
 
 ### 2.4 생성하고 확인한다
 
-1. `generate_screen_from_text`(`projectId`, `designSystem`, `deviceType`, `prompt`). **타임아웃이 나도 다시 실행하지 않는다**. `get_screen`을 30초 간격으로 최대 10번 확인한다
+1. `generate_screen_from_text`(`projectId`, `designSystem`, `deviceType`, `prompt`). **타임아웃이 나도 다시 실행하지 않는다**. 화면 ID가 돌아왔으면 `get_screen`, 돌아오지 않았으면 `list_screens`(`projectId`)로 30초 간격으로 최대 10번 확인한다. 그래도 화면을 찾지 못하거나 오류로 실패했으면 **작업을 멈추고 보고한다**
 2. `download_file`로 이미지를 꺼내 저장(3장)한 뒤 `Read`로 이미지를 본다
 3. 확인: 02에 없는 요소가 없는지 / 02의 요소가 빠지지 않았는지 / 07의 색이 쓰였는지 / 문구가 한국어인지
 4. 고칠 곳이 있으면 `edit_screens`로, **고칠 것을 모두 한 번의 프롬프트에 모아서** 요청한다(예: "뒤로 가기 화살표를 지운다. 버튼 색을 #3B5BDB로 한다. 다른 요소를 더하지 않는다")
@@ -232,6 +233,7 @@ docs/design/mockups/
   ```
   python -I scripts/stitch-save.py {결과 JSON 파일 경로} docs/design/mockups/S-01/S-01-mobile.png
   ```
+- 이미지가 base64 그대로 결과에 바로 돌아오고 파일로 저장되지 않았을 때는 `Write`로 바이너리를 저장할 수 없으므로 멈추고 보고한다.
 - **HTML**: 결과에 `html`이 문자열로 돌아왔을 때는 그 내용을 `Write`로 `.html`에 저장한다. 파일로 저장되었을 때는 위와 같은 스크립트에서 `.html`을 지정한다.
 - HTML은 Tailwind CDN과 Google Fonts를 불러오고, 이미지는 `lh3.googleusercontent.com` URL을 참조한다(기한이 끝날 수 있다). **HTML은 참고용이며 frontend-dev는 구현에 그대로 쓰지 않는다**(Tailwind는 ADR에 없음). 겉모습의 기준은 PNG와 07.
 - `mockups/README.md` 목록에는 화면 ID·단말·상태·파일·Stitch 화면 ID·생성일·사용한 프롬프트(Stitch가 고쳐 쓴 뒤의 `prompt`)·사람의 확인(미 / 완료·Issue 코멘트 링크)을 쓴다.
@@ -246,9 +248,9 @@ Stitch에는 사용 횟수 상한이 있다. 낭비하지 않는다.
 |---|---|
 | `create_project` / `create_design_system` | 작업 전체에서 각 1번(실패했을 때 제외) |
 | `generate_screen_from_text` | 화면 ID × 단말 × 상태마다 1번 |
-| `edit_screens` | 같은 화면에 2번까지(고칠 것을 한 번에 모은다) |
+| `edit_screens` | 화면 ID × 단말 × 상태마다 2번까지(편집으로 Stitch 화면 ID가 바뀌어도 02의 화면 ID로 센다. 고칠 것을 한 번에 모은다) |
 | `generate_variants` | 사람(PM 경유)이 다른 안을 요청했을 때만. `variantCount`는 2 이하 |
-| 실패·타임아웃 | 다시 생성하지 않는다. `get_screen`으로 확인한다 |
+| 실패·타임아웃 | 다시 생성하지 않는다. 2.4의 절차로 확인하고, 찾지 못하면 멈추고 보고한다 |
 
 - 상한에 이르러도 고쳐지지 않으면 작업을 멈추고 "무엇을 요청했고 무엇이 고쳐지지 않았는지"를 보고한다.
 - 작업 전체의 생성·편집 횟수를 세어 보고에 쓴다.
