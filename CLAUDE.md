@@ -19,7 +19,7 @@ AI（Claude Code とそのサブエージェント）と人間が同じルール
 | DB | MySQL 8.4（utf8mb4, Asia/Seoul） |
 | 開発環境 | Docker Compose（MySQL）, VS Code, GitHub Actions |
 
-選定理由は `docs/adr/`。地図・外部データ API は要件定義の後で決める（ADR 0003・0004 は「提案」）。
+選定理由は `docs/adr/`。地図・外部データ API・サーバーなどは工程3で決めた（ADR 0006〜0013。UI は 0014・0015）。
 新しいライブラリ・方式は ADR を追加してから入れる。必要になったエージェントは自分で入れずに作業を止めて報告し、architect が ADR を書き、人間が承認してから導入する（E2E ツールの依存関係・設定は frontend-dev が入れる）。
 
 ## 開発プロセス
@@ -216,7 +216,7 @@ AI(Claude Code와 서브 에이전트)와 사람이 같은 규칙으로 개발�
 | DB | MySQL 8.4 (utf8mb4, Asia/Seoul) |
 | 개발 환경 | Docker Compose(MySQL), VS Code, GitHub Actions |
 
-선정 이유는 `docs/adr/`. 지도·외부 데이터 API는 요건정의 후에 정한다(ADR 0003·0004는 "제안").
+선정 이유는 `docs/adr/`. 지도·외부 데이터 API·서버 등은 공정 3에서 정했다(ADR 0006~0013. UI는 0014·0015).
 새 라이브러리·방식은 ADR을 추가한 뒤 도입한다. 필요해진 에이전트는 직접 넣지 말고 작업을 멈추고 보고하며, architect가 ADR을 쓰고 사람이 승인한 뒤 도입한다(E2E 도구의 의존성·설정은 frontend-dev가 넣는다).
 
 ## 개발 프로세스
