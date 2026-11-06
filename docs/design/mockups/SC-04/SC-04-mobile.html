@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>로그인 - CatTicket</title>
+<!-- Google Fonts: Noto Sans KR (weights 400 and 500 only) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: "#4338CA",
+            "on-primary": "#FFFFFF",
+            "primary-container": "#EEF2FF",
+            tertiary: "#B45309",
+            "tertiary-container": "#FFFBEB",
+            surface: "#FFFFFF",
+            "surface-container-low": "#F9FAFB",
+            "surface-container": "#F3F4F6",
+            text: "#1F2937",
+            "secondary-text": "#4B5563",
+            outline: "#D1D5DB"
+          },
+          fontFamily: {
+            sans: ["'Noto Sans KR'", "sans-serif"],
+            body: ["'Noto Sans KR'", "sans-serif"],
+            headline: ["'Noto Sans KR'", "sans-serif"]
+          },
+          borderRadius: {
+            DEFAULT: "0.5rem",
+            lg: "1rem",
+            xl: "1.5rem",
+            full: "9999px"
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: #FFFFFF;
+      color: #1F2937;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      display: inline-block;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-white min-h-screen flex flex-col justify-between selection:bg-primary-container selection:text-primary">
+<!-- 1. Header Bar -->
+<header class="fixed top-0 left-0 w-full z-50 h-14 bg-white border-b border-outline flex items-center justify-between px-4">
+<!-- Left: Brand Text Anchor -->
+<div class="flex items-center">
+<span class="font-medium text-lg text-primary tracking-tight select-none">CatTicket</span>
+</div>
+<!-- Right: Language Toggle & Menu Icon Button -->
+<div class="flex items-center gap-2">
+<!-- Segmented Language Toggle -->
+<div aria-label="언어 선택" class="flex items-center bg-surface-container rounded-full p-0.5 border border-outline text-xs font-medium" role="radiogroup">
+<button aria-checked="true" class="px-2.5 py-1 rounded-full bg-white text-primary shadow-xs transition-colors" role="radio" type="button">
+          한국어
+        </button>
+<button aria-checked="false" class="px-2.5 py-1 rounded-full text-secondary-text hover:text-text transition-colors" role="radio" type="button">
+          日本語
+        </button>
+</div>
+<!-- Hamburger Menu Action Button -->
+<button aria-label="메뉴 열기" class="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full text-secondary-text hover:bg-surface-container active:opacity-80 transition-colors" type="button">
+<span class="material-symbols-outlined select-none" data-icon="menu">menu</span>
+</button>
+</div>
+</header>
+<!-- Main Canvas Column: Max 400px, centered horizontally -->
+<main class="w-full max-w-[400px] mx-auto px-4 pt-14 pb-8 flex-1 flex flex-col justify-start">
+<!-- 2. Page Title -->
+<div class="pt-6 pb-6">
+<h1 class="font-medium text-[24px] leading-8 text-text">로그인</h1>
+</div>
+<!-- Login Form Fields -->
+<form class="flex flex-col w-full" onsubmit="event.preventDefault();">
+<!-- 3. Outlined Text Field: 이메일 주소 -->
+<div class="relative w-full mb-4">
+<input autocomplete="email" class="peer w-full h-14 px-3.5 pt-4 pb-1 text-base font-normal text-text bg-transparent border border-outline rounded-[4px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder-transparent transition-all" id="email-field" placeholder=" " type="email"/>
+<label class="absolute left-3 top-4 px-1 bg-white text-secondary-text text-base font-normal transition-all pointer-events-none peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-secondary-text peer-focus:-top-2 peer-focus:text-xs peer-focus:text-primary peer-focus:font-medium peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-secondary-text" for="email-field">
+          이메일 주소
+        </label>
+</div>
+<!-- 4. Outlined Text Field: 비밀번호 -->
+<div class="relative w-full mb-6">
+<input autocomplete="current-password" class="peer w-full h-14 px-3.5 pt-4 pb-1 text-base font-normal text-text bg-transparent border border-outline rounded-[4px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder-transparent transition-all" id="password-field" placeholder=" " type="password"/>
+<label class="absolute left-3 top-4 px-1 bg-white text-secondary-text text-base font-normal transition-all pointer-events-none peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-secondary-text peer-focus:-top-2 peer-focus:text-xs peer-focus:text-primary peer-focus:font-medium peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:text-secondary-text" for="password-field">
+          비밀번호
+        </label>
+</div>
+<!-- 5. Full-width Filled Primary Button -->
+<button class="w-full h-12 rounded-full bg-primary text-on-primary font-medium text-base flex items-center justify-center min-h-[48px] shadow-none hover:bg-opacity-95 active:opacity-80 transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2" type="submit">
+        로그인
+      </button>
+</form>
+<!-- 6. Three Text Links Stacked Vertically -->
+<div class="flex flex-col mt-4 w-full">
+<a class="h-11 min-h-[44px] flex items-center justify-center text-primary text-sm font-medium hover:underline active:opacity-70 transition-opacity" href="#">
+        회원가입
+      </a>
+<a class="h-11 min-h-[44px] flex items-center justify-center text-primary text-sm font-medium hover:underline active:opacity-70 transition-opacity" href="#">
+        비밀번호를 잊으셨나요?
+      </a>
+<a class="h-11 min-h-[44px] flex items-center justify-center text-primary text-sm font-medium hover:underline active:opacity-70 transition-opacity" href="#">
+        잠금 해제하기
+      </a>
+</div>
+</main>
+<!-- 7. Footer -->
+<footer class="w-full bg-surface-container-low border-t border-outline px-4 py-6 text-center select-none">
+<div class="max-w-[400px] mx-auto flex flex-col gap-1 text-[12px] leading-relaxed text-secondary-text font-normal">
+<p class="m-0 break-keep">
+        출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)
+      </p>
+<p class="m-0 break-keep">
+        서울교통공사 공공데이터(역 좌표·주소, 물품보관함 위치, 역명 다국어 표기 – 공공누리 제1유형)
+      </p>
+</div>
+</footer>
+</body></html>

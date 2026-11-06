@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CatTicket 공연 상세 (SC-02) Desktop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4338CA',
+            'on-primary': '#FFFFFF',
+            'primary-container': '#EEF2FF',
+            tertiary: '#B45309',
+            'tertiary-bg': '#FFFBEB',
+            'status-green': '#166534',
+            'status-green-bg': '#F0FDF4',
+            'text-main': '#1F2937',
+            'text-sub': '#4B5563',
+            'outline-border': '#D1D5DB',
+            'placeholder-gray': '#E5E7EB',
+            'footer-bg': '#F9FAFB',
+          },
+          fontFamily: {
+            sans: ['"Noto Sans KR"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      color: #1F2937;
+      background-color: #FFFFFF;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .min-touch {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  </style>
+</head>
+<body class="bg-white min-h-screen flex flex-col justify-between">
+
+  <!-- 1. Header bar (64px, white, bottom border #D1D5DB) -->
+  <header class="w-full h-16 bg-white border-b border-outline-border flex items-center justify-center sticky top-0 z-50">
+    <div class="w-full max-w-[1200px] px-6 flex items-center justify-between">
+      <!-- Left: Logo & Nav items -->
+      <div class="flex items-center gap-8">
+        <span class="text-xl font-medium text-primary tracking-tight cursor-pointer select-none">CatTicket</span>
+        <nav class="flex items-center gap-1">
+          <button type="button" class="min-touch px-4 py-2 text-sm font-medium text-text-sub hover:text-text-main rounded-full transition-colors">지도</button>
+          <button type="button" class="min-touch px-4 py-2 text-sm font-medium text-text-sub hover:text-text-main rounded-full transition-colors">인기·트렌드</button>
+          <button type="button" class="min-touch px-4 py-2 text-sm font-medium text-text-sub hover:text-text-main rounded-full transition-colors">즐겨찾기</button>
+        </nav>
+      </div>
+
+      <!-- Right: User info, Logout, Language toggle -->
+      <div class="flex items-center gap-3">
+        <button type="button" class="min-touch px-3 py-2 text-sm font-medium text-text-main hover:bg-gray-100 rounded-full transition-colors">
+          계정(고양이123)
+        </button>
+        <button type="button" class="min-touch px-3 py-2 text-sm font-medium text-text-sub hover:text-text-main hover:bg-gray-100 rounded-full transition-colors">
+          로그아웃
+        </button>
+        <!-- Segmented language toggle -->
+        <div class="inline-flex p-1 bg-gray-100 border border-outline-border rounded-full items-center">
+          <button type="button" class="h-8 px-3 rounded-full text-xs font-medium bg-primary text-white shadow-sm transition-all select-none">
+            한국어
+          </button>
+          <button type="button" class="h-8 px-3 rounded-full text-xs font-medium text-text-sub hover:text-text-main transition-all select-none">
+            日本語
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area: max-w-[1200px] centered, 24px side padding, spacing unit 4px -->
+  <main class="w-full max-w-[1200px] mx-auto px-6 py-8 flex flex-col gap-6 flex-1">
+
+    <!-- 2. Two-column area (left 2/3, right 1/3) -->
+    <div class="grid grid-cols-12 gap-6 items-start">
+
+      <!-- LEFT COLUMN: 8 cols (2/3 width) -->
+      <div class="col-span-8 flex flex-col gap-6">
+
+        <!-- a. BASIC INFO card -->
+        <section class="bg-white border border-outline-border rounded-[12px] p-6">
+          <div class="flex gap-6 items-start">
+            <!-- Poster box: 3:4 ratio, 240px wide, #E5E7EB, with label '포스터' -->
+            <div class="w-[240px] shrink-0 aspect-[3/4] bg-placeholder-gray rounded-[8px] flex items-center justify-center select-none text-text-sub text-sm">
+              포스터
+            </div>
+
+            <!-- Basic details on right of poster -->
+            <div class="flex-1 flex flex-col gap-4">
+              <!-- Title, Status, Favorite Button -->
+              <div class="flex flex-col gap-3">
+                <div class="flex items-center gap-3">
+                  <h1 class="text-[24px] font-medium text-text-main leading-tight">뮤지컬 〈별빛 정거장〉</h1>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-[8px] text-xs font-medium bg-status-green-bg text-status-green border border-green-200">
+                    공연 중
+                  </span>
+                </div>
+
+                <div>
+                  <button type="button" class="min-touch inline-flex items-center gap-2 px-4 py-2 border border-outline-border rounded-full text-sm font-medium text-text-main hover:bg-gray-50 transition-colors">
+                    <svg class="w-4 h-4 text-text-sub" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                    </svg>
+                    즐겨찾기
+                  </button>
+                </div>
+              </div>
+
+              <!-- Label / Value rows -->
+              <div class="border-t border-outline-border pt-4 flex flex-col gap-2.5">
+                <div class="flex items-start text-sm">
+                  <span class="w-24 shrink-0 text-text-sub">공연 기간</span>
+                  <span class="text-base text-text-main">2026-10-01 ~ 2026-12-31</span>
+                </div>
+
+                <div class="flex items-start text-sm">
+                  <span class="w-24 shrink-0 text-text-sub">공연장</span>
+                  <div class="flex flex-col">
+                    <span class="text-base text-text-main">대학로 소나무극장</span>
+                    <span class="text-sm text-text-sub mt-0.5">서울특별시 종로구 대학로 00</span>
+                  </div>
+                </div>
+
+                <div class="flex items-start text-sm">
+                  <span class="w-24 shrink-0 text-text-sub">장르</span>
+                  <span class="text-base text-text-main">뮤지컬</span>
+                </div>
+
+                <div class="flex items-start text-sm">
+                  <span class="w-24 shrink-0 text-text-sub">출연자</span>
+                  <span class="text-base text-text-main">김하늘, 이바다, 박구름</span>
+                </div>
+
+                <div class="flex items-start text-sm">
+                  <span class="w-24 shrink-0 text-text-sub">티켓 가격</span>
+                  <span class="text-base text-text-main">R석 77,000원 / S석 55,000원</span>
+                </div>
+
+                <div class="flex items-start text-sm">
+                  <span class="w-24 shrink-0 text-text-sub">공연 시간</span>
+                  <span class="text-base text-text-main">화~금 19:30 / 토·일 14:00, 18:00</span>
+                </div>
+
+                <div class="flex items-start text-sm">
+                  <span class="w-24 shrink-0 text-text-sub">상연 시간</span>
+                  <span class="text-base text-text-main">150분 (인터미션 15분)</span>
+                </div>
+
+                <div class="flex items-start text-sm">
+                  <span class="w-24 shrink-0 text-text-sub">관람 연령</span>
+                  <span class="text-base text-text-main">만 8세 이상</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- b. BOOKING card (title '예매') -->
+        <section class="bg-white border border-outline-border rounded-[12px] p-6">
+          <h2 class="text-lg font-medium text-text-main mb-4">예매</h2>
+          <div class="flex items-center">
+            <a href="#" class="min-touch inline-flex items-center gap-1.5 text-base font-medium text-primary hover:underline">
+              <span>인터파크 티켓</span>
+              <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+            </a>
+          </div>
+        </section>
+
+        <!-- c. STATS card (title '평가·통계') -->
+        <section class="bg-white border border-outline-border rounded-[12px] p-6 flex flex-col gap-4">
+          <h2 class="text-lg font-medium text-text-main">평가·통계</h2>
+
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5 text-base font-medium text-tertiary">
+              <span class="text-lg">★</span>
+              <span>4.3 (12)</span>
+            </div>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-[8px] text-xs font-medium bg-tertiary-bg text-tertiary border border-amber-200">
+              수상작
+            </span>
+          </div>
+
+          <div class="text-sm text-text-sub">
+            오픈런 · 개막 이후 누적 512회
+          </div>
+
+          <div class="border-t border-outline-border pt-4 flex flex-col gap-2">
+            <span class="text-sm font-medium text-text-main">인기 순위</span>
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center px-3 py-1 rounded-[8px] text-xs font-medium text-tertiary bg-tertiary-bg border border-tertiary">
+                주간·전체 3위
+              </span>
+              <span class="inline-flex items-center px-3 py-1 rounded-[8px] text-xs font-medium text-tertiary bg-tertiary-bg border border-tertiary">
+                일간·뮤지컬 2위
+              </span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- RIGHT COLUMN: 4 cols (1/3 width) -->
+      <div class="col-span-4 flex flex-col gap-6">
+
+        <!-- d. NEARBY card (No map) -->
+        <section class="bg-white border border-outline-border rounded-[12px] p-6 flex flex-col gap-6">
+          <!-- 주변 역 (500m 이내) -->
+          <div class="flex flex-col gap-3">
+            <h2 class="text-base font-medium text-text-main">주변 역 (500m 이내)</h2>
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center gap-3 text-sm text-text-main">
+                <svg class="w-5 h-5 text-text-sub shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 16.5V6a2.25 2.25 0 012.25-2.25h10.5A2.25 2.25 0 0119.5 6v10.5m-15 0a2.25 2.25 0 002.25 2.25h10.5a2.25 2.25 0 002.25-2.25m-15 0h15m-12 3.75l-1.5 1.5m10.5-1.5l1.5 1.5M7.5 9h9m-9 3.75h9" />
+                </svg>
+                <span>혜화역 · 4호선 · 230m</span>
+              </div>
+              <div class="flex items-center gap-3 text-sm text-text-main">
+                <svg class="w-5 h-5 text-text-sub shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 16.5V6a2.25 2.25 0 012.25-2.25h10.5A2.25 2.25 0 0119.5 6v10.5m-15 0a2.25 2.25 0 002.25 2.25h10.5a2.25 2.25 0 002.25-2.25m-15 0h15m-12 3.75l-1.5 1.5m10.5-1.5l1.5 1.5M7.5 9h9m-9 3.75h9" />
+                </svg>
+                <span>동대문역 · 1호선 · 480m</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-outline-border"></div>
+
+          <!-- 주변 물품보관함 (500m 이내) -->
+          <div class="flex flex-col gap-3">
+            <h2 class="text-base font-medium text-text-main">주변 물품보관함 (500m 이내)</h2>
+            <div class="flex items-center gap-3 text-sm text-text-main">
+              <svg class="w-5 h-5 text-text-sub shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+              <span>혜화역 · 4호선 · 1번 출구 앞 · 260m</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- 3. Below both columns: full width REVIEWS card -->
+    <section class="w-full bg-white border border-outline-border rounded-[12px] p-6 flex flex-col gap-6">
+      <!-- Title & Action -->
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-medium text-text-main">리뷰</h2>
+        <button type="button" class="min-touch px-4 py-2 border border-outline-border rounded-full text-sm font-medium text-text-main hover:bg-gray-50 transition-colors">
+          리뷰 쓰기
+        </button>
+      </div>
+
+      <!-- Review items -->
+      <div class="flex flex-col divide-y divide-outline-border">
+        <!-- Review 1 -->
+        <div class="py-4 first:pt-0 flex flex-col gap-1.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-tertiary font-medium tracking-tight text-base">★★★★★</span>
+              <span class="text-sm font-medium text-text-main">고양이123</span>
+            </div>
+            <span class="text-xs text-text-sub">2026-11-03</span>
+          </div>
+          <p class="text-sm text-text-main mt-0.5">배우들의 노래가 정말 좋았어요. 다시 보고 싶어요.</p>
+        </div>
+
+        <!-- Review 2 -->
+        <div class="py-4 last:pb-0 flex flex-col gap-1.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-tertiary font-medium tracking-tight text-base">★★★★☆</span>
+              <span class="text-sm font-medium text-text-main">공연러버</span>
+            </div>
+            <span class="text-xs text-text-sub">2026-10-28</span>
+          </div>
+          <p class="text-sm text-text-main mt-0.5">무대 연출이 인상적이었습니다.</p>
+        </div>
+      </div>
+
+      <!-- Paginator: "1 – 12 / 12" with chevron-left/right icon buttons -->
+      <div class="pt-4 border-t border-outline-border flex items-center justify-center gap-4">
+        <button type="button" aria-label="이전 페이지" class="min-touch w-11 h-11 inline-flex items-center justify-center rounded-full text-text-sub hover:bg-gray-100 disabled:opacity-40 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+        </button>
+        <span class="text-sm font-medium text-text-main select-none">1 – 12 / 12</span>
+        <button type="button" aria-label="다음 페이지" class="min-touch w-11 h-11 inline-flex items-center justify-center rounded-full text-text-sub hover:bg-gray-100 disabled:opacity-40 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 4. Footer full width (background #F9FAFB, 12px text #4B5563) -->
+  <footer class="w-full bg-footer-bg border-t border-outline-border py-6 px-6 mt-12">
+    <div class="w-full max-w-[1200px] mx-auto flex flex-col items-center justify-center gap-1 text-center text-xs text-text-sub leading-relaxed">
+      <p>출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)</p>
+      <p>서울교통공사 공공데이터(역 좌표·주소, 물품보관함 위치, 역명 다국어 표기 – 공공누리 제1유형)</p>
+    </div>
+  </footer>
+
+</body>
+</html>
