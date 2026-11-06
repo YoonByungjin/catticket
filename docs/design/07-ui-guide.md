@@ -1,6 +1,6 @@
 # 07. UI デザインガイド
 
-- 状態: 基本設計（レビュー待ち。試作7つは人間が承認済み: Issue #15 コメント 6676583842）
+- 状態: 承認（2026-11-06、Issue #15 コメント 6678921752）
 - 担当: ui-designer
 - 最終更新: 2026-11-06
 - 前提: [02. 画面設計書](02-screens.md)（P-01〜P-18 は決定済み。Issue #15 コメント 6651238358・6676943465）、[01. 要件定義書](01-requirements.md)（N-01, N-02, F-36）、ADR 0014（Angular Material + CDK）、ADR 0015（Google Stitch）、ADR 0016（Material Symbols を npm で同梱）、ADR 0006（地図）
@@ -441,7 +441,7 @@ ADR 0014 決定6 のとおり、要件としての達成基準（WCAG の等級�
 
 # 07. UI 디자인 가이드
 
-- 상태: 기본설계(리뷰 대기. 시안 7개는 사람이 승인함: Issue #15 코멘트 6676583842)
+- 상태: 승인(2026-11-06, Issue #15 코멘트 6678921752)
 - 담당: ui-designer
 - 최종 갱신: 2026-11-06
 - 전제: [02. 화면 설계서](02-screens.md)(P-01~P-18은 결정됨. Issue #15 코멘트 6651238358·6676943465), [01. 요건정의서](01-requirements.md)(N-01, N-02, F-36), ADR 0014(Angular Material + CDK), ADR 0015(Google Stitch), ADR 0016(Material Symbols를 npm으로 포함), ADR 0006(지도)
