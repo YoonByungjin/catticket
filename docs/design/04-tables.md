@@ -6,6 +6,7 @@
 - 前提: [01. 要件定義書](01-requirements.md)（F-01〜F-36、N-01〜N-08。R-62・R-63 を反映）、[02. 画面設計書](02-screens.md)、[03. API 設計書](03-api.md)（**5. のデータ項目**、**6. の対応表**）、[05. バッチ設計書](05-batch.md)、ADR 0006〜0016（特に 0007・0008・0009・0012・0013）
 - この設計書の 8. に、**要件 → テーブルの対応表**を 03 の 6. と同じ行（同じ要件 ID・同じ順番）で置く。2つの表を要件 ID で突き合わせると、要件 → 画面 → API → バッチ → テーブルの対応になる（Issue #15 コメント 6651238358 の 3.）
 - `DB-xx` はこの設計書の設計判断の番号（9.）。`P-xx` は 02 の判断（人間が決定済み）
+- 10.1 の Q-01〜Q-03 は解決済み（人間の決定: Issue #15 コメント 6677710885。それを受けた 03・05 の変更: コミット dc1f012）。Q-01 の決定（案 B）に合わせて DB-06 を変えた
 
 ## 1. 方針
 
@@ -151,7 +152,8 @@ erDiagram
     bigint id PK
     varchar email UK
     varchar password_hash
-    varchar nickname UK
+    varchar nickname
+    varchar active_nickname UK "生成カラム。有効な行だけ値あり（DB-06）"
     enum role "USER / ADMIN"
     enum status "PENDING / ACTIVE"
     int failed_login_count
@@ -215,13 +217,13 @@ erDiagram
 | 9 | `ranking_collection` | 人気順位の収集の完了（期間の種類・期間・ジャンルの組ごとに1行） | `id` | — | (`period_type`, `genre_code`, `period_start`) | F-03, F-29, F-33 | API-03, 20, 21 | B-01（S2） |
 | 10 | `ranking_entry` | 人気順位の行（提供元が返したすべての行） | `id` | `ranking_collection_id` → `ranking_collection` | (`ranking_collection_id`, `kopis_performance_id`) | F-03, F-09, F-29, F-33 | API-03, 20, 21 | B-01（S2, S4） |
 | 11 | `genre_trend` | ジャンル別トレンド（直近30日の予約数・割合・基準） | `id` | — | (`period_start`, `period_end`, `genre_code`) | F-34 | API-22 | B-01（S6） |
-| 12 | `app_user` | ユーザー（一般ユーザー・管理者。認証前の申込を含む） | `id` | — | `email`、`nickname`、管理者は1行だけ（DB-07） | F-12〜F-18, F-23〜F-25, N-05 | API-10, 30〜42, 55 | B-03 |
-| 13 | `auth_token` | メールのリンクのトークン（会員登録の認証・パスワード再設定・ロック解除） | `id` | `user_id` → `app_user` | `token_hash` | F-12, F-14, F-15, F-18, N-05 | API-33〜38 | — |
+| 12 | `app_user` | ユーザー（一般ユーザー・管理者。認証前の申込を含む） | `id` | — | `email`（認証前の行も含む）、`active_nickname`（有効な行のニックネームだけ。DB-06）、管理者は1行だけ（DB-07） | F-12〜F-18, F-23〜F-25, N-05 | API-10, 30〜42, 55 | B-03, B-04（期限の切れた認証前の行を削除） |
+| 13 | `auth_token` | メールのリンクのトークン（会員登録の認証・パスワード再設定・ロック解除） | `id` | `user_id` → `app_user` | `token_hash` | F-12, F-14, F-15, F-18, N-05 | API-33〜38 | B-04（会員登録の認証のトークンの有効期限で削除する行を決める。トークンは `app_user` の削除の CASCADE で消える） |
 | 14 | `favorite` | お気に入り | `id` | `user_id` → `app_user`、`performance_id` → `performance` | (`user_id`, `performance_id`) | F-09, F-18〜F-20 | API-03, 42〜45 | — |
 | 15 | `review` | レビュー（評価と本文） | `id` | `user_id` → `app_user`、`performance_id` → `performance` | (`user_id`, `performance_id`) | F-03, F-09, F-17, F-18, F-21〜F-24, F-28, F-30 | API-01, 03, 10〜13, 42, 43, 55, 56 | — |
 | 16 | `mail_send_log` | メールの送信の記録（直近 24 時間の数を数える） | `id` | — | — | F-12, F-14, F-15, N-06, N-07 | API-33, 35, 37 | — |
-| 17 | `batch_job_run` | バッチの実行の記録（1回の実行に1行） | `id` | — | — | F-08, N-04 | — | B-01〜B-03 |
-| 18 | `batch_step_run` | バッチのステップの実行の記録 | `id` | `job_run_id` → `batch_job_run` | (`job_run_id`, `step_name`) | F-08, N-04 | — | B-01〜B-03 |
+| 17 | `batch_job_run` | バッチの実行の記録（1回の実行に1行） | `id` | — | — | F-08, F-12, N-04 | — | B-01〜B-04 |
+| 18 | `batch_step_run` | バッチのステップの実行の記録 | `id` | `job_run_id` → `batch_job_run` | (`job_run_id`, `step_name`) | F-08, F-12, N-04 | — | B-01〜B-04 |
 
 ## 4. テーブルごとの主なカラム
 
@@ -375,9 +377,10 @@ erDiagram
 
 | カラム | 型（予定） | NULL | 既定 | 制約 | 説明 |
 |---|---|---|---|---|---|
-| `email` | VARCHAR(254) | 不可 | — | UNIQUE | メールアドレス（03 の 4.6 で 254 文字以内） |
+| `email` | VARCHAR(254) | 不可 | — | UNIQUE | メールアドレス（03 の 4.6 で 254 文字以内）。一意制約は認証前の行にも効く（同じメールアドレスの申込し直しは行の置き換え。P-10） |
 | `password_hash` | VARCHAR | 不可 | — | — | パスワードのハッシュ（`DelegatingPasswordEncoder` の形。既定は bcrypt。ADR 0013 決定6） |
-| `nickname` | VARCHAR(20) | 不可 | — | UNIQUE | ニックネーム（1〜20 文字。P-05）。管理者は画面に出ないが、NOT NULL のため B-03 で決めた値を入れる（工程4） |
+| `nickname` | VARCHAR(20) | 不可 | — | —（一意制約は下の `active_nickname` に置く） | ニックネーム（1〜20 文字。P-05）。認証前の行は申込のときのニックネーム（押さえない）。管理者は画面に出ないが、NOT NULL のため B-03 で決めた値を入れる（工程4） |
+| `active_nickname` | VARCHAR(20)。生成カラム（`GENERATED ALWAYS AS (CASE WHEN status = 'ACTIVE' THEN nickname END) VIRTUAL`） | 可 | （式で決まる） | UNIQUE | 有効な行のニックネーム。認証前の行は NULL。**有効なアカウントの間だけでニックネームの重複を防ぐ**（DB-06。03 の 4.7）。アプリは書き込まない（INSERT・UPDATE の列に入れない） |
 | `role` | ENUM(`USER`, `ADMIN`) | 不可 | `USER` | 管理者は1行だけ（DB-07） | 役割（一般ユーザー / 管理者） |
 | `status` | ENUM(`PENDING`, `ACTIVE`) | 不可 | `PENDING` | — | 状態（認証前 / 有効）。B-03 の管理者は `ACTIVE` で作る |
 | `failed_login_count` | INT | 不可 | 0 | CHECK（0 以上） | 連続の失敗回数（F-14 ①②） |
@@ -385,7 +388,9 @@ erDiagram
 | `created_at` | DATETIME | 不可 | 1.1 | — | 作成日時（会員登録の申込・置き換えの日時） |
 
 - 退会（F-18）では行を削除する（退会した行を残さない。メールアドレス・ニックネームを再び使えるようにする。03 の 5.）。レビュー・お気に入り・トークンは外部キーで一緒に削除される（5.）。
-- 認証前の申込もこの表に入れる（`status = PENDING`）。同じメールアドレスの申込し直しはこの行を置き換える（P-10）。ニックネームの一意制約は認証前の行にも効く（DB-06。未決事項 Q-01）。
+- 認証前の申込もこの表に入れる（`status = PENDING`）。同じメールアドレスの申込し直しはこの行を置き換える（P-10）。**認証前の行はニックネームを押さえない**（人間の決定。Issue #15 コメント 6677710885 の Q-01 の B）: `active_nickname` が NULL なので、同じニックネームの認証前の行が何行あっても、有効な行と同じニックネームでも、一意制約に当たらない（MySQL の UNIQUE は NULL どうしを重複とみなさない）。
+- 認証の完了（API-34）で `status` を `ACTIVE` にすると `active_nickname` に値が入り、そのときに同じニックネームの有効な行があれば一意制約の違反（エラー 1062）になる。API-34 はこれを「認証の時点でニックネームが使われている」と同じ扱い（その認証前の行を削除して 409）にする（03 の 4.7）。ニックネームの変更（API-40）も、有効な行の間でこの制約が効く。
+- 認証前の行が削除されるのは、API-33 の置き換え（同じメールアドレス）、API-34 の 2.（ニックネームが使われていた）、B-04（期限の切れた行。05 の 6.）の3つ。どれもトークンは外部キーの CASCADE で一緒に消える（5.）。
 
 ### 4.13 `auth_token`（トークン）
 
@@ -396,6 +401,8 @@ erDiagram
 | `token_hash` | CHAR(64) | 不可 | — | UNIQUE | トークンのハッシュ（SHA-256 の16進）。トークンそのものは保存しない（03 の 4.7） |
 | `expires_at` | DATETIME | 不可 | — | — | 有効期限（24 時間・1 時間・1 時間。P-10） |
 | `used_at` | DATETIME | 可 | NULL | — | 使った日時。NULL でなければ使用済み（1回使ったら無効） |
+
+- B-04 は、認証前の行のうち、有効期限内の `SIGNUP` のトークンが1つもない行を削除する（05 の 6.2 の 3.）。この判定に `user_id`・`purpose`・`expires_at` を使う（6. のインデックス）。
 
 ### 4.14 `favorite`（お気に入り）
 
@@ -431,7 +438,7 @@ erDiagram
 
 | カラム | 型（予定） | NULL | 既定 | 制約 | 説明 |
 |---|---|---|---|---|---|
-| `job_name` | VARCHAR | 不可 | — | — | 処理の名前（`daily-collect`・`import-subway`・`create-admin`。05 の 1.1） |
+| `job_name` | VARCHAR | 不可 | — | — | 処理の名前（`daily-collect`・`import-subway`・`create-admin`・`purge-expired-signups`。05 の 1.1） |
 | `started_at` | DATETIME | 不可 | — | — | 開始日時 |
 | `finished_at` | DATETIME | 可 | NULL | — | 終了日時。実行中は NULL |
 | `result` | ENUM(`SUCCESS`, `PARTIAL_FAILURE`, `FAILURE`) | 可 | NULL | — | 結果（成功 / 一部失敗 / 失敗。05 の 1.1）。実行中は NULL |
@@ -442,7 +449,7 @@ erDiagram
 | カラム | 型（予定） | NULL | 既定 | 制約 | 説明 |
 |---|---|---|---|---|---|
 | `job_run_id` | BIGINT | 不可 | — | FK → `batch_job_run.id`。UNIQUE（`job_run_id`, `step_name`） | どの実行のステップか |
-| `step_name` | VARCHAR | 不可 | — | — | ステップ（B-01 は `S1`〜`S7`。B-02・B-03 は1つのステップとして記録する） |
+| `step_name` | VARCHAR | 不可 | — | — | ステップ（B-01 は `S1`〜`S7`。B-02〜B-04 は1つのステップとして記録する。B-04 は削除した件数を `processed_count` に入れる） |
 | `started_at` | DATETIME | 不可 | — | — | 開始日時 |
 | `finished_at` | DATETIME | 可 | NULL | — | 終了日時 |
 | `result` | ENUM(`SUCCESS`, `FAILURE`) | 可 | NULL | — | 結果。実行中は NULL |
@@ -464,7 +471,7 @@ erDiagram
 | `review.performance_id` → `performance` | RESTRICT | 同上 |
 | `favorite.user_id` → `app_user` | **CASCADE** | 退会（行の削除）でお気に入りも一緒に削除する（F-18 ④） |
 | `review.user_id` → `app_user` | **CASCADE** | 退会でレビューも一緒に削除する（F-18 ③）。評価にも含まれなくなる |
-| `auth_token.user_id` → `app_user` | **CASCADE** | 退会でトークンも削除する（03 の 5.） |
+| `auth_token.user_id` → `app_user` | **CASCADE** | 退会でトークンも削除する（03 の 5.）。認証前の行の削除（API-33 の置き換え、API-34 の 2.、B-04）でもトークンを一緒に消す（03 の 4.7、05 の 6.2） |
 | `coin_locker.station_id` → `station` | **CASCADE** | B-02 が駅を全件入れ替えるとき、属するコインロッカーも消す（同じトランザクションで入れ直す。05 の 4.3） |
 | `ranking_entry.ranking_collection_id` → `ranking_collection` | **CASCADE** | 組の行を消すときはその順位の行も消す（S2 は組の行を更新し、順位の行を入れ替える） |
 | `batch_step_run.job_run_id` → `batch_job_run` | **CASCADE** | 実行の記録を消すとき（運用で古い記録を消す場合）にステップも消す |
@@ -487,13 +494,15 @@ erDiagram
 | `ranking_entry` | (`kopis_performance_id`) | 公演詳細で、その公演が入っている順位を探す（API-03。4.3 の人気順位） |
 | `review` | (`performance_id`, `created_at`) | 公演のレビューの一覧（新しい順。API-10, 55）と評価の集計（API-01, 03, 43） |
 | `favorite` | (`user_id`, `created_at`) | お気に入りの一覧（登録の新しい順。API-43） |
-| `auth_token` | (`user_id`, `purpose`) | 申込し直し・再設定のときに、同じユーザー・用途の古いトークンを無効にする（API-33, 35, 37） |
+| `auth_token` | (`user_id`, `purpose`, `expires_at`) | 申込し直し・再設定のときに、同じユーザー・用途の古いトークンを無効にする（API-33, 35, 37）。B-04 で、認証前の行ごとに「有効期限内の `SIGNUP` のトークンがあるか」を確かめる（05 の 6.2 の 3.。末尾の `expires_at` で期限の比較までインデックスで済む） |
+| `app_user` | (`status`) | B-04 で認証前（`PENDING`）の行だけを読む（05 の 6.2 の 3.）。有効な行が大半で、認証前の行は少ない見込みなので、絞り込みに効く |
 | `mail_send_log` | (`created_at`) | 直近 24 時間の送信数を数える（03 の 4.8） |
 | `batch_job_run` | (`job_name`, `started_at`) | 処理ごとの最新の実行を見る（運用） |
 | `batch_step_run` | (`step_name`, `result`, `started_at`) | 前回 S1 が成功した日と窓の末日を求める（05 の 3.3） |
 
 - `ranking_collection` の一意制約は (`period_type`, `genre_code`, `period_start`) の順にし、「期間の種類・ジャンルごとの最新の完了した期間」（03 の 4.9）を同じインデックスで引けるようにする。
 - 空間インデックス（`POINT`・`SPATIAL`）は使わない（DB-12）。
+- 申込・認証の完了・ニックネームの変更での「有効なアカウントでニックネームが使われているか」（03 の 4.7。API-33, 34, 40）は、`active_nickname` の一意制約のインデックスを `WHERE active_nickname = ?` で引く（DB-06）。
 - 管理者の修正した値（4.4）を反映した値で絞る条件（期間・ジャンル・キーワード）は、`performance` のインデックスだけでは効かない。公演は数千件の規模なので、工程4で実際のクエリと実行計画を見て決める（DB-01）。
 
 ## 7. 03 の 5. のデータ項目の割り当て
@@ -511,19 +520,19 @@ erDiagram
 | 人気順位 | `ranking_entry`（提供元の順位 → `provider_rank`、公演 ID → `kopis_performance_id`）。期間の種類・期間の初日・末日・ジャンル・取得した日時は、親の `ranking_collection`（`period_type`・`period_start`・`period_end`・`genre_code`・`completed_at`）に持つ（DB-03） |
 | 人気順位の収集の完了 | `ranking_collection`（期間の種類・初日・末日・ジャンル、収集を終えた日時 → `completed_at`、件数 → `row_count`。組ごとに1行） |
 | ジャンル別トレンド | `genre_trend`（集計期間 → `period_start`・`period_end`、ジャンル → `genre_code`、予約数 → `booking_count`、割合 → `share`、基準 → `basis`） |
-| ユーザー | `app_user`（メールアドレス → `email`、パスワードのハッシュ → `password_hash`、ニックネーム → `nickname`、役割 → `role`、状態 → `status`、連続の失敗回数 → `failed_login_count`、ロック中か → `locked_at`、作成日時 → `created_at`） |
+| ユーザー | `app_user`（メールアドレス → `email`、パスワードのハッシュ → `password_hash`、ニックネーム → `nickname`、役割 → `role`、状態 → `status`、連続の失敗回数 → `failed_login_count`、ロック中か → `locked_at`、作成日時 → `created_at`）。「ニックネームの重複は有効なアカウントの間だけで禁止」は `active_nickname` の一意制約、「メールアドレスの重複は認証前の行を含めて禁止」は `email` の一意制約（DB-06） |
 | トークン | `auth_token`（用途 → `purpose`、ユーザー → `user_id`、トークンのハッシュ → `token_hash`、有効期限 → `expires_at`、使った日時 → `used_at`） |
 | お気に入り | `favorite`（ユーザー・公演、登録日時 → `created_at`。(`user_id`, `performance_id`) で一意） |
 | レビュー | `review`（ユーザー・公演、評価 → `rating`、本文 → `body`、投稿日時 → `created_at`、更新日時 → `updated_at`。(`user_id`, `performance_id`) で一意） |
 | メールの送信の記録 | `mail_send_log`（送った日時 → `created_at`、用途 → `purpose`） |
-| バッチの実行の記録 | `batch_job_run`（ジョブ、開始・終了日時、結果、エラーの内容）と `batch_step_run`（ステップ、開始・終了日時、結果、件数 → `processed_count`・`summary`、エラーの内容）。前回の収集が成功した日は `batch_step_run` から求める（DB-10）。05 の 3.3 の「今回の窓の末日」は `batch_step_run.window_end_date` |
+| バッチの実行の記録 | `batch_job_run`（ジョブ、開始・終了日時、結果、エラーの内容）と `batch_step_run`（ステップ、開始・終了日時、結果、件数 → `processed_count`・`summary`、エラーの内容）。前回の収集が成功した日は `batch_step_run` から求める（DB-10）。「今回の窓の末日」（03 の 5.。05 の 3.3 の 3.(b)・7.）は `batch_step_run.window_end_date` |
 
 03 の 5. にない項目で、この設計書が持つもの:
 
 | 項目 | 理由 |
 |---|---|
 | `booking_site.source` | 予約サイトの管理者の修正を、自動収集の行と分けて持つため（DB-02。03 の 4.10・P-13 の「予約サイト（名前と URL）」の修正） |
-| `batch_step_run.window_end_date` | 05 の 3.3 の 3.(b)・7. が「今回の窓の末日」の記録を求めている（03 の 5. の「バッチの実行の記録」には書かれていない。10. の Q-02） |
+| `app_user.active_nickname` | 03 の 4.7・5. の「ニックネームの重複は有効なアカウントの間だけで禁止」を DB の一意制約で守るための生成カラム（DB-06）。値は `nickname` と `status` から決まり、新しい事実は持たない |
 
 ## 8. 要件 → テーブルの対応表
 
@@ -542,12 +551,12 @@ erDiagram
 | F-09 | `performance`, `ranking_entry`, `favorite`, `review` | 公演を削除しない（外部キーは RESTRICT）。終わったかは `end_date` で判定。順位・お気に入り・レビューは終わった公演も対象 |
 | F-10 | — | ブラウザに記憶する（03 の 6. と同じ。1.3） |
 | F-11 | `translation`, `translation_usage`, `station` | 原文のハッシュで翻訳を引く。駅名は `station.name_ja`（公式表記）を優先。月の上限は `translation_usage` |
-| F-12 | `app_user`, `auth_token`, `mail_send_log` | 認証前の行（`PENDING`）と認証のトークン。メールの上限を数える |
+| F-12 | `app_user`, `auth_token`, `mail_send_log`, `batch_job_run`, `batch_step_run` | 認証前の行（`PENDING`。ニックネームは押さえない）と認証のトークン。メールの上限を数える。認証の完了で有効にし、ニックネームの重複は `active_nickname` の一意制約でも防ぐ（DB-06）。期限の切れた認証前の行は B-04 が削除し、その実行を記録する |
 | F-13 | `app_user` | メールアドレス・パスワードのハッシュ・状態の確認 |
 | F-14 | `app_user`, `auth_token`, `mail_send_log` | 失敗回数・ロック（`locked_at`）。ロック解除の再認証のトークンとメール |
 | F-15 | `app_user`, `auth_token`, `mail_send_log` | パスワード再設定のトークンとメール。ロック解除・失敗回数の初期化 |
 | F-16 | `app_user` | パスワードのハッシュの更新 |
-| F-17 | `app_user`, `review` | ニックネーム（一意）。レビューの投稿者として `review` から結んで表示する |
+| F-17 | `app_user`, `review` | ニックネーム（有効なアカウントの間で一意。`active_nickname`。DB-06）。レビューの投稿者として `review` から結んで表示する |
 | F-18 | `app_user`, `review`, `favorite`, `auth_token` | 行の削除。外部キーの CASCADE でレビュー・お気に入り・トークンも削除する |
 | F-19 | `favorite`, `performance` | (`user_id`, `performance_id`) で一意。登録・解除 |
 | F-20 | `favorite`, `performance` | 自分のお気に入り（非表示を除き、終わった公演を含む） |
@@ -565,7 +574,7 @@ erDiagram
 | F-32 | `performance`, `performance_override` | `is_open_run`（修正できる）、`total_show_count` |
 | F-33 | `ranking_collection`, `ranking_entry`, `performance` | 現在の期間と1つ前の期間の順位を比べる。1つ前の期間の完了の記録がなければ P-17 |
 | F-34 | `genre_trend` | 最新の集計期間の割合と基準 |
-| F-35 | — | ログアウト・自動ログアウトはセッション（アプリのメモリ。ADR 0013 決定2〜4）で行い、テーブルを使わない（10. の Q-03） |
+| F-35 | — | ログアウト・自動ログアウトはセッション（アプリのメモリ。ADR 0013 決定2〜4）で行い、テーブルを使わない（03 の 6. と同じ。1.3。10.1 の Q-03） |
 | F-36 | — | ブラウザに記憶する（03 の 6. と同じ。1.3） |
 | N-01 | `translation`, `translation_usage`, `station` | F-11 と同じ |
 | N-02 | — | 画面の対応（03 の 6. と同じ） |
@@ -578,9 +587,9 @@ erDiagram
 
 ### 8.1 逆向きの確認（余分がないこと）
 
-- 3. のすべてのテーブルに要件 ID がある（8. の表のどこかの行に出る）。`batch_job_run`・`batch_step_run` は F-08・N-04（収集の再実行・`afterdate`）、`ranking_collection` は F-29・F-33（R-62 の「収集が終わっている」の判断）、`mail_send_log` は N-06 ②・N-07、`translation_usage` は F-11 ①・N-07 のため。
-- 03 の 6. で「—」の要件（F-10, F-36, N-02, N-03, N-08）は、この表でも「—」。
-- 03 の 6. で「04 に記入」としたのに、この表で「—」にした要件は **F-35 だけ**（理由は表と 10. の Q-03）。
+- 3. のすべてのテーブルに要件 ID がある（8. の表のどこかの行に出る）。`batch_job_run`・`batch_step_run` は F-08・N-04（収集の再実行・`afterdate`）と F-12（B-04 の実行の記録）、`ranking_collection` は F-29・F-33（R-62 の「収集が終わっている」の判断）、`mail_send_log` は N-06 ②・N-07、`translation_usage` は F-11 ①・N-07 のため。
+- 03 の 6. で「—」の要件（F-10, F-35, F-36, N-02, N-03, N-08）は、この表でも「—」。03 の 6. で「04 に記入」の要件は、この表ですべてテーブルがある（2つの表の「—」の行が一致する）。
+- 03 の 6. のバッチの列の B-01〜B-04 は、3. のバッチの列のどこかに出る（B-04 は `app_user`・`auth_token`・`batch_job_run`・`batch_step_run`）。
 - 要件にないデータ（例: 閲覧の履歴、検索条件の保存、通知、ログインの履歴、レビューの「いいね」）のテーブルは置いていない（X-04〜X-07）。
 
 ## 9. 設計判断（DB-xx）
@@ -592,7 +601,7 @@ erDiagram
 | DB-03 | 人気順位は「組」（`ranking_collection`）と「行」（`ranking_entry`）の2つのテーブルに分け、期間・ジャンルは組だけに持つ | 03 の 5. の「人気順位」と「人気順位の収集の完了」は、同じ組（期間の種類・期間・ジャンル）を持つ。組を1か所にすると重複がなくなり、S2 が組ごとに「行の入れ替え + 完了の記録」を1つのトランザクションで行う（05 の 3.4）形と一致する。行があるのに完了の記録がない状態が構造上起きない | 2つを別々の表にして、両方に期間・ジャンルを持つ: 同じ値を2か所に持ち、ずれるおそれがある |
 | DB-04 | `ranking_entry` は公演を KOPIS の公演 ID（文字列）で持ち、`performance` への外部キーを置かない | S2 の時点では、順位に出た公演がまだ DB にないことがある（S4 で後から補う。05 の 3.2）。S4 が失敗しても順位は保存したい（その公演は API で結べなければ出さない）。`performance.kopis_performance_id` の一意制約で結ぶ | 外部キーを置く: S2 の前に公演が必要になり、S2・S4 の順番と失敗の扱い（05）と合わない |
 | DB-05 | 翻訳は `translation` に原文のハッシュ（SHA-256）ごとに1行で持ち、公演などのテーブルに翻訳の列を持たない | 「同じ原文は二度翻訳しない」（ADR 0007 3.）を一意制約で守れる。原文が変われば別のハッシュになり、自動で「翻訳がない」状態になる（05 の 3.3 の 4.）。管理者の修正した値・駅名・コインロッカーの位置の文章も同じ仕組みで引ける。`TEXT` の原文そのものには一意制約を付けにくいのでハッシュにする | 各テーブルに `title_ja` などの列を持つ: 列が多くなり、同じ原文の翻訳を使い回せず、原文が変わったときに翻訳を消す処理がいる |
-| DB-06 | 認証前の会員登録の申込も `app_user` に `status = PENDING` で持つ。メールアドレス・ニックネームの一意制約は認証前の行にも効く | 03 の 5.（ユーザーの状態: 認証前 / 有効）のとおり。申込し直しは同じ行の置き換えになる（P-10）。ニックネームの一意制約を有効な行だけに効かせると、2人が同じニックネームで申し込めて、認証の完了のときに初めて重複が分かる | 申込を別のテーブルに持つ: 03 の 5. と合わない。テーブルが増える |
+| DB-06 | 認証前の会員登録の申込も `app_user` に `status = PENDING` で持つ。**メールアドレスの一意制約は認証前の行にも効かせ、ニックネームの一意制約は有効な行だけに効かせる**。後者は生成カラム `active_nickname`（`CASE WHEN status = 'ACTIVE' THEN nickname END`、`VIRTUAL`）に UNIQUE を付けて実現する | 人間の決定（Issue #15 コメント 6677710885 の Q-01 の B）と 03 の 4.7: 認証前の申込はニックネームを押さえず、有効なアカウントの間の重複は DB の一意制約でも防ぐ。MySQL 8.4 の UNIQUE は NULL どうしを重複とみなさないので、認証前の行（NULL）は何行でも入り、有効な行の間だけ重複が防がれる。認証の完了で `status` を変えた瞬間に制約が効くので、2つの申込がほぼ同時に有効になっても片方は失敗する（03 の 4.7 の 2. の競合）。生成カラムにした理由: ① 値の確認（API-33, 34, 40）が `WHERE active_nickname = ?` でそのインデックスを使える（式インデックスでは、問い合わせごとに同じ式を正確に書かないと使われない）、② 違反のときのキーの名前が列の名前で分かり、API-34 で 409 に変えやすい、③ `SHOW CREATE TABLE` で意図が読める。`VIRTUAL` にしたのは、値を行に保存しなくても InnoDB はセカンダリインデックスに値を持つので足りるため。メールアドレスは、同じメールアドレスの申込し直しを行の置き換えにする（P-10）ので、認証前の行も含めて一意にする | 申込を別のテーブルに持つ: 03 の 5. と合わない。テーブルが増える。／認証前の行もニックネームを押さえる（db-designer の以前の提案）: 人間が採らなかった（Q-01）。／式インデックス `UNIQUE ((CASE WHEN status = 'ACTIVE' THEN nickname END))`: 同じことができるが、上の ① ② の理由で生成カラムにした。／アプリの確認だけ: 03 の 4.7 の競合を防げず、`CLAUDE.md` に合わない |
 | DB-07 | 管理者は1行だけであることを DB で保証する（`role = 'ADMIN'` のときだけ値を持つ式に一意制約を付ける。MySQL 8 の式インデックス。形は工程4） | F-25 ①（管理者アカウント1つ）を、B-03 の確認（05 の 5. の 3.）だけに頼らない | アプリの確認だけ: `CLAUDE.md` の「制約は DB でも定義する」に合わない |
 | DB-08 | ロック中かどうかは `locked_at`（NULL でなければロック中）で持つ | 「ロック中かどうか」に加えて、いつロックしたかが運用の確認に使える。解除で NULL と失敗回数 0 にする | 真偽の列 `is_locked`: 日時が残らない |
 | DB-09 | **正規化を崩すもの**: `ranking_collection.period_end`・`genre_trend.period_end`（初日と期間の種類から計算できる）、`genre_trend.share`（予約数から計算できる）、`genre_trend.basis`（同じ期間の行でみな同じ値） | `period_end`: 03 の 5. が初日・末日を求め、API が集計期間をそのまま返す。暦の週・月の末日の計算を SQL ごとに書かない。`share`: 05 の S6 が収集のときに計算して保存する設計。期間ごとに全部入れ替えるので、値がずれない。`basis`: S6 は1回の照会で1つの期間を取るので、同じ期間の行はいつも同じ値になる。期間の親テーブルを作るほどの利点がない | 計算で求める・親テーブルを作る |
@@ -602,23 +611,25 @@ erDiagram
 
 ## 10. 未決事項・ほかの設計書への申し送り
 
-### 10.1 architect への確認（03・05 の記述）
+### 10.1 architect への確認（03・05 の記述）— すべて解決済み
 
-| No. | 内容 | 関係 | 04 での扱い |
+| No. | 内容 | 関係 | 状態と 04 での扱い |
 |---|---|---|---|
-| Q-01 | 認証前の申込（`PENDING`）がニックネームを押さえるか。03 の 4.7 は「ニックネームが使われていれば 409」とだけあり、認証前の申込を「使われている」に含めるかが書かれていない。また、期限の切れた認証前の行をいつ消すか（消さないと、そのメールアドレス・ニックネームが使えないままになる。同じメールアドレスの申込し直しは置き換えで解決するが、ニックネームは解決しない） | 03 の 4.7、F-12 ③、P-10 | DB-06 のとおり、一意制約は認証前の行にも効かせる。**提案**: 「有効な（期限内の）認証前の申込もニックネームを使っているとみなす。API-33 は、申込の前に期限の切れた認証前の行を削除する」を 03 の 4.7 に書く。テーブルの形はどちらに決まっても変わらない |
-| Q-02 | 05 の 3.3 の 7. が「今回の窓の末日」の記録を求めているが、03 の 5. の「バッチの実行の記録」の項目にない | 03 の 5.、05 の 3.3 | 05 に従い `batch_step_run.window_end_date` に持つ（7.）。03 の 5. に項目を足すかは architect が判断する |
-| Q-03 | 03 の 6. で F-35 のテーブルの列は「04 に記入」だが、セッションはアプリのメモリ（ADR 0013 決定2）なので、テーブルを使わない | 03 の 6.、ADR 0013 | 8. で「—」と理由を書いた。03 の 6. の F-35 を「—（セッションはメモリ）」にそろえるかは architect が判断する |
+| Q-01 | 認証前の申込（`PENDING`）がニックネームを押さえるか。期限の切れた認証前の行をいつ消すか | 03 の 4.7、F-12 ③、P-10 | **解決**（人間の決定: Issue #15 コメント 6677710885。案 B。db-designer の提案は採らない。03 の 4.7・05 の 6. への反映: コミット dc1f012）。認証前の申込はニックネームを押さえず、認証の完了のときに有効なアカウントで使われていれば登録は失敗し、その認証前の行を削除する。期限の切れた認証前の行は B-04（`purge-expired-signups`、毎日 04:00）が削除する。04 では DB-06 を変え（`active_nickname` の一意制約）、3.・4.12・4.13・4.17・4.18・5.・6.・8. を合わせた |
+| Q-02 | 05 の 3.3 の 7. が「今回の窓の末日」の記録を求めているが、03 の 5. の「バッチの実行の記録」の項目にない | 03 の 5.、05 の 3.3 | **解決**（03 の 5. に「今回の窓の末日」が足された。コミット dc1f012）。`batch_step_run.window_end_date` に持つ（7.） |
+| Q-03 | 03 の 6. で F-35 のテーブルの列は「04 に記入」だが、セッションはアプリのメモリ（ADR 0013 決定2）なので、テーブルを使わない | 03 の 6.、ADR 0013 | **解決**（03 の 6. の F-35 が「—（セッションはメモリ。ADR 0013）」になった。コミット dc1f012）。8. も「—」 |
 
 ### 10.2 工程4（詳細設計）で決めること
 
 - 型の長さ（`VARCHAR` の文字数、`share` の桁など）。KOPIS・駅のファイルの実際の値の長さを見て決める。
-- **照合順序（collation）**: サーバーの既定は `utf8mb4_unicode_ci`（`compose.yaml`）。大文字・小文字やかな（ひらがな・カタカナ）、濁点の違いを同じとみなす場合がある。メールアドレス（大文字・小文字を同じとみなしてよいか）、ニックネームの一意制約（「Cat」と「cat」を同じニックネームとするか）、キーワード検索（F-02 ⑥）、ハッシュの列（`_bin` か `ascii`）について、列ごとに決める。ニックネームの扱いは利用者に見える振る舞いなので、人間の確認が要る。
+- **照合順序（collation）**: サーバーの既定は `utf8mb4_unicode_ci`（`compose.yaml`）。大文字・小文字やかな（ひらがな・カタカナ）、濁点の違いを同じとみなす場合がある。メールアドレス（大文字・小文字を同じとみなしてよいか）、ニックネームの一意制約（「Cat」と「cat」を同じニックネームとするか）、キーワード検索（F-02 ⑥）、ハッシュの列（`_bin` か `ascii`）について、列ごとに決める。ニックネームの扱いは利用者に見える振る舞いなので、人間の確認が要る（Issue #15 コメント 6677710885 で工程4へ送られた）。一意制約は `active_nickname`（生成カラム）に付くので、その照合順序を `nickname` と同じに明示する。
+- DB-07（管理者は1行だけ）も DB-06 と同じく生成カラム + UNIQUE にするか、式インデックスにするか。
 - 管理者の修正を反映した値を読む方法（ビューにするか、クエリごとに結ぶか）と、その値で絞るときのインデックス（DB-01・6.）。
 - `ranking_entry` の一意制約を (`ranking_collection_id`, `provider_rank`) にも付けるか（`boxoffice` が同じ順位を複数返すことがあるかを、ADR 0008 の「注意点」の確認で見る）。
 - `station.line` の値の書き方、`coin_locker` の結びつけの規則（05 の 4.4。ファイルを取得して決める）。
 - 管理者の `nickname` に入れる値（B-03。画面には出ない）。
-- 古い記録（`mail_send_log`、`batch_*`、使った・期限の切れた `auth_token`）を消すかどうか。消す機能は要件にないので、今は消さない（量は小さい）。
+- 古い記録（`mail_send_log`、`batch_*`、有効なアカウントの使った・期限の切れた `auth_token`）を消すかどうか。消す機能は要件にないので、今は消さない（量は小さい）。期限の切れた認証前の行とそのトークンは B-04 が消す（05 の 6.）。
+- B-04 と認証の完了（API-34）が期限の直前に同時に動いたときの行のロックの取り方（05 の 6.3。06 で決める。テーブルの形は変わらない）。
 
 ---
 
@@ -632,6 +643,7 @@ erDiagram
 - 전제: [01. 요건정의서](01-requirements.md)(F-01~F-36, N-01~N-08. R-62·R-63 반영), [02. 화면 설계서](02-screens.md), [03. API 설계서](03-api.md)(**5.의 데이터 항목**, **6.의 대응표**), [05. 배치 설계서](05-batch.md), ADR 0006~0016(특히 0007·0008·0009·0012·0013)
 - 이 설계서의 8.에 **요건 → 테이블 대응표**를 03의 6.과 같은 행(같은 요건 ID·같은 순서)으로 둔다. 두 표를 요건 ID로 맞대면 요건 → 화면 → API → 배치 → 테이블의 대응이 된다(Issue #15 코멘트 6651238358의 3.)
 - `DB-xx`는 이 설계서의 설계 판단 번호(9.). `P-xx`는 02의 판단(사람이 결정함)
+- 10.1의 Q-01~Q-03은 해결됨(사람의 결정: Issue #15 코멘트 6677710885. 그에 따른 03·05 변경: 커밋 dc1f012). Q-01 결정(안 B)에 맞춰 DB-06을 바꿨다
 
 ### 1. 방침
 
@@ -777,7 +789,8 @@ erDiagram
     bigint id PK
     varchar email UK
     varchar password_hash
-    varchar nickname UK
+    varchar nickname
+    varchar active_nickname UK "생성 컬럼. 유효한 행만 값 있음(DB-06)"
     enum role "USER / ADMIN"
     enum status "PENDING / ACTIVE"
     int failed_login_count
@@ -841,13 +854,13 @@ erDiagram
 | 9 | `ranking_collection` | 인기 순위 수집 완료(기간 종류·기간·장르 조합마다 1행) | `id` | — | (`period_type`, `genre_code`, `period_start`) | F-03, F-29, F-33 | API-03, 20, 21 | B-01(S2) |
 | 10 | `ranking_entry` | 인기 순위 행(제공처가 돌려준 모든 행) | `id` | `ranking_collection_id` → `ranking_collection` | (`ranking_collection_id`, `kopis_performance_id`) | F-03, F-09, F-29, F-33 | API-03, 20, 21 | B-01(S2, S4) |
 | 11 | `genre_trend` | 장르별 트렌드(최근 30일 예매 수·비중·기준) | `id` | — | (`period_start`, `period_end`, `genre_code`) | F-34 | API-22 | B-01(S6) |
-| 12 | `app_user` | 사용자(일반 사용자·관리자. 인증 전 신청 포함) | `id` | — | `email`, `nickname`, 관리자는 1행만(DB-07) | F-12~F-18, F-23~F-25, N-05 | API-10, 30~42, 55 | B-03 |
-| 13 | `auth_token` | 메일 링크 토큰(회원가입 인증·비밀번호 재설정·잠금 해제) | `id` | `user_id` → `app_user` | `token_hash` | F-12, F-14, F-15, F-18, N-05 | API-33~38 | — |
+| 12 | `app_user` | 사용자(일반 사용자·관리자. 인증 전 신청 포함) | `id` | — | `email`(인증 전 행 포함), `active_nickname`(유효한 행의 닉네임만. DB-06), 관리자는 1행만(DB-07) | F-12~F-18, F-23~F-25, N-05 | API-10, 30~42, 55 | B-03, B-04(기한이 지난 인증 전 행 삭제) |
+| 13 | `auth_token` | 메일 링크 토큰(회원가입 인증·비밀번호 재설정·잠금 해제) | `id` | `user_id` → `app_user` | `token_hash` | F-12, F-14, F-15, F-18, N-05 | API-33~38 | B-04(회원가입 인증 토큰의 유효기간으로 삭제할 행을 정한다. 토큰은 `app_user` 삭제의 CASCADE로 지워진다) |
 | 14 | `favorite` | 즐겨찾기 | `id` | `user_id` → `app_user`, `performance_id` → `performance` | (`user_id`, `performance_id`) | F-09, F-18~F-20 | API-03, 42~45 | — |
 | 15 | `review` | 리뷰(평점과 본문) | `id` | `user_id` → `app_user`, `performance_id` → `performance` | (`user_id`, `performance_id`) | F-03, F-09, F-17, F-18, F-21~F-24, F-28, F-30 | API-01, 03, 10~13, 42, 43, 55, 56 | — |
 | 16 | `mail_send_log` | 메일 발송 기록(최근 24시간 수를 센다) | `id` | — | — | F-12, F-14, F-15, N-06, N-07 | API-33, 35, 37 | — |
-| 17 | `batch_job_run` | 배치 실행 기록(1회 실행에 1행) | `id` | — | — | F-08, N-04 | — | B-01~B-03 |
-| 18 | `batch_step_run` | 배치 스텝 실행 기록 | `id` | `job_run_id` → `batch_job_run` | (`job_run_id`, `step_name`) | F-08, N-04 | — | B-01~B-03 |
+| 17 | `batch_job_run` | 배치 실행 기록(1회 실행에 1행) | `id` | — | — | F-08, F-12, N-04 | — | B-01~B-04 |
+| 18 | `batch_step_run` | 배치 스텝 실행 기록 | `id` | `job_run_id` → `batch_job_run` | (`job_run_id`, `step_name`) | F-08, F-12, N-04 | — | B-01~B-04 |
 
 ### 4. 테이블별 주요 컬럼
 
@@ -1001,9 +1014,10 @@ erDiagram
 
 | 컬럼 | 타입(예정) | NULL | 기본값 | 제약 | 설명 |
 |---|---|---|---|---|---|
-| `email` | VARCHAR(254) | 불가 | — | UNIQUE | 이메일 주소(03의 4.6에서 254자 이내) |
+| `email` | VARCHAR(254) | 불가 | — | UNIQUE | 이메일 주소(03의 4.6에서 254자 이내). 유일 제약은 인증 전 행에도 적용된다(같은 이메일 주소의 재신청은 행 교체. P-10) |
 | `password_hash` | VARCHAR | 불가 | — | — | 비밀번호 해시(`DelegatingPasswordEncoder` 형식. 기본은 bcrypt. ADR 0013 결정 6) |
-| `nickname` | VARCHAR(20) | 불가 | — | UNIQUE | 닉네임(1~20자. P-05). 관리자는 화면에 나오지 않지만 NOT NULL이므로 B-03에서 정한 값을 넣는다(공정 4) |
+| `nickname` | VARCHAR(20) | 불가 | — | —(유일 제약은 아래 `active_nickname`에 둔다) | 닉네임(1~20자. P-05). 인증 전 행은 신청 때의 닉네임(차지하지 않음). 관리자는 화면에 나오지 않지만 NOT NULL이므로 B-03에서 정한 값을 넣는다(공정 4) |
+| `active_nickname` | VARCHAR(20). 생성 컬럼(`GENERATED ALWAYS AS (CASE WHEN status = 'ACTIVE' THEN nickname END) VIRTUAL`) | 가능 | (식으로 정해짐) | UNIQUE | 유효한 행의 닉네임. 인증 전 행은 NULL. **유효한 계정 사이에서만 닉네임 중복을 막는다**(DB-06. 03의 4.7). 앱은 쓰지 않는다(INSERT·UPDATE 열에 넣지 않음) |
 | `role` | ENUM(`USER`, `ADMIN`) | 불가 | `USER` | 관리자는 1행만(DB-07) | 역할(일반 사용자 / 관리자) |
 | `status` | ENUM(`PENDING`, `ACTIVE`) | 불가 | `PENDING` | — | 상태(인증 전 / 유효). B-03의 관리자는 `ACTIVE`로 만든다 |
 | `failed_login_count` | INT | 불가 | 0 | CHECK(0 이상) | 연속 실패 횟수(F-14 ①②) |
@@ -1011,7 +1025,9 @@ erDiagram
 | `created_at` | DATETIME | 불가 | 1.1 | — | 생성 일시(회원가입 신청·교체 일시) |
 
 - 탈퇴(F-18)하면 행을 삭제한다(탈퇴한 행을 남기지 않음. 이메일 주소·닉네임을 다시 쓸 수 있게 한다. 03의 5.). 리뷰·즐겨찾기·토큰은 외래 키로 함께 삭제된다(5.).
-- 인증 전 신청도 이 표에 넣는다(`status = PENDING`). 같은 이메일 주소로 다시 신청하면 이 행을 교체한다(P-10). 닉네임 유일 제약은 인증 전 행에도 적용된다(DB-06. 미결 사항 Q-01).
+- 인증 전 신청도 이 표에 넣는다(`status = PENDING`). 같은 이메일 주소로 다시 신청하면 이 행을 교체한다(P-10). **인증 전 행은 닉네임을 차지하지 않는다**(사람의 결정. Issue #15 코멘트 6677710885의 Q-01의 B): `active_nickname`이 NULL이므로, 같은 닉네임의 인증 전 행이 몇 개 있어도, 유효한 행과 같은 닉네임이어도 유일 제약에 걸리지 않는다(MySQL의 UNIQUE는 NULL끼리를 중복으로 보지 않는다).
+- 인증 완료(API-34)에서 `status`를 `ACTIVE`로 하면 `active_nickname`에 값이 들어가고, 그때 같은 닉네임의 유효한 행이 있으면 유일 제약 위반(오류 1062)이 된다. API-34는 이것을 "인증 시점에 닉네임이 쓰이고 있음"과 같은 처리(그 인증 전 행을 삭제하고 409)로 한다(03의 4.7). 닉네임 변경(API-40)에도 유효한 행 사이에서 이 제약이 적용된다.
+- 인증 전 행이 삭제되는 것은 API-33의 교체(같은 이메일 주소), API-34의 2.(닉네임이 쓰이고 있었음), B-04(기한이 지난 행. 05의 6.) 세 가지. 모두 토큰은 외래 키 CASCADE로 함께 지워진다(5.).
 
 #### 4.13 `auth_token`(토큰)
 
@@ -1022,6 +1038,8 @@ erDiagram
 | `token_hash` | CHAR(64) | 불가 | — | UNIQUE | 토큰 해시(SHA-256의 16진). 토큰 자체는 저장하지 않는다(03의 4.7) |
 | `expires_at` | DATETIME | 불가 | — | — | 유효기간(24시간·1시간·1시간. P-10) |
 | `used_at` | DATETIME | 가능 | NULL | — | 사용한 일시. NULL이 아니면 사용됨(한 번 쓰면 무효) |
+
+- B-04는 인증 전 행 중 유효기간 안의 `SIGNUP` 토큰이 하나도 없는 행을 삭제한다(05의 6.2의 3.). 이 판정에 `user_id`·`purpose`·`expires_at`을 쓴다(6.의 인덱스).
 
 #### 4.14 `favorite`(즐겨찾기)
 
@@ -1057,7 +1075,7 @@ erDiagram
 
 | 컬럼 | 타입(예정) | NULL | 기본값 | 제약 | 설명 |
 |---|---|---|---|---|---|
-| `job_name` | VARCHAR | 불가 | — | — | 처리 이름(`daily-collect`·`import-subway`·`create-admin`. 05의 1.1) |
+| `job_name` | VARCHAR | 불가 | — | — | 처리 이름(`daily-collect`·`import-subway`·`create-admin`·`purge-expired-signups`. 05의 1.1) |
 | `started_at` | DATETIME | 불가 | — | — | 시작 일시 |
 | `finished_at` | DATETIME | 가능 | NULL | — | 종료 일시. 실행 중에는 NULL |
 | `result` | ENUM(`SUCCESS`, `PARTIAL_FAILURE`, `FAILURE`) | 가능 | NULL | — | 결과(성공 / 일부 실패 / 실패. 05의 1.1). 실행 중에는 NULL |
@@ -1068,7 +1086,7 @@ erDiagram
 | 컬럼 | 타입(예정) | NULL | 기본값 | 제약 | 설명 |
 |---|---|---|---|---|---|
 | `job_run_id` | BIGINT | 불가 | — | FK → `batch_job_run.id`. UNIQUE(`job_run_id`, `step_name`) | 어느 실행의 스텝인지 |
-| `step_name` | VARCHAR | 불가 | — | — | 스텝(B-01은 `S1`~`S7`. B-02·B-03은 하나의 스텝으로 기록한다) |
+| `step_name` | VARCHAR | 불가 | — | — | 스텝(B-01은 `S1`~`S7`. B-02~B-04는 하나의 스텝으로 기록한다. B-04는 삭제한 건수를 `processed_count`에 넣는다) |
 | `started_at` | DATETIME | 불가 | — | — | 시작 일시 |
 | `finished_at` | DATETIME | 가능 | NULL | — | 종료 일시 |
 | `result` | ENUM(`SUCCESS`, `FAILURE`) | 가능 | NULL | — | 결과. 실행 중에는 NULL |
@@ -1090,7 +1108,7 @@ erDiagram
 | `review.performance_id` → `performance` | RESTRICT | 위와 같음 |
 | `favorite.user_id` → `app_user` | **CASCADE** | 탈퇴(행 삭제)하면 즐겨찾기도 함께 삭제한다(F-18 ④) |
 | `review.user_id` → `app_user` | **CASCADE** | 탈퇴하면 리뷰도 함께 삭제한다(F-18 ③). 평점에도 포함되지 않게 된다 |
-| `auth_token.user_id` → `app_user` | **CASCADE** | 탈퇴하면 토큰도 삭제한다(03의 5.) |
+| `auth_token.user_id` → `app_user` | **CASCADE** | 탈퇴하면 토큰도 삭제한다(03의 5.). 인증 전 행 삭제(API-33의 교체, API-34의 2., B-04)에서도 토큰을 함께 지운다(03의 4.7, 05의 6.2) |
 | `coin_locker.station_id` → `station` | **CASCADE** | B-02가 역을 전부 교체할 때 속한 물품보관함도 지운다(같은 트랜잭션에서 다시 넣는다. 05의 4.3) |
 | `ranking_entry.ranking_collection_id` → `ranking_collection` | **CASCADE** | 조합 행을 지울 때는 그 순위 행도 지운다(S2는 조합 행을 갱신하고 순위 행을 교체한다) |
 | `batch_step_run.job_run_id` → `batch_job_run` | **CASCADE** | 실행 기록을 지울 때(운영에서 오래된 기록을 지우는 경우) 스텝도 지운다 |
@@ -1113,13 +1131,15 @@ erDiagram
 | `ranking_entry` | (`kopis_performance_id`) | 공연 상세에서 그 공연이 들어 있는 순위 찾기(API-03. 4.3의 인기 순위) |
 | `review` | (`performance_id`, `created_at`) | 공연의 리뷰 목록(최신순. API-10, 55)과 평점 집계(API-01, 03, 43) |
 | `favorite` | (`user_id`, `created_at`) | 즐겨찾기 목록(등록 최신순. API-43) |
-| `auth_token` | (`user_id`, `purpose`) | 재신청·재설정 때 같은 사용자·용도의 오래된 토큰을 무효로 하기(API-33, 35, 37) |
+| `auth_token` | (`user_id`, `purpose`, `expires_at`) | 재신청·재설정 때 같은 사용자·용도의 오래된 토큰을 무효로 하기(API-33, 35, 37). B-04에서 인증 전 행마다 "유효기간 안의 `SIGNUP` 토큰이 있는지"를 확인하기(05의 6.2의 3.. 끝의 `expires_at`으로 기한 비교까지 인덱스로 끝난다) |
+| `app_user` | (`status`) | B-04에서 인증 전(`PENDING`) 행만 읽기(05의 6.2의 3.). 유효한 행이 대부분이고 인증 전 행은 적을 것으로 보이므로 거르기에 효과가 있다 |
 | `mail_send_log` | (`created_at`) | 최근 24시간 발송 수 세기(03의 4.8) |
 | `batch_job_run` | (`job_name`, `started_at`) | 처리별 최신 실행 보기(운영) |
 | `batch_step_run` | (`step_name`, `result`, `started_at`) | 지난번 S1이 성공한 날과 창의 마지막 날 구하기(05의 3.3) |
 
 - `ranking_collection`의 유일 제약은 (`period_type`, `genre_code`, `period_start`) 순서로 해서, "기간 종류·장르별 최신 완료 기간"(03의 4.9)을 같은 인덱스로 찾을 수 있게 한다.
 - 공간 인덱스(`POINT`·`SPATIAL`)는 쓰지 않는다(DB-12).
+- 신청·인증 완료·닉네임 변경에서 "유효한 계정이 닉네임을 쓰고 있는지"(03의 4.7. API-33, 34, 40)는 `active_nickname` 유일 제약의 인덱스를 `WHERE active_nickname = ?`로 찾는다(DB-06).
 - 관리자 수정을 반영한 값으로 거르는 조건(기간·장르·키워드)은 `performance`의 인덱스만으로는 효과가 없다. 공연은 수천 건 규모이므로, 공정 4에서 실제 쿼리와 실행 계획을 보고 정한다(DB-01).
 
 ### 7. 03의 5. 데이터 항목 할당
@@ -1137,19 +1157,19 @@ erDiagram
 | 인기 순위 | `ranking_entry`(제공처 순위 → `provider_rank`, 공연 ID → `kopis_performance_id`). 기간 종류·기간 첫날·마지막 날·장르·받은 일시는 부모 `ranking_collection`(`period_type`·`period_start`·`period_end`·`genre_code`·`completed_at`)에 둔다(DB-03) |
 | 인기 순위 수집 완료 | `ranking_collection`(기간 종류·첫날·마지막 날·장르, 수집을 마친 일시 → `completed_at`, 건수 → `row_count`. 조합마다 1행) |
 | 장르별 트렌드 | `genre_trend`(집계 기간 → `period_start`·`period_end`, 장르 → `genre_code`, 예매 수 → `booking_count`, 비중 → `share`, 기준 → `basis`) |
-| 사용자 | `app_user`(이메일 주소 → `email`, 비밀번호 해시 → `password_hash`, 닉네임 → `nickname`, 역할 → `role`, 상태 → `status`, 연속 실패 횟수 → `failed_login_count`, 잠김 여부 → `locked_at`, 생성 일시 → `created_at`) |
+| 사용자 | `app_user`(이메일 주소 → `email`, 비밀번호 해시 → `password_hash`, 닉네임 → `nickname`, 역할 → `role`, 상태 → `status`, 연속 실패 횟수 → `failed_login_count`, 잠김 여부 → `locked_at`, 생성 일시 → `created_at`). "닉네임 중복은 유효한 계정 사이에서만 금지"는 `active_nickname` 유일 제약, "이메일 주소 중복은 인증 전 행을 포함해 금지"는 `email` 유일 제약(DB-06) |
 | 토큰 | `auth_token`(용도 → `purpose`, 사용자 → `user_id`, 토큰 해시 → `token_hash`, 유효기간 → `expires_at`, 사용한 일시 → `used_at`) |
 | 즐겨찾기 | `favorite`(사용자·공연, 등록 일시 → `created_at`. (`user_id`, `performance_id`)로 유일) |
 | 리뷰 | `review`(사용자·공연, 평점 → `rating`, 본문 → `body`, 작성 일시 → `created_at`, 수정 일시 → `updated_at`. (`user_id`, `performance_id`)로 유일) |
 | 메일 발송 기록 | `mail_send_log`(보낸 일시 → `created_at`, 용도 → `purpose`) |
-| 배치 실행 기록 | `batch_job_run`(잡, 시작·종료 일시, 결과, 오류 내용)과 `batch_step_run`(스텝, 시작·종료 일시, 결과, 건수 → `processed_count`·`summary`, 오류 내용). 지난번 수집이 성공한 날은 `batch_step_run`에서 구한다(DB-10). 05의 3.3의 "이번 창의 마지막 날"은 `batch_step_run.window_end_date` |
+| 배치 실행 기록 | `batch_job_run`(잡, 시작·종료 일시, 결과, 오류 내용)과 `batch_step_run`(스텝, 시작·종료 일시, 결과, 건수 → `processed_count`·`summary`, 오류 내용). 지난번 수집이 성공한 날은 `batch_step_run`에서 구한다(DB-10). "이번 창의 마지막 날"(03의 5.. 05의 3.3의 3.(b)·7.)은 `batch_step_run.window_end_date` |
 
 03의 5.에 없는 항목으로 이 설계서가 두는 것:
 
 | 항목 | 이유 |
 |---|---|
 | `booking_site.source` | 예매처의 관리자 수정을 자동 수집 행과 나눠 두기 위해(DB-02. 03의 4.10·P-13의 "예매처(이름과 URL)" 수정) |
-| `batch_step_run.window_end_date` | 05의 3.3의 3.(b)·7.이 "이번 창의 마지막 날" 기록을 요구한다(03의 5.의 "배치 실행 기록"에는 없다. 10.의 Q-02) |
+| `app_user.active_nickname` | 03의 4.7·5.의 "닉네임 중복은 유효한 계정 사이에서만 금지"를 DB 유일 제약으로 지키기 위한 생성 컬럼(DB-06). 값은 `nickname`과 `status`로 정해지며 새 사실을 갖지 않는다 |
 
 ### 8. 요건 → 테이블 대응표
 
@@ -1168,12 +1188,12 @@ erDiagram
 | F-09 | `performance`, `ranking_entry`, `favorite`, `review` | 공연을 삭제하지 않는다(외래 키는 RESTRICT). 끝났는지는 `end_date`로 판정. 순위·즐겨찾기·리뷰는 끝난 공연도 대상 |
 | F-10 | — | 브라우저에 기억한다(03의 6.과 같음. 1.3) |
 | F-11 | `translation`, `translation_usage`, `station` | 원문 해시로 번역을 찾는다. 역명은 `station.name_ja`(공식 표기)를 우선. 월 상한은 `translation_usage` |
-| F-12 | `app_user`, `auth_token`, `mail_send_log` | 인증 전 행(`PENDING`)과 인증 토큰. 메일 상한을 센다 |
+| F-12 | `app_user`, `auth_token`, `mail_send_log`, `batch_job_run`, `batch_step_run` | 인증 전 행(`PENDING`. 닉네임은 차지하지 않음)과 인증 토큰. 메일 상한을 센다. 인증 완료로 유효로 하고, 닉네임 중복은 `active_nickname` 유일 제약으로도 막는다(DB-06). 기한이 지난 인증 전 행은 B-04가 삭제하고 그 실행을 기록한다 |
 | F-13 | `app_user` | 이메일 주소·비밀번호 해시·상태 확인 |
 | F-14 | `app_user`, `auth_token`, `mail_send_log` | 실패 횟수·잠금(`locked_at`). 잠금 해제 재인증 토큰과 메일 |
 | F-15 | `app_user`, `auth_token`, `mail_send_log` | 비밀번호 재설정 토큰과 메일. 잠금 해제·실패 횟수 초기화 |
 | F-16 | `app_user` | 비밀번호 해시 갱신 |
-| F-17 | `app_user`, `review` | 닉네임(유일). 리뷰 작성자로 `review`에서 연결해 표시한다 |
+| F-17 | `app_user`, `review` | 닉네임(유효한 계정 사이에서 유일. `active_nickname`. DB-06). 리뷰 작성자로 `review`에서 연결해 표시한다 |
 | F-18 | `app_user`, `review`, `favorite`, `auth_token` | 행 삭제. 외래 키 CASCADE로 리뷰·즐겨찾기·토큰도 삭제한다 |
 | F-19 | `favorite`, `performance` | (`user_id`, `performance_id`)로 유일. 등록·해제 |
 | F-20 | `favorite`, `performance` | 내 즐겨찾기(숨김 제외, 끝난 공연 포함) |
@@ -1191,7 +1211,7 @@ erDiagram
 | F-32 | `performance`, `performance_override` | `is_open_run`(수정 가능), `total_show_count` |
 | F-33 | `ranking_collection`, `ranking_entry`, `performance` | 현재 기간과 하나 전 기간의 순위를 비교한다. 하나 전 기간의 완료 기록이 없으면 P-17 |
 | F-34 | `genre_trend` | 최신 집계 기간의 비중과 기준 |
-| F-35 | — | 로그아웃·자동 로그아웃은 세션(앱 메모리. ADR 0013 결정 2~4)으로 하며 테이블을 쓰지 않는다(10.의 Q-03) |
+| F-35 | — | 로그아웃·자동 로그아웃은 세션(앱 메모리. ADR 0013 결정 2~4)으로 하며 테이블을 쓰지 않는다(03의 6.과 같음. 1.3. 10.1의 Q-03) |
 | F-36 | — | 브라우저에 기억한다(03의 6.과 같음. 1.3) |
 | N-01 | `translation`, `translation_usage`, `station` | F-11과 같음 |
 | N-02 | — | 화면 대응(03의 6.과 같음) |
@@ -1204,9 +1224,9 @@ erDiagram
 
 #### 8.1 역방향 확인(불필요한 것이 없음)
 
-- 3.의 모든 테이블에 요건 ID가 있다(8. 표의 어느 행에 나온다). `batch_job_run`·`batch_step_run`은 F-08·N-04(수집 재실행·`afterdate`), `ranking_collection`은 F-29·F-33(R-62의 "수집이 끝남" 판단), `mail_send_log`는 N-06 ②·N-07, `translation_usage`는 F-11 ①·N-07을 위한 것이다.
-- 03의 6.에서 "—"인 요건(F-10, F-36, N-02, N-03, N-08)은 이 표에서도 "—".
-- 03의 6.에서 "04에 기입"이었는데 이 표에서 "—"로 한 요건은 **F-35뿐**(이유는 표와 10.의 Q-03).
+- 3.의 모든 테이블에 요건 ID가 있다(8. 표의 어느 행에 나온다). `batch_job_run`·`batch_step_run`은 F-08·N-04(수집 재실행·`afterdate`)와 F-12(B-04 실행 기록), `ranking_collection`은 F-29·F-33(R-62의 "수집이 끝남" 판단), `mail_send_log`는 N-06 ②·N-07, `translation_usage`는 F-11 ①·N-07을 위한 것이다.
+- 03의 6.에서 "—"인 요건(F-10, F-35, F-36, N-02, N-03, N-08)은 이 표에서도 "—". 03의 6.에서 "04에 기입"인 요건은 이 표에서 모두 테이블이 있다(두 표의 "—" 행이 일치한다).
+- 03의 6. 배치 열의 B-01~B-04는 3. 배치 열의 어딘가에 나온다(B-04는 `app_user`·`auth_token`·`batch_job_run`·`batch_step_run`).
 - 요건에 없는 데이터(예: 열람 이력, 검색 조건 저장, 알림, 로그인 이력, 리뷰 "좋아요")의 테이블은 두지 않았다(X-04~X-07).
 
 ### 9. 설계 판단 (DB-xx)
@@ -1218,7 +1238,7 @@ erDiagram
 | DB-03 | 인기 순위는 "조합"(`ranking_collection`)과 "행"(`ranking_entry`) 두 테이블로 나누고, 기간·장르는 조합에만 둔다 | 03의 5.의 "인기 순위"와 "인기 순위 수집 완료"는 같은 조합(기간 종류·기간·장르)을 가진다. 조합을 한 곳에 두면 중복이 없어지고, S2가 조합마다 "행 교체 + 완료 기록"을 한 트랜잭션으로 하는(05의 3.4) 형태와 일치한다. 행은 있는데 완료 기록이 없는 상태가 구조상 생기지 않는다 | 두 표를 따로 두고 양쪽에 기간·장르를 두기: 같은 값을 두 곳에 두어 어긋날 우려가 있다 |
 | DB-04 | `ranking_entry`는 공연을 KOPIS 공연 ID(문자열)로 두고, `performance`로의 외래 키를 두지 않는다 | S2 시점에는 순위에 나온 공연이 아직 DB에 없을 수 있다(S4에서 나중에 보충. 05의 3.2). S4가 실패해도 순위는 저장하고 싶다(그 공연은 API에서 연결되지 않으면 내지 않는다). `performance.kopis_performance_id`의 유일 제약으로 연결한다 | 외래 키를 둔다: S2 전에 공연이 필요해져 S2·S4의 순서와 실패 처리(05)와 맞지 않는다 |
 | DB-05 | 번역은 `translation`에 원문 해시(SHA-256)마다 1행으로 두고, 공연 등의 테이블에 번역 열을 두지 않는다 | "같은 원문은 두 번 번역하지 않는다"(ADR 0007 3.)를 유일 제약으로 지킬 수 있다. 원문이 바뀌면 다른 해시가 되어 자동으로 "번역 없음" 상태가 된다(05의 3.3의 4.). 관리자가 수정한 값·역명·물품보관함 위치 문장도 같은 방법으로 찾을 수 있다. `TEXT` 원문 자체에는 유일 제약을 붙이기 어려워 해시로 한다 | 각 테이블에 `title_ja` 같은 열을 둔다: 열이 많아지고, 같은 원문의 번역을 재사용할 수 없으며, 원문이 바뀌었을 때 번역을 지우는 처리가 필요하다 |
-| DB-06 | 인증 전 회원가입 신청도 `app_user`에 `status = PENDING`으로 둔다. 이메일 주소·닉네임 유일 제약은 인증 전 행에도 적용된다 | 03의 5.(사용자 상태: 인증 전 / 유효)대로. 재신청은 같은 행의 교체가 된다(P-10). 닉네임 유일 제약을 유효한 행에만 적용하면 두 사람이 같은 닉네임으로 신청할 수 있고, 인증을 완료할 때 처음으로 중복을 알게 된다 | 신청을 별도 테이블에 둔다: 03의 5.와 맞지 않는다. 테이블이 늘어난다 |
+| DB-06 | 인증 전 회원가입 신청도 `app_user`에 `status = PENDING`으로 둔다. **이메일 주소 유일 제약은 인증 전 행에도 적용하고, 닉네임 유일 제약은 유효한 행에만 적용한다**. 후자는 생성 컬럼 `active_nickname`(`CASE WHEN status = 'ACTIVE' THEN nickname END`, `VIRTUAL`)에 UNIQUE를 붙여 구현한다 | 사람의 결정(Issue #15 코멘트 6677710885의 Q-01의 B)과 03의 4.7: 인증 전 신청은 닉네임을 차지하지 않고, 유효한 계정 사이의 중복은 DB 유일 제약으로도 막는다. MySQL 8.4의 UNIQUE는 NULL끼리를 중복으로 보지 않으므로, 인증 전 행(NULL)은 몇 개든 들어가고 유효한 행 사이에서만 중복이 막힌다. 인증 완료로 `status`를 바꾸는 순간 제약이 적용되므로, 두 신청이 거의 동시에 유효가 되어도 한쪽은 실패한다(03의 4.7의 2.의 경합). 생성 컬럼으로 한 이유: ① 값 확인(API-33, 34, 40)이 `WHERE active_nickname = ?`로 그 인덱스를 쓸 수 있다(식 인덱스는 쿼리마다 같은 식을 정확히 써야 쓰인다), ② 위반 때 키 이름이 열 이름으로 드러나 API-34에서 409로 바꾸기 쉽다, ③ `SHOW CREATE TABLE`에서 의도를 읽을 수 있다. `VIRTUAL`로 한 것은 값을 행에 저장하지 않아도 InnoDB가 보조 인덱스에 값을 가지므로 충분하기 때문이다. 이메일 주소는 같은 이메일 주소의 재신청을 행 교체로 하므로(P-10) 인증 전 행을 포함해 유일하게 한다 | 신청을 별도 테이블에 둔다: 03의 5.와 맞지 않는다. 테이블이 늘어난다. / 인증 전 행도 닉네임을 차지한다(db-designer의 이전 제안): 사람이 채택하지 않았다(Q-01). / 식 인덱스 `UNIQUE ((CASE WHEN status = 'ACTIVE' THEN nickname END))`: 같은 일을 할 수 있지만 위 ①②의 이유로 생성 컬럼으로 했다. / 앱 확인만: 03의 4.7의 경합을 막지 못하고 `CLAUDE.md`와 맞지 않는다 |
 | DB-07 | 관리자가 1행뿐임을 DB로 보장한다(`role = 'ADMIN'`일 때만 값을 갖는 식에 유일 제약. MySQL 8의 식 인덱스. 형태는 공정 4) | F-25 ①(관리자 계정 1개)을 B-03의 확인(05의 5.의 3.)에만 의존하지 않는다 | 앱 확인만: `CLAUDE.md`의 "제약은 DB에도 정의한다"와 맞지 않는다 |
 | DB-08 | 잠김 여부는 `locked_at`(NULL이 아니면 잠김)으로 둔다 | "잠김 여부"에 더해 언제 잠갔는지 운영 확인에 쓸 수 있다. 해제하면 NULL과 실패 횟수 0으로 한다 | 참거짓 열 `is_locked`: 일시가 남지 않는다 |
 | DB-09 | **정규화를 깨는 것**: `ranking_collection.period_end`·`genre_trend.period_end`(첫날과 기간 종류로 계산 가능), `genre_trend.share`(예매 수로 계산 가능), `genre_trend.basis`(같은 기간 행은 모두 같은 값) | `period_end`: 03의 5.가 첫날·마지막 날을 요구하고, API가 집계 기간을 그대로 돌려준다. 달력 주·월의 마지막 날 계산을 SQL마다 쓰지 않는다. `share`: 05의 S6가 수집할 때 계산해 저장하는 설계. 기간 단위로 전부 교체하므로 값이 어긋나지 않는다. `basis`: S6는 한 번의 조회로 한 기간을 받으므로 같은 기간 행은 항상 같은 값이 된다. 기간의 부모 테이블을 만들 만큼의 이점이 없다 | 계산으로 구한다·부모 테이블을 만든다 |
@@ -1228,20 +1248,22 @@ erDiagram
 
 ### 10. 미결 사항·다른 설계서로의 인계
 
-#### 10.1 architect에게 확인 (03·05의 기술)
+#### 10.1 architect에게 확인 (03·05의 기술) — 모두 해결됨
 
-| No. | 내용 | 관련 | 04에서의 처리 |
+| No. | 내용 | 관련 | 상태와 04에서의 처리 |
 |---|---|---|---|
-| Q-01 | 인증 전 신청(`PENDING`)이 닉네임을 차지하는지. 03의 4.7은 "닉네임이 쓰이고 있으면 409"라고만 쓰고, 인증 전 신청을 "쓰이고 있음"에 포함하는지 쓰여 있지 않다. 또 기한이 지난 인증 전 행을 언제 지우는지(지우지 않으면 그 이메일 주소·닉네임을 계속 쓸 수 없다. 같은 이메일 주소로 재신청하는 것은 교체로 해결되지만 닉네임은 해결되지 않는다) | 03의 4.7, F-12 ③, P-10 | DB-06대로 유일 제약은 인증 전 행에도 적용한다. **제안**: "유효한(기한 내) 인증 전 신청도 닉네임을 쓰고 있는 것으로 본다. API-33은 신청 전에 기한이 지난 인증 전 행을 삭제한다"를 03의 4.7에 쓴다. 테이블 형태는 어느 쪽으로 정해져도 바뀌지 않는다 |
-| Q-02 | 05의 3.3의 7.이 "이번 창의 마지막 날" 기록을 요구하지만, 03의 5.의 "배치 실행 기록" 항목에 없다 | 03의 5., 05의 3.3 | 05를 따라 `batch_step_run.window_end_date`에 둔다(7.). 03의 5.에 항목을 더할지는 architect가 판단한다 |
-| Q-03 | 03의 6.에서 F-35의 테이블 열은 "04에 기입"이지만, 세션은 앱 메모리(ADR 0013 결정 2)이므로 테이블을 쓰지 않는다 | 03의 6., ADR 0013 | 8.에서 "—"와 이유를 썼다. 03의 6.의 F-35를 "—(세션은 메모리)"로 맞출지는 architect가 판단한다 |
+| Q-01 | 인증 전 신청(`PENDING`)이 닉네임을 차지하는지. 기한이 지난 인증 전 행을 언제 지우는지 | 03의 4.7, F-12 ③, P-10 | **해결**(사람의 결정: Issue #15 코멘트 6677710885. 안 B. db-designer의 제안은 채택하지 않음. 03의 4.7·05의 6.에 반영: 커밋 dc1f012). 인증 전 신청은 닉네임을 차지하지 않고, 인증 완료 때 유효한 계정이 쓰고 있으면 가입은 실패하며 그 인증 전 행을 삭제한다. 기한이 지난 인증 전 행은 B-04(`purge-expired-signups`, 매일 04:00)가 삭제한다. 04에서는 DB-06을 바꾸고(`active_nickname` 유일 제약), 3.·4.12·4.13·4.17·4.18·5.·6.·8.을 맞췄다 |
+| Q-02 | 05의 3.3의 7.이 "이번 창의 마지막 날" 기록을 요구하지만, 03의 5.의 "배치 실행 기록" 항목에 없다 | 03의 5., 05의 3.3 | **해결**(03의 5.에 "이번 창의 마지막 날"이 추가됨. 커밋 dc1f012). `batch_step_run.window_end_date`에 둔다(7.) |
+| Q-03 | 03의 6.에서 F-35의 테이블 열은 "04에 기입"이지만, 세션은 앱 메모리(ADR 0013 결정 2)이므로 테이블을 쓰지 않는다 | 03의 6., ADR 0013 | **해결**(03의 6.의 F-35가 "—(세션은 메모리. ADR 0013)"이 됨. 커밋 dc1f012). 8.도 "—" |
 
 #### 10.2 공정 4(상세설계)에서 정할 것
 
 - 타입 길이(`VARCHAR` 글자 수, `share` 자릿수 등). KOPIS·역 파일의 실제 값 길이를 보고 정한다.
-- **콜레이션**: 서버 기본은 `utf8mb4_unicode_ci`(`compose.yaml`). 대소문자나 가나(히라가나·가타카나), 탁점 차이를 같은 것으로 보는 경우가 있다. 이메일 주소(대소문자를 같게 봐도 되는지), 닉네임 유일 제약("Cat"과 "cat"을 같은 닉네임으로 볼지), 키워드 검색(F-02 ⑥), 해시 열(`_bin` 또는 `ascii`)에 대해 열마다 정한다. 닉네임 처리는 이용자에게 보이는 동작이므로 사람의 확인이 필요하다.
+- **콜레이션**: 서버 기본은 `utf8mb4_unicode_ci`(`compose.yaml`). 대소문자나 가나(히라가나·가타카나), 탁점 차이를 같은 것으로 보는 경우가 있다. 이메일 주소(대소문자를 같게 봐도 되는지), 닉네임 유일 제약("Cat"과 "cat"을 같은 닉네임으로 볼지), 키워드 검색(F-02 ⑥), 해시 열(`_bin` 또는 `ascii`)에 대해 열마다 정한다. 닉네임 처리는 이용자에게 보이는 동작이므로 사람의 확인이 필요하다(Issue #15 코멘트 6677710885에서 공정 4로 넘겨짐). 유일 제약은 `active_nickname`(생성 컬럼)에 붙으므로 그 콜레이션을 `nickname`과 같게 명시한다.
+- DB-07(관리자는 1행만)도 DB-06처럼 생성 컬럼 + UNIQUE로 할지, 식 인덱스로 할지.
 - 관리자 수정을 반영한 값을 읽는 방법(뷰로 할지, 쿼리마다 연결할지)과 그 값으로 거를 때의 인덱스(DB-01·6.).
 - `ranking_entry`의 유일 제약을 (`ranking_collection_id`, `provider_rank`)에도 붙일지(`boxoffice`가 같은 순위를 여러 개 돌려주는 경우가 있는지를 ADR 0008 "주의점" 확인에서 본다).
 - `station.line` 값의 표기, `coin_locker` 연결 규칙(05의 4.4. 파일을 받아 정한다).
 - 관리자의 `nickname`에 넣을 값(B-03. 화면에는 나오지 않음).
-- 오래된 기록(`mail_send_log`, `batch_*`, 사용했거나 기한이 지난 `auth_token`)을 지울지. 지우는 기능은 요건에 없으므로 지금은 지우지 않는다(양이 작다).
+- 오래된 기록(`mail_send_log`, `batch_*`, 유효한 계정의 사용했거나 기한이 지난 `auth_token`)을 지울지. 지우는 기능은 요건에 없으므로 지금은 지우지 않는다(양이 작다). 기한이 지난 인증 전 행과 그 토큰은 B-04가 지운다(05의 6.).
+- B-04와 인증 완료(API-34)가 기한 직전에 동시에 돌 때의 행 잠금 방법(05의 6.3. 06에서 정한다. 테이블 형태는 바뀌지 않는다).
