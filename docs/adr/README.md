@@ -25,6 +25,7 @@
 | [0013](0013-auth-server-session.md) | 認証はサーバーのセッション（Spring Security）で行う | 採用 |
 | [0014](0014-ui-angular-material.md) | UI コンポーネントライブラリは Angular Material（+ Angular CDK）を使う | 採用 |
 | [0015](0015-ui-design-google-stitch-mcp.md) | 画面のデザインは Google Stitch を公式の MCP サーバー経由で使い、使えないときは Angular Material の標準の見た目で作る | 採用 |
+| [0016](0016-icon-font-material-symbols-npm.md) | アイコンのフォント（Material Symbols）は npm のパッケージ `@material-symbols/font-400` でアプリに同梱する | 提案 |
 
 ## テンプレート
 
@@ -75,3 +76,4 @@
 | 0013 | 인증은 서버 세션(Spring Security)으로 한다 | 채택 |
 | 0014 | UI 컴포넌트 라이브러리는 Angular Material(+ Angular CDK)을 쓴다 | 채택 |
 | 0015 | 화면 디자인은 Google Stitch를 공식 MCP 서버를 통해 쓰고, 쓸 수 없을 때는 Angular Material 기본 겉모습으로 만든다 | 채택 |
+| 0016 | 아이콘 글꼴(Material Symbols)은 npm 패키지 `@material-symbols/font-400`으로 앱에 함께 넣는다 | 제안 |
