@@ -1,6 +1,6 @@
 # 03. API 設計書
 
-- 状態: 基本設計: 承認（2026-11-06、Issue #15 コメント 6678921752）。詳細は工程4。リクエスト・レスポンスの詳細（項目・JSON の例・入力チェックの細目・エラーコードの全体）は工程4で書く
+- 状態: 基本設計: 承認（2026-11-06、Issue #15 コメント 6678921752）。詳細設計: 作成中（工程4、Issue #20）。詳細は 7.（共通）・8.（API ごと）・9.（Issue #20 で決めること）に書いた
 - 担当: architect
 - 最終更新: 2026-11-06
 - 前提: [01. 要件定義書](01-requirements.md)（R-62〜R-64 を反映）、[02. 画面設計書](02-screens.md)、ADR 0006〜0016
@@ -8,6 +8,7 @@
 - `P-xx` は 02 の 8. の判断。P-01〜P-15 は人間が決定した（2026-11-05、Issue #15 コメント 6651238358）
 - 認証前の申込とニックネームの扱い（04 の Q-01）は人間が決定した（2026-11-06、Issue #15 コメント 6677710885。案 B: ニックネームは認証の完了のときに確定する）。4.7 に反映した
 - ゲート3 の reviewer の指摘（Issue #15 コメント 6678542365）と人間の決定（2026-11-06、コメント 6678516145）を反映した: 3. と 6. の要件 ID の一致（軽微1）、パスワードのルール（軽微3。01 の R-64。4.6）、公演に結びつかない順位の行（軽微6。4.9）
+- 工程4（Issue #20）: 1.〜6. は基本設計の内容のまま（参照のための番号を変えない）。詳細を 7.〜9. に足した。Issue #20 の D-01・D-05・D-06・D-07 の案と、D-09 のうち API に関わるものは 9.。人間の決定 D-08（Issue #20 コメント 6679098450）は 4.6 と 02 の SC-05・SC-08・SC-12 にそろっている
 
 ## 1. 共通の決まり
 
@@ -45,7 +46,7 @@
 
 ### 1.5 エラー
 
-- エラーの本文は共通の形（エラーコード、メッセージ、入力の誤りのときは項目ごとの内容）にする。詳しい形とコードの一覧は工程4で書く。
+- エラーの本文は共通の形（エラーコード、メッセージ、入力の誤りのときは項目ごとの内容）にする。詳しい形とコードの一覧は 7.3（D-07）。
 - 主なステータス: 400 入力の誤り・業務上の条件に合わない、401 未ログイン・ログインの失敗、403 権限がない・CSRF、404 ない・非表示の公演、409 重複（メールアドレス・ニックネーム・レビュー）、503 外部サービスの上限・停止（メール・reCAPTCHA）。
 
 ### 1.6 公開中の公演・表示できる公演
@@ -183,7 +184,7 @@
 - **会員登録の申込（API-33。P-10）**: メールの上限（4.8）を確かめ、上限なら何も保存せず 503。メールアドレスが登録済み（認証を完了したアカウントがある）なら 409。ニックネームが**登録を完了したアカウント**（有効なアカウント。管理者を含む）で使われていれば 409。**認証前の申込はニックネームを押さえない**: 同じニックネームの認証前の申込がほかにあっても受け付ける（人間の決定。Issue #15 コメント 6677710885 の Q-01 の B）。認証前の同じメールアドレスの申込があれば置き換える（前のトークンは無効になる）。認証のメールのリンクは 24 時間有効。
 - **メール認証の完了（API-34）**: 1つのトランザクションで、次の順に判定する。
   1. トークンが無効（存在しない・期限切れ・使用済み）なら 400（エラーの種類: トークンが無効）。何も変えない。
-  2. 申込のニックネームが、その時点で**登録を完了したアカウント**で使われていれば、**登録は失敗**し 409（エラーの種類: 認証の時点でニックネームが使われている。API-33 の 409 の種類（メールアドレス・ニックネーム）とはエラーコードで見分ける。コードの名前・本文の形は工程4）。このとき、その**認証前の行を削除**する（トークンも一緒に消え、同じリンクはそれ以降 1. の「無効」になる）。行が残らないので、利用者は同じメールアドレスで、別のニックネームですぐ申し込み直せる（02 の SC-06）。
+  2. 申込のニックネームが、その時点で**登録を完了したアカウント**で使われていれば、**登録は失敗**し 409（エラーの種類: 認証の時点でニックネームが使われている。API-33 の 409 の種類（メールアドレス・ニックネーム）とはエラーコードで見分ける。コードは `NICKNAME_TAKEN_AT_VERIFICATION`。7.3）。このとき、その**認証前の行を削除**する（トークンも一緒に消え、同じリンクはそれ以降 1. の「無効」になる）。行が残らないので、利用者は同じメールアドレスで、別のニックネームですぐ申し込み直せる（02 の SC-06）。
   3. 1・2 に当たらなければ、アカウントを有効にし、トークンを使用済みにする（F-12 ⑦）。
   - 2 の判定から有効にするまでの間に、同じニックネームの別の申込が先に有効になることがある。これを防ぐため、**有効なアカウントの間のニックネームの重複は DB の一意制約でも防ぐ**（認証前の行には効かせない。04 の DB-06 を db-designer が直す）。制約の違反は 2 と同じ扱い（行の削除と 409）にする。
 - **F-12 ③ との関係**: F-12 ③「他のユーザーが使っているニックネームでは登録できない」の「登録」は、⑦ のとおりメールの認証の完了で成立する。そのため、申込（API-33）と認証の完了（API-34）の両方で、その時点の登録を完了したアカウントと比べれば ③ を満たす（認証の完了のときに使われていれば、③ により登録できない）。認証前の申込は、⑧ のとおりログインできない状態で、「他のユーザー」に含めない。ニックネームの変更（API-40。F-17 ③）も同じく、登録を完了したアカウントとだけ比べる（認証前の申込と同じニックネームに変えられる。その申込は認証の完了のときに 2. で失敗する）。
@@ -209,8 +210,8 @@
   - 組ごとに決めるので、S2 の途中（一部のジャンルだけ保存が済んだとき）に照会すると、ジャンルによって集計期間が違うことがある。画面は返された集計期間をそのまま表示する。
 - **人気急上昇（API-21）**: 上の期間を現在の期間とし、その1つ前の期間（暦の上で1つ前。F-33 ②）と比べる。1つ前の期間の収集が終わっていないときは、比べず、現在の期間の集計期間・直前の期間の集計期間と「直前の期間の順位がない」ことを返す（画面はこれで「比べる期間（{直前の期間の集計期間}）の順位データがないため、人気急上昇を表示できません」を表示する。02 の決定 P-17）。
 - 表示できる期間がまったくない（サービスの開始前など）ときは、0 件と「期間がない」ことを返す（画面は「この期間の順位データがありません」）。
-- レスポンスの項目の詳細（集計期間の項目名、直前の期間がないときの形）は工程4で書く。
-- **公演（performance）に結びつかない順位の行**の扱いは工程4で決める。画面に見える振る舞いが変わる場合は、工程4で人間に確認する（ゲート3 の軽微6。人間の決定: Issue #15 コメント 6678516145）。
+- レスポンスの項目の詳細（集計期間の項目名、直前の期間がないときの形）は 8. の API-20・API-21 と 9.3（D-06）。
+- **公演（performance）に結びつかない順位の行**の扱いは 9.1（D-01。案。人間の確認（Issue #20 の確認2）の対象）。
 
 ### 4.10 管理者の修正（F-26。P-13）
 
@@ -244,6 +245,22 @@
 
 - 退会（F-18）では、そのユーザーのレビュー・お気に入り・トークンを一緒に削除する。外部キーの削除の扱いは 04 で決める。
 - 公演のデータは削除しない（F-09 ②）。
+
+### 5.1 工程4 で足した・具体化したこと（Issue #20。db-designer へ）
+
+03 の詳細（7.〜9.）で、04 のテーブルの形（3.・4.）に**新しいテーブル・列は要らない**ことを確かめた。04 の詳細（型の長さ・照合順序・インデックス・制約）で受けてほしいことを挙げる。
+
+| No. | 事項 | 03 の前提 | 04 で決めてほしいこと |
+|---|---|---|---|
+| H-01 | 管理者の修正を反映した値の読み方（D-09） | 一般ユーザー向けのすべての API は、表示・絞り込み・並び順・1.6 の条件に**修正を反映した値**（修正があればその値、なければ自動収集の値）を使う（9.5）。対象の項目と `override_value` の文字列の形は 9.5 の表 | ビューにするか、クエリごとに結ぶか。修正を反映した公演開始日・終了日・ジャンル・公演名での絞り込みと、公演開始日での並び替え（API-01・02・05・06・43・50）が1つの SQL で書けること。インデックス（04 の 6. の最後の項目） |
+| H-02 | 入力の上限と列の長さ | 8. の入力チェックの上限: メールアドレス 254、ニックネーム 20（NFC に正規化した後のコードポイント）、レビュー本文 1,000、管理者の修正: 公演名 200、出演者・チケット価格・公演時間の案内 2,000、上演時間・観覧年齢 100、予約サイトの名前 100・URL 2,000・最大 10 件 | 列の長さを上の上限以上にする（特に `booking_site.name`・`url` は `ADMIN` の行が入る）。`override_value` は TEXT のまま。公演 ID・会場 ID（`kopis_performance_id`・`kopis_venue_id`）の長さ（API はパスの形の確認にこの長さを使う。7.1） |
+| H-03 | 公演に結びつかない順位の行（D-01） | 9.1: 順位を読むときに `performance` と結び（INNER JOIN）、結びつかない行と非表示の公演を除いて振り直す。同じ提供元の順位が複数あるときは公演 ID の順 | DB-04 のまま（外部キーなし）。`ranking_entry` の一意制約を (`ranking_collection_id`, `provider_rank`) にも付けるか（D-09）。付けない場合も 9.1 の順で並ぶ |
+| H-04 | B-04 と API-34 のロック（D-05） | 9.2: `app_user` → `auth_token` の順でロックする。API-34 は `SELECT ... FOR UPDATE` で行をロックしてから確かめる。B-04 は主キーで、条件（認証前・有効期限内の会員登録のトークンがない）を付けた1つの DELETE で消す | 分離レベルは MySQL の既定（REPEATABLE READ）のまま。9.2 の SQL で使うインデックス（04 の 6. の `auth_token` (`user_id`, `purpose`, `expires_at`)・`app_user` (`status`)）が足りるか |
+| H-05 | `station.line` の書き方（D-09） | API は路線を **1〜8 の整数**で返す（8. の API-04。表示の文言は画面の辞書。ADR 0007 決定3） | DB の持ち方（整数で持つか、`1호선` のような文字で持ち変換するか） |
+| H-06 | セッションの確認（7.4） | 認証の必要なリクエストのたびに、ユーザーを主キーで読み、状態とパスワードのハッシュを確かめる | 新しい列は要らない（主キーで1行を読むだけ） |
+| H-07 | トークン（7.6） | 用途ごとに有効なトークンは最新の1つだけ（新しく作るとき、同じユーザー・用途の使っていないトークンの `used_at` を入れる）。トークンの文字列は 43 文字、保存するのは SHA-256 の16進 64 文字 | 04 の 4.13 のまま |
+| H-08 | 管理者の `nickname`（D-09） | API は管理者のニックネームを返さない（API-30 で `null`）。管理者の行は有効なので、そのニックネームは一般ユーザーが使えない（4.7。409） | 値（ニックネームのルール（4.6）を満たし、利用者が使いそうにない値） |
+| H-09 | メールアドレス・ニックネームの比べ方（D-02・D-03） | API は値を小文字に変えない。メールアドレスは前後の空白を除くだけ、ニックネームは前後の空白を除き NFC に正規化するだけで、同じかどうかは DB の照合順序で比べる。ニックネームの大文字・小文字は同じとみなす（D-02 の人間の決定） | 照合順序（D-03）。メールアドレスも大文字・小文字を同じとみなす照合順序を推奨する（`A@example.com` と `a@example.com` が別のアカウントにならないように） |
 
 ## 6. 要件対応表（要件 → 画面 → API → バッチ）
 
@@ -309,13 +326,1058 @@
 - API の列が「—」の機能要件は F-36 だけ。F-36 はブラウザの中だけで完結する（切り替えた値を `localStorage` に記憶する。02 の 3.8）ので API を置かない。ログインしている利用者の設定としてサーバーに保存する機能は要件にない（F-36 ③ は「ブラウザに記憶」）。
 - 要件にない機能（例: レビューへの「いいね」、通知、検索条件の保存、メールの再送のボタン）は置いていない（X-05〜X-07 など）。
 
+## 7. 共通の詳細（工程4）
+
+### 7.1 リクエストの共通の決まり
+
+| 項目 | 決まり |
+|---|---|
+| 本文 | JSON（`Content-Type: application/json`）。本文があるのは POST・PUT・PATCH と API-42（DELETE）だけ。ほかの形式は 415（`UNSUPPORTED_MEDIA_TYPE`）。JSON として読めない・項目の型が違う（数値の項目に文字列など）ときは 400（`MALFORMED_REQUEST`） |
+| 知らない項目 | 本文の知らない項目は無視する（Spring Boot の既定）。**API-52 だけは 400**（`VALIDATION_FAILED`、理由 `UNKNOWN_FIELD`。部分の更新で項目名の誤りが黙って無視されないように） |
+| 前後の空白 | メールアドレス・ニックネーム・キーワード・管理者の修正の文字列は、前後の空白（Unicode の空白。Java の `String.strip()`）を除いてから確かめ、除いた値を使う。パスワード・トークン・レビュー本文は除かない（4.6） |
+| 文字数 | Unicode のコードポイントで数える（4.6）。ニックネームは、確かめる前に Unicode の **NFC** に正規化する（ハングルは分解された形で入力されることがあり、見た目が同じでも別の文字列になって重複の確認をすり抜けるため） |
+| 制御文字 | 1行の項目（ニックネーム、キーワード、管理者の修正の公演名・上演時間・観覧年齢・予約サイトの名前と URL）は、制御文字（Unicode の一般カテゴリ Cc）を1つでも含むと 400（理由 `FORMAT`）。複数行の項目（レビュー本文、管理者の修正の出演者・チケット価格・公演時間の案内）は、Cc のうち改行（LF・CR）だけを許す |
+| 繰り返しのクエリ | 複数の値は同じ名前を繰り返す（`genre=AAAA&genre=GGGA`）。同じ値は1つとみなす |
+| `lang` | `ko` / `ja`。省略すると `ko`。ほかの値は 400（理由 `INVALID_VALUE`）。受け取る API は 8. に書く |
+| ページング | `page`: 0〜10,000 の整数（既定 0）。`size`: 1〜100 の整数（既定 20）。範囲の外は 400（理由 `RANGE`）。最後のページより後は 200 で `items` が空 |
+| 公演 ID・会場 ID（パス） | KOPIS の ID（`mt20id`・`mt10id`）。英数字だけで、長さが 04 の列（`kopis_performance_id`・`kopis_venue_id`）の長さ以内。形が合わないときは 400 にせず、存在しない ID として 404 にする |
+| レビュー ID（パス） | 1 以上の整数（JSON の数値）。形が合わないときは 404 |
+| 「今日」・今の時刻 | 1回のリクエストの中で1回だけ求め（Asia/Seoul）、その中のすべての判定に使う |
+
+### 7.2 レスポンスの共通の決まり
+
+| 項目 | 決まり |
+|---|---|
+| 形式 | JSON（UTF-8）。項目名は lowerCamelCase |
+| NULL | 8. の表に書いた項目は**いつも出す**（省かない）。値がないときは `null`。配列は値がなくても `[]`（`null` にしない） |
+| 日付 | `"2026-11-05"`（`YYYY-MM-DD`） |
+| 日時 | `"2026-11-05T14:03:00+09:00"`（ISO 8601。Asia/Seoul のオフセット付き。秒まで） |
+| 座標 | JSON の数値（小数第6位まで） |
+| 距離 | `distanceMeters`: 整数（m。四捨五入。02 の SC-01）。500m 以内の判定は丸める前の値で行う（4.5）。地球の半径は 6,371,000 m |
+| 状態の値 | 公演の状態 `ONGOING`（公演中）/ `UPCOMING`（公演予定）/ `ENDED`（終了）。期間の種類 `DAILY` / `WEEKLY` / `MONTHLY`。役割 `USER` / `ADMIN` |
+| 成功のステータス | GET は 200。作成（API-11）は 201。本文を返さない操作は 204 |
+| キャッシュ | Spring Security の既定のヘッダー（`Cache-Control: no-cache, no-store, ...`）のまま（ログインで内容が変わる API があるため） |
+
+**共通の型**
+
+`LocalizedText`（外部データの文。1.2、02 の 3.4）
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `value` | string | 不可 | 表示する文。`lang=ja` で翻訳があれば日本語の翻訳、それ以外は韓国語の原文 |
+| `original` | string | 不可 | 韓国語の原文 |
+| `translated` | boolean | 不可 | `value` が翻訳か。`lang=ko` ではいつも `false` |
+
+```json
+{ "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true }
+```
+
+- 画面は、`lang=ja` で `translated = false` のとき「原文」と示す（P-06）。公演名・会場名・駅名は `translated = true` のとき `original` を併記する（F-11 ②）。それ以外は `value` だけを表示する（F-11 ③）。
+- 翻訳は、表示する原文（管理者の修正を反映した値）のハッシュで引く（04 の DB-05）。
+- 駅名は、`lang=ja` で公式の日本語表記（ADR 0009）があればそれを `value` にして `translated = true`。なければ翻訳、それもなければ原文。
+- 項目の値そのものがない（例: 出演者がない）ときは、`LocalizedText` ではなく `null`。
+
+`Period`（集計期間）: `{ "start": "2026-10-26", "end": "2026-11-01" }`（どちらも date、NULL 不可。日次は `start` = `end`）。
+
+`Rating`（評価。4.4）
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `average` | number | 可 | 平均（小数第1位。P-03）。`count` が 0 のとき `null` |
+| `count` | integer | 不可 | レビュー数 |
+
+- 平均は、DB から星の合計と件数を読み、アプリで `BigDecimal` の割り算（小数第1位、`RoundingMode.HALF_UP`）で求める。SQL の `AVG` は途中で桁を丸めるため、境目の値（4.25 など）で P-03 とずれることがある。
+
+`PerformanceSummary`（公演のカード。02 の 3.7）
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `performanceId` | string | 不可 | 公演 ID（KOPIS の `mt20id`） |
+| `title` | LocalizedText | 不可 | 公演名 |
+| `venue` | object | 不可 | `{ "venueId": string, "name": LocalizedText }`（どちらも NULL 不可） |
+| `startDate` | date | 不可 | 公演開始日 |
+| `endDate` | date | 不可 | 公演終了日 |
+| `genre` | string | 不可 | ジャンルのコード（KOPIS。例: `AAAA`。表示は画面の辞書） |
+| `status` | string | 不可 | `ONGOING` / `UPCOMING` / `ENDED`（今日と公演期間で計算する。1.6） |
+| `posterUrl` | string | 可 | ポスターの URL |
+| `hasAward` | boolean | 不可 | 受賞歴（F-31） |
+| `rating` | Rating | 可 | 評価（F-30）。API-20・21 では計算せず `null`（02 の SC-03 のカードは評価を除く） |
+
+- 公演の値（公演名・期間・ジャンルなど）は、すべて管理者の修正を反映した値（4.10・9.5）。
+
+`ReviewItem`（レビュー）
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `reviewId` | integer | 不可 | レビュー ID |
+| `rating` | integer | 不可 | 星（1〜5） |
+| `body` | string | 可 | 本文。本文のないレビュー、または未ログインへの応答（F-23 ①）では `null` |
+| `nickname` | string | 可 | 投稿者のニックネーム。未ログインへの応答（F-23 ④）では `null` |
+| `createdAt` | datetime | 可 | 投稿日時。未ログインへの応答では `null`（02 の SC-02） |
+
+`Page<T>`（一覧。1.4）
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `items` | array（T） | 不可 | そのページの行 |
+| `page` | integer | 不可 | 要求したページ（0 から） |
+| `size` | integer | 不可 | 要求した件数 |
+| `totalElements` | integer | 不可 | 全件数 |
+| `totalPages` | integer | 不可 | ページ数（0 件なら 0） |
+
+### 7.3 エラー（D-07）
+
+**本文の形（全 API 共通）**
+
+```json
+{
+  "code": "VALIDATION_FAILED",
+  "message": "Request validation failed",
+  "errors": [
+    { "field": "password", "reason": "PASSWORD_RULE" },
+    { "field": "nickname", "reason": "LENGTH" }
+  ]
+}
+```
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `code` | string | 不可 | エラーコード（下の表）。**画面はこの値で表示の文言を決める**（画面の辞書。02） |
+| `message` | string | 不可 | 開発者向けの短い説明（英語）。画面に表示しない。内部の情報（SQL・スタックトレース・例外のクラス名・入力されたパスワード）を含めない |
+| `errors` | array | 不可 | 項目ごとの誤り。`VALIDATION_FAILED` のときだけ要素がある。ほかは `[]` |
+| `errors[].field` | string | 不可 | 項目名。本文は JSON の項目の経路（例: `bookingSites[0].url`）、クエリ・パスはその名前 |
+| `errors[].reason` | string | 不可 | 理由のコード（下の表） |
+
+- 複数の項目が誤っていれば、`errors` にすべて入れる（順番は決めない）。
+- Spring Security が返す 401・403 と、Spring の例外（405・415 など）もこの形にする。Spring Security の既定の本文・Spring Boot の既定のエラーの応答は使わない。
+- 採らなかった案: RFC 9457（Problem Details。Spring の `ProblemDetail`）。標準の形だが、`type`・`title` など画面が使わない項目が増える。画面が見るのは `code` と `errors` だけなので、小さい独自の形にした（新しいライブラリは要らない）。
+
+**エラーコード**
+
+| ステータス | `code` | いつ | API |
+|---|---|---|---|
+| 400 | `VALIDATION_FAILED` | 入力の誤り（必須・長さ・形・範囲・組み合わせ）。`errors` に項目ごとの理由 | 入力のあるすべての API |
+| 400 | `MALFORMED_REQUEST` | 本文が JSON として読めない・項目の型が違う | 本文のある API |
+| 400 | `REVIEW_NOT_OPEN` | 公演の開始日より前のレビューの投稿（F-21 ⑦） | API-11 |
+| 400 | `TOKEN_INVALID` | メールのリンクのトークンが無効（ない・形が違う・期限切れ・使用済み・用途が違う） | API-34, 36, 38 |
+| 400 | `CURRENT_PASSWORD_INCORRECT` | 現在のパスワードが違う（P-14） | API-41, 42 |
+| 400 | `RECAPTCHA_FAILED` | reCAPTCHA の検証を通らなかった | API-37 |
+| 401 | `UNAUTHENTICATED` | ログインしていない（セッションがない・切れた・無効になった。7.4） | 認可が「一般」「管理者」の API |
+| 401 | `LOGIN_FAILED` | メールアドレスかパスワードが違う（存在しないメールアドレスも同じ） | API-31 |
+| 401 | `ACCOUNT_LOCKED` | ロック中（F-14 ③） | API-31 |
+| 401 | `EMAIL_NOT_VERIFIED` | メールの認証が済んでいない（F-12 ⑧） | API-31 |
+| 403 | `FORBIDDEN` | 権限がない（一般ユーザーが管理者の API、管理者が「一般」の API、ほかの人のレビューの編集・削除） | 認可が「一般」「管理者」の API、API-12, 13 |
+| 403 | `CSRF_INVALID` | CSRF のトークンがない・合わない | 状態を変えるすべての API |
+| 404 | `NOT_FOUND` | API のパスがない | — |
+| 404 | `PERFORMANCE_NOT_FOUND` | 公演がない、または非表示（一般ユーザー向けの API）。管理者の API では、ないときだけ | API-03, 10, 11, 44, 51〜55 |
+| 404 | `VENUE_NOT_FOUND` | 会場がない | API-04 |
+| 404 | `REVIEW_NOT_FOUND` | レビューがない（API-12・13 では、レビューの公演が非表示のときも） | API-12, 13, 56 |
+| 405 | `METHOD_NOT_ALLOWED` | そのパスにないメソッド | — |
+| 409 | `EMAIL_ALREADY_REGISTERED` | メールアドレスが登録済み（F-12 ⑤） | API-33 |
+| 409 | `NICKNAME_ALREADY_USED` | ニックネームが有効なアカウントで使われている（F-12 ③、F-17 ③） | API-33, 40 |
+| 409 | `NICKNAME_TAKEN_AT_VERIFICATION` | 認証の時点でニックネームが使われていて、登録に失敗した（4.7 の API-34 の 2.） | API-34 |
+| 409 | `REVIEW_ALREADY_EXISTS` | 同じ公演のレビューを投稿済み（F-21 ⑤） | API-11 |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | 本文が JSON でない | 本文のある API |
+| 503 | `MAIL_LIMIT_REACHED` | メールの直近 24 時間の上限（4.8） | API-33, 35, 37 |
+| 503 | `MAIL_SEND_FAILED` | メールの送信に失敗した（4.8） | API-33, 35, 37 |
+| 503 | `RECAPTCHA_UNAVAILABLE` | reCAPTCHA の上限（429）・エラー・タイムアウト（ADR 0011） | API-37 |
+| 500 | `INTERNAL_ERROR` | 予期しないエラー（詳細はログだけに残す） | すべて |
+
+**`errors[].reason`**
+
+| `reason` | 意味 | Bean Validation との対応（06 で使う） |
+|---|---|---|
+| `REQUIRED` | 必須の項目がない・空（前後の空白を除いた後） | `@NotNull`・`@NotBlank` |
+| `LENGTH` | 文字数・要素の数が範囲の外 | `@Size` |
+| `FORMAT` | 形が違う（メールアドレス、日付、URL、ID、制御文字） | `@Email`・`@Pattern`・独自 |
+| `RANGE` | 数値・日付が範囲の外 | `@Min`・`@Max`・`@DecimalMin`・`@DecimalMax` |
+| `INVALID_VALUE` | 決まった値の一覧にない（ジャンル・区・`status`・`period`・`lang`・`visibility`・修正できる項目の名前） | 独自 |
+| `PASSWORD_RULE` | パスワードのルール（4.6。長さを含む）に合わない | 独自（名前は 06） |
+| `DATE_ORDER` | 開始日が終了日より後（API-01 の `from` > `to`、API-52・53 の公演期間） | 独自 |
+| `CONFLICT` | 同時に指定できない条件（区・地図の範囲・会場。4.1、P-04）。指定した項目ごとに1つ | 独自 |
+| `INCOMPLETE` | 組で指定する項目の一部だけ（地図の範囲の4つ） | 独自 |
+| `UNKNOWN_FIELD` | 知らない項目（API-52 だけ） | — |
+| `TYPE` | クエリ・パスの値の型が違う（例: `page=abc`） | —（型の変換の失敗） |
+
+**画面との関係（02 の 3.3・3.5・3.6）**
+
+- 02 の 3.5 の「API が『未ログイン』を返したら」は、**`code = UNAUTHENTICATED`** のときだけを指す。API-31 の `LOGIN_FAILED`・`ACCOUNT_LOCKED`・`EMAIL_NOT_VERIFIED` は同じ 401 だが、SC-04 の結果の表示に使い、自動ログアウトの扱いにしない。
+- `VALIDATION_FAILED` は `errors[].field` の入力欄の下に表示する（02 の 3.3）。`CURRENT_PASSWORD_INCORRECT` は「現在のパスワード」の入力欄の下に表示する（02 の SC-12）。
+- 8. の各 API の「エラー」に画面の表示が書いていないコード（`INTERNAL_ERROR` など）は、02 の 3.6 の「エラー（通信・サーバー）」の表示にする。
+
+### 7.4 認証・セッション・判定の順番（1.3、ADR 0013）
+
+- ログインの成功（API-31）でセッション ID を変える（セッション固定攻撃の対策。Spring Security の既定）。セッションには、ユーザーの ID と、ログインしたときのパスワードのハッシュの値を持つ。
+- **セッションのあるリクエストの確認（ADR 0013 決定9 を具体化。実装の形は 06）**: リクエストのたびにそのユーザーを DB で読み（主キー）、次のどれかに当たれば、そのセッションを無効にして未ログインとして扱う（認可が「一般」「管理者」の API は 401 `UNAUTHENTICATED`、API-30 は未ログインの応答、「全員（内容が変わる）」の API は未ログインの内容）。
+  1. 行がない（退会した。F-18 ②）
+  2. 状態が有効でない
+  3. パスワードのハッシュがセッションの値と違う（ほかの端末でパスワードを変更・再設定した。古いパスワードでログインしたセッションを残さない。F-16 ②・F-15 ②）
+  - ロック（F-14）はログインの試行の制限なので、すでにあるセッションは無効にしない。
+  - ニックネーム・役割はセッションに持たず、毎回この読み込みの値を使う（API-40 の変更がほかの端末にもすぐ反映される）。
+- **CSRF（1.3）**: ログイン・ログアウトの成功で CSRF のトークンの Cookie は消え、トークンは使われるまで作られない（Spring Security の既定。公式、確認日 2026-11-06）。そのため **API-30 は応答のたびに CSRF のトークンを読み込み、Cookie `XSRF-TOKEN` を応答に付ける**（方法は 06）。画面は最初の表示のときと、ログイン・ログアウトの直後に API-30 を呼ぶ（02 の 3.5）。
+- **判定の順番**（8. の各 API は、この順で最初に当たったエラーを返す。API ごとに違う順番は 8. に書く）: ① CSRF（403 `CSRF_INVALID`。Spring Security のフィルターで先に判定される）→ ② ログイン（401 `UNAUTHENTICATED`）→ ③ 役割（403 `FORBIDDEN`）→ ④ 入力（400 `VALIDATION_FAILED`・`MALFORMED_REQUEST`）→ ⑤ 存在（404）→ ⑥ 業務の条件（400・409・503）。
+- 確認した公式ドキュメント（確認日 2026-11-06）: Spring Security の CSRF（`csrf.spa()`。ログインの成功・ログアウトの成功で Cookie が消える、トークンの読み込みは遅延される、失敗は `AccessDeniedHandler` に渡され 403）: https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html
+
+### 7.5 API の中で呼ぶ外部サービス
+
+| 呼び出し | 使う API | 失敗したとき |
+|---|---|---|
+| Gmail の SMTP（ADR 0012） | API-33, 35, 37 | 503 `MAIL_SEND_FAILED`。再試行しない（利用者がもう一度送る）。タイムアウトの値は 06（ADR 0012 決定3） |
+| reCAPTCHA `CreateAssessment`（ADR 0011） | API-37 | 429・5xx・タイムアウト・通信のエラーは 503 `RECAPTCHA_UNAVAILABLE`。再試行しない。タイムアウトの値は 06 |
+
+- **reCAPTCHA の呼び出し**（確認日 2026-11-06。https://docs.cloud.google.com/recaptcha/docs/create-assessment-website ）: `POST https://recaptchaenterprise.googleapis.com/v1/projects/{プロジェクト ID}/assessments?key={API キー}`、本文 `{ "event": { "token": "{画面から受け取ったトークン}", "siteKey": "{サイトキー}" } }`。応答の `tokenProperties.valid` が `true` なら通過、`false` なら 400 `RECAPTCHA_FAILED`。チェックボックスの部品では `action` を使わないので、`action` は比べない（公式: チェックボックスで `action` を設定していなければこの確認を省く）。プロジェクト ID・API キー・サイトキーは環境変数（ADR 0011。名前は 06）。
+- **メールの1日の上限の数え方（4.8）**: 送る直前に `mail_send_log` の直近 24 時間の数を数え、400 以上なら送らない。送信に成功したら1行足す。同時の申込で数と送信の間に差が出て 400 通をわずかに超えることはあるが、Gmail の 500 通（ADR 0012）までの余裕の中に収まる。
+
+### 7.6 メールのリンクとトークン（4.7）
+
+- トークン: 32 バイトの暗号論的な乱数（`SecureRandom`）を Base64URL（パディングなし）にした **43 文字**（`[A-Za-z0-9_-]`）。DB にはその SHA-256 の16進（64 文字。04 の `auth_token.token_hash`）だけを保存する。
+- リンク: `{公開の URL}/signup/verify?token=…`（SC-06）、`{公開の URL}/password-reset/confirm?token=…`（SC-08）、`{公開の URL}/unlock/confirm?token=…`（SC-10）。公開の URL は環境変数（ADR 0010。名前は 06）。
+- 新しいトークンを作るとき、同じユーザー・同じ用途の使っていないトークンは使用済み（`used_at` に今の時刻）にする。有効なリンクは用途ごとにいつも最新の1つだけ。
+- 有効期限: 会員登録 24 時間、パスワード再設定 1 時間、ロック解除 1 時間（P-10）。「有効期限 > 今の時刻」なら有効。
+- メールの本文は、韓国語と日本語を1通の中に併記する（申込の API は表示言語を受け取らないため。文言は 06・実装）。件名・本文にトークン以外の秘密の情報（パスワードなど）を入れない。
+
+## 8. API ごとの詳細
+
+- 各 API の認可・並び順・画面・要件 ID は 3. の表。ここではリクエスト・レスポンス・エラーを書く。
+- 「型」の `date`・`datetime` は 7.2 の形の文字列。「NULL」の「可」は JSON で `null` になりうること。
+- 入力チェックの「理由」は 7.3 の `errors[].reason`。
+- 「エラー」には、7.4 の判定の順番の ①〜③（`CSRF_INVALID`・`UNAUTHENTICATED`・`FORBIDDEN`）と `INTERNAL_ERROR`・`MALFORMED_REQUEST`・`UNSUPPORTED_MEDIA_TYPE` を書かない（認可の区分から決まる）。
+
+### 8.1 公演・会場（`performance`）
+
+#### API-01 GET `/api/performances`（公演の検索）
+
+**リクエスト（クエリ）**
+
+| 名前 | 型 | 必須 | 入力チェック（理由） |
+|---|---|---|---|
+| `lang` | string | 任意 | 7.1 |
+| `page`, `size` | integer | 任意 | 7.1 |
+| `from` | date | 任意 | `YYYY-MM-DD`（`TYPE`）。`from` と `to` の両方があるとき `from` ≤ `to`（`DATE_ORDER`）。片方だけでもよい（4.1 の判定の片側だけを使う） |
+| `to` | date | 任意 | 同上 |
+| `district` | string（繰り返し） | 任意 | ソウルの 25 区の名前（原文。例: `종로구`。アプリの定数）のどれか（`INVALID_VALUE`） |
+| `swLat`, `swLng`, `neLat`, `neLng` | number | 任意 | 4つそろえる（一部だけは、ないものに `INCOMPLETE`）。緯度 -90〜90・経度 -180〜180（`RANGE`）。`swLat` ≤ `neLat`、`swLng` ≤ `neLng`（違えば `neLat`・`neLng` に `RANGE`） |
+| `venueId` | string | 任意 | 英数字（`FORMAT`）。存在しない会場は 0 件（404 にしない） |
+| `genre` | string（繰り返し） | 任意 | ジャンルのコードの一覧（アプリの定数。05 の 7. で確定する）のどれか（`INVALID_VALUE`） |
+| `status` | string（繰り返し） | 任意 | `ongoing` / `upcoming`（`INVALID_VALUE`） |
+| `keyword` | string | 任意 | 前後の空白を除いて 0〜100 文字（`LENGTH`）。0 文字なら指定なし。制御文字なし（`FORMAT`） |
+
+- `district`・地図の範囲・`venueId` のうち2つ以上を指定すると 400（指定したものそれぞれに `CONFLICT`。地図の範囲は `swLat` に付ける）。P-04。
+- キーワードは「含む」で探す（SQL の `LIKE`。`%`・`_`・`\` はエスケープする）。大文字・小文字などの扱いは 04 の照合順序（D-03）。`lang=ja` のときは、原文の公演名または翻訳した公演名のどちらかに含めば結果に出る（F-02 ⑥）。
+- SC-01 で会場の印を選んだとき（「その会場の公演（いまの検索条件に合うもの）」）は、画面はいまの条件のうち場所の条件（区・地図の範囲）を外し、`venueId` を足して呼ぶ（印はその場所の条件に合う会場にだけ出ているので、結果は同じになる。P-04 の 400 を避ける）。
+
+**レスポンス 200**: `Page<PerformanceSummary>`（7.2）。並び順は 3.（修正を反映した公演開始日の早い順 → 公演 ID の順）。
+
+```json
+{
+  "items": [
+    {
+      "performanceId": "PF270001",
+      "title": { "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true },
+      "venue": { "venueId": "FC001247", "name": { "value": "シャルロッテシアター", "original": "샤롯데씨어터", "translated": true } },
+      "startDate": "2026-09-01",
+      "endDate": "2027-02-28",
+      "genre": "GGGA",
+      "status": "ONGOING",
+      "posterUrl": "http://www.kopis.or.kr/upload/pfmPoster/PF_PF270001.gif",
+      "hasAward": false,
+      "rating": { "average": 4.3, "count": 12 }
+    }
+  ],
+  "page": 0, "size": 20, "totalElements": 1, "totalPages": 1
+}
+```
+
+**エラー**: 400 `VALIDATION_FAILED`。
+
+#### API-02 GET `/api/performances/markers`（地図の印）
+
+**リクエスト（クエリ）**: API-01 と同じ（`page`・`size` はない）。チェックも同じ。
+
+**レスポンス 200**
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `markers` | array | 不可 | 会場ごとに1つ（P-01）。座標のない会場は含めない（P-11）。並び順は会場 ID の順 |
+| `markers[].venueId` | string | 不可 | 会場 ID |
+| `markers[].name` | LocalizedText | 不可 | 会場名（印の `aria-label` などに使う） |
+| `markers[].latitude` | number | 不可 | 緯度 |
+| `markers[].longitude` | number | 不可 | 経度 |
+| `markers[].performanceCount` | integer | 不可 | 条件に合う公開中の公演の数（1 以上） |
+
+```json
+{ "markers": [ { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false }, "latitude": 37.511044, "longitude": 127.099164, "performanceCount": 2 } ] }
+```
+
+**エラー**: 400 `VALIDATION_FAILED`。
+
+#### API-03 GET `/api/performances/{performanceId}`（公演詳細）
+
+**リクエスト**: パス `performanceId`（7.1）、クエリ `lang`。
+
+**レスポンス 200**
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `performanceId` | string | 不可 | 公演 ID |
+| `title` | LocalizedText | 不可 | 公演名 |
+| `status` | string | 不可 | `ONGOING` / `UPCOMING` / `ENDED`（`ENDED` は「終了」。F-03 ④） |
+| `startDate`, `endDate` | date | 不可 | 公演期間 |
+| `genre` | string | 不可 | ジャンルのコード |
+| `venue` | object | 不可 | 下の表 |
+| `cast` | LocalizedText | 可 | 出演者 |
+| `ticketPrice` | LocalizedText | 可 | チケット価格 |
+| `schedule` | LocalizedText | 可 | 公演時間の案内 |
+| `runtime` | LocalizedText | 可 | 上演時間 |
+| `ageLimit` | LocalizedText | 可 | 観覧年齢 |
+| `posterUrl` | string | 可 | ポスターの URL |
+| `isOpenRun` | boolean | 不可 | オープンランか（F-32 ①） |
+| `totalShowCount` | integer | 可 | 開幕からの累計の上演回数（F-32 ②）。まだ取れていなければ `null`（画面は表示しない） |
+| `hasAward` | boolean | 不可 | 受賞歴（F-31） |
+| `bookingSites` | array | 不可 | 予約サイト（並び順のとおり）。`[]` なら画面は「予約サイトの情報がありません」（F-04） |
+| `bookingSites[].name` | LocalizedText | 不可 | 予約サイトの名前 |
+| `bookingSites[].url` | string | 不可 | URL |
+| `rating` | Rating | 不可 | 評価（F-30） |
+| `reviewOpen` | boolean | 不可 | 今日 ≥ 公演開始日（レビューを投稿できる期間。F-21 ⑥⑦）。`false` のとき画面は「公演の開始日（`startDate`）から投稿できます」 |
+| `rankings` | array | 不可 | 入っている人気順位（4.3、P-02。最大 6）。並び順は `DAILY` → `WEEKLY` → `MONTHLY`、それぞれ `ALL` → ジャンル |
+| `rankings[].periodType` | string | 不可 | `DAILY` / `WEEKLY` / `MONTHLY` |
+| `rankings[].genre` | string | 不可 | `ALL`（全体）またはジャンルのコード |
+| `rankings[].rank` | integer | 不可 | 振り直した順位（1〜10。9.1） |
+| `rankings[].period` | Period | 不可 | 集計期間（4.9） |
+| `viewer` | object | 可 | 一般ユーザーでログインしているときだけ。未ログイン・管理者は `null` |
+| `viewer.isFavorite` | boolean | 不可 | お気に入りに登録しているか（F-19） |
+| `viewer.myReview` | ReviewItem | 可 | 自分のレビュー（なければ `null`） |
+
+`venue`
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `venueId` | string | 不可 | 会場 ID（API-04 に使う） |
+| `name` | LocalizedText | 不可 | 会場名 |
+| `address` | LocalizedText | 可 | 住所 |
+| `hasLocation` | boolean | 不可 | 座標があるか。`false` なら画面は API-04 を呼ばず「会場の位置情報がないため、周辺の情報を表示できません」（P-11） |
+
+- `rankings` のジャンルは、その公演の修正を反映したジャンル。期間の種類・ジャンルの組ごとに API-20 と同じ期間・同じ振り直し（9.1）で上位 10 位を求め、この公演が入っているものだけを入れる。
+- 予約サイトは、管理者の修正（`booking_sites`）があれば修正の行、なければ自動収集の行（04 の DB-02）。
+
+```json
+{
+  "performanceId": "PF270001",
+  "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false },
+  "status": "ONGOING", "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA",
+  "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false }, "address": { "value": "서울특별시 송파구 올림픽로 240", "original": "서울특별시 송파구 올림픽로 240", "translated": false }, "hasLocation": true },
+  "cast": { "value": "조승우, 최재림", "original": "조승우, 최재림", "translated": false },
+  "ticketPrice": { "value": "VIP석 190,000원", "original": "VIP석 190,000원", "translated": false },
+  "schedule": null, "runtime": { "value": "2시간 30분", "original": "2시간 30분", "translated": false }, "ageLimit": null,
+  "posterUrl": null, "isOpenRun": false, "totalShowCount": 120, "hasAward": true,
+  "bookingSites": [ { "name": { "value": "인터파크", "original": "인터파크", "translated": false }, "url": "https://tickets.interpark.com/" } ],
+  "rating": { "average": null, "count": 0 },
+  "reviewOpen": true,
+  "rankings": [ { "periodType": "WEEKLY", "genre": "ALL", "rank": 3, "period": { "start": "2026-10-26", "end": "2026-11-01" } } ],
+  "viewer": { "isFavorite": true, "myReview": null }
+}
+```
+
+**エラー**: 404 `PERFORMANCE_NOT_FOUND`（ない・非表示。F-03 ⑤。画面は SC-99）。
+
+#### API-06 GET `/api/venues`（会場の候補）
+
+**リクエスト（クエリ）**
+
+| 名前 | 型 | 必須 | 入力チェック（理由） |
+|---|---|---|---|
+| `keyword` | string | 必須 | 前後の空白を除いて 1〜50 文字（`REQUIRED`・`LENGTH`）。制御文字なし（`FORMAT`） |
+| `lang` | string | 任意 | 7.1 |
+
+- 会場名（原文）に含む会場。`lang=ja` のときは翻訳した会場名に含むものも。公開中の公演（1.6）が1つ以上ある会場だけ。最大 20 件（ページなし）。並び順は会場名（原文）の順、同じなら会場 ID の順。
+
+**レスポンス 200**
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `items` | array | 不可 | 最大 20 |
+| `items[].venueId` | string | 不可 | 会場 ID（API-01・02 の `venueId` に使う） |
+| `items[].name` | LocalizedText | 不可 | 会場名 |
+| `items[].district` | string | 可 | 区の名前（原文。決められなかった会場は `null`。4.2） |
+
+**エラー**: 400 `VALIDATION_FAILED`。
+
+### 8.2 周辺（`surrounding`）
+
+共通の型 `StationItem`・`LockerItem`:
+
+| 型 | 項目 | 型 | NULL | 内容 |
+|---|---|---|---|---|
+| StationItem | `name` | LocalizedText | 不可 | 駅名（7.2 の駅名の決まり） |
+| | `line` | integer | 不可 | 路線（1〜8。表示の文言は画面の辞書。ADR 0007 決定3） |
+| | `distanceMeters` | integer | 不可 | 距離（7.2） |
+| LockerItem | `stationName` | LocalizedText | 不可 | 属する駅の駅名 |
+| | `line` | integer | 不可 | 路線（1〜8） |
+| | `location` | LocalizedText | 不可 | 位置の文章（F-06 ③。例: `1번 출입구 주변`） |
+| | `distanceMeters` | integer | 不可 | 属する駅の座標での距離（F-06 ②） |
+
+- 駅の並び順: 距離（丸める前）の近い順 → 駅名（原文）→ 路線。コインロッカー: 距離の近い順 → 駅名（原文）→ 路線 → 位置の文章（原文）。件数に上限を置かない（500m 以内なので少ない）。
+
+#### API-04 GET `/api/venues/{venueId}/surroundings`（会場の周辺）
+
+**リクエスト**: パス `venueId`（7.1）、クエリ `lang`。
+
+**レスポンス 200**
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `venue` | object | 不可 | `{ "venueId": string, "name": LocalizedText, "address": LocalizedText（可）, "latitude": number（可）, "longitude": number（可） }`（SC-01 の会場の情報に使う） |
+| `hasLocation` | boolean | 不可 | 会場の座標があるか。`false` なら `stations`・`lockers` は `[]`（P-11） |
+| `stations` | array（StationItem） | 不可 | 500m 以内の駅（F-05）。`[]` なら画面は「500m 以内に駅はありません」 |
+| `lockers` | array（LockerItem） | 不可 | 500m 以内のコインロッカー（F-06）。`[]` なら「500m 以内にコインロッカーはありません」 |
+
+**エラー**: 404 `VENUE_NOT_FOUND`。
+
+#### API-05 GET `/api/surroundings`（現在地の周辺）
+
+**リクエスト（クエリ）**
+
+| 名前 | 型 | 必須 | 入力チェック（理由） |
+|---|---|---|---|
+| `lat` | number | 必須 | -90〜90（`REQUIRED`・`RANGE`・`TYPE`） |
+| `lng` | number | 必須 | -180〜180（同上） |
+| `lang` | string | 任意 | 7.1 |
+
+**レスポンス 200**
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `venues` | array | 不可 | 500m 以内の、公開中の公演（1.6）がある会場（座標のある会場だけ）。距離の近い順 → 会場 ID の順 |
+| `venues[].venueId` | string | 不可 | 会場 ID |
+| `venues[].name` | LocalizedText | 不可 | 会場名 |
+| `venues[].latitude`, `venues[].longitude` | number | 不可 | 座標（地図の印） |
+| `venues[].distanceMeters` | integer | 不可 | 現在地からの距離 |
+| `venues[].performances` | array（PerformanceSummary） | 不可 | その会場の公開中の公演（1 件以上）。並び順は API-01 と同じ |
+| `stations` | array（StationItem） | 不可 | 500m 以内の駅（距離は現在地から） |
+| `lockers` | array（LockerItem） | 不可 | 500m 以内のコインロッカー |
+
+- ページはない（大学路のように会場が多い場所でも数百件の見込み）。ソウルの外の座標でもエラーにせず、空の結果になる（4.5）。
+
+**エラー**: 400 `VALIDATION_FAILED`。
+
+### 8.3 レビュー（`review`）
+
+#### API-10 GET `/api/performances/{performanceId}/reviews`（レビューの一覧）
+
+**リクエスト**: パス `performanceId`、クエリ `page`・`size`（7.1）。
+
+**レスポンス 200**: `Page<ReviewItem>`。並び順は投稿日時の新しい順 → レビュー ID の大きい順。ログインしていなければ、各行の `body`・`nickname`・`createdAt` を `null` にする（F-23 ①④。サーバーで消す。画面で隠すのではない）。一般ユーザー・管理者には全部を返す。
+
+```json
+{ "items": [ { "reviewId": 31, "rating": 5, "body": "最高でした", "nickname": "Cat", "createdAt": "2026-11-05T14:03:00+09:00" } ], "page": 0, "size": 20, "totalElements": 1, "totalPages": 1 }
+```
+
+**エラー**: 404 `PERFORMANCE_NOT_FOUND`（ない・非表示）。
+
+#### API-11 POST `/api/performances/{performanceId}/reviews`（レビューの投稿）
+
+**リクエスト（本文）**
+
+| 項目 | 型 | 必須 | 入力チェック（理由） |
+|---|---|---|---|
+| `rating` | integer | 必須 | 1〜5 の整数（`REQUIRED`・`RANGE`。小数は `MALFORMED_REQUEST`） |
+| `body` | string | 任意 | 1,000 文字以内（`LENGTH`）。改行以外の制御文字なし（`FORMAT`）。`null`・空・空白だけなら本文なしとして保存する（前後の空白は除かない） |
+
+```json
+{ "rating": 5, "body": "最高でした" }
+```
+
+**処理**: ① 公演がある・非表示でない（404）→ ② 今日 ≥ 修正を反映した公演開始日（400 `REVIEW_NOT_OPEN`）→ ③ 同じ人の同じ公演のレビューがない（409。DB の一意制約の違反も 409）→ 保存。
+
+**レスポンス 201**: `ReviewItem`（全部の項目）。
+
+**エラー**: 400 `VALIDATION_FAILED`・`REVIEW_NOT_OPEN`、404 `PERFORMANCE_NOT_FOUND`、409 `REVIEW_ALREADY_EXISTS`（画面は「この公演にはすでにレビューを投稿しています」。02 の SC-02）。
+
+#### API-12 PUT `/api/reviews/{reviewId}`（自分のレビューの編集）
+
+**リクエスト**: パス `reviewId`（7.1）、本文は API-11 と同じ（`rating` は必須。`body` を `null` にすると本文を消す）。
+
+**処理**: ① レビューがあり、その公演が非表示でない（404 `REVIEW_NOT_FOUND`）→ ② 自分のレビュー（403 `FORBIDDEN`。F-24 ③）→ 更新（`updated_at`）。公演の開始日は確かめない（投稿できたレビューの編集なので）。
+
+**レスポンス 200**: `ReviewItem`。
+
+**エラー**: 400 `VALIDATION_FAILED`、403 `FORBIDDEN`、404 `REVIEW_NOT_FOUND`。
+
+#### API-13 DELETE `/api/reviews/{reviewId}`（自分のレビューの削除）
+
+**リクエスト**: パス `reviewId`。本文なし。
+
+**処理**: API-12 の ①② → 行を削除（F-22 ③④）。
+
+**レスポンス 204**。
+
+**エラー**: 403 `FORBIDDEN`、404 `REVIEW_NOT_FOUND`（削除済みも 404）。
+
+### 8.4 人気順位・トレンド（`ranking`）
+
+#### API-20 GET `/api/rankings`（人気順位）
+
+**リクエスト（クエリ）**
+
+| 名前 | 型 | 必須 | 入力チェック（理由） |
+|---|---|---|---|
+| `period` | string | 必須 | `daily` / `weekly` / `monthly`（`REQUIRED`・`INVALID_VALUE`） |
+| `genre` | string | 任意 | `ALL`（既定）またはジャンルのコード（`INVALID_VALUE`） |
+| `lang` | string | 任意 | 7.1 |
+
+**処理**: 4.9 の表示する期間を決め、9.1 の振り直しで上位 10 位を返す（F-29 ③⑤⑥⑧⑨）。
+
+**レスポンス 200**
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `periodType` | string | 不可 | `DAILY` / `WEEKLY` / `MONTHLY` |
+| `genre` | string | 不可 | `ALL` またはジャンルのコード |
+| `period` | Period | 可 | 表示する期間の集計期間（F-29 ④）。表示できる期間がない（4.9）とき `null` |
+| `items` | array | 不可 | 最大 10。`rank` の順。`period` が `null`、またはその期間の行が 0 件なら `[]`（画面は「この期間の順位データがありません」） |
+| `items[].rank` | integer | 不可 | 振り直した順位（1〜10） |
+| `items[].performance` | PerformanceSummary | 不可 | 公演（`rating` は `null`。終わった公演も出る。F-09 ④） |
+
+```json
+{ "periodType": "WEEKLY", "genre": "ALL", "period": { "start": "2026-10-26", "end": "2026-11-01" },
+  "items": [ { "rank": 1, "performance": { "performanceId": "PF270001", "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false }, "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false } }, "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA", "status": "ONGOING", "posterUrl": null, "hasAward": true, "rating": null } } ] }
+```
+
+**エラー**: 400 `VALIDATION_FAILED`。
+
+#### API-21 GET `/api/rankings/rising`（人気急上昇）
+
+**リクエスト（クエリ）**: API-20 と同じ。
+
+**処理**: 4.9 の表示する期間を現在の期間とし、暦の上で1つ前の期間（日次は前日、週次は7日前からの週、月次は前の月）を直前の期間とする。ADR 0008 4. の手順（両方の期間を 9.1 の振り直しで並べる）で計算する。
+
+**レスポンス 200**（形は 9.3（D-06））
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `periodType` | string | 不可 | 期間の種類 |
+| `genre` | string | 不可 | `ALL` またはジャンルのコード |
+| `availability` | string | 不可 | `AVAILABLE` / `NO_PREVIOUS_RANKING` / `NO_RANKING`（9.3） |
+| `currentPeriod` | Period | 可 | 現在の期間の集計期間（F-33 ②）。`NO_RANKING` のとき `null` |
+| `previousPeriod` | Period | 可 | 比べる直前の期間の集計期間。`NO_RANKING` のとき `null`。`NO_PREVIOUS_RANKING` のときも値を入れる（画面の文言 P-17 に使う） |
+| `items` | array | 不可 | `AVAILABLE` のときだけ要素がありうる（最大 10。並び順は F-33 ⑨）。ほかは `[]` |
+| `items[].rank` | integer | 不可 | 現在の期間の振り直した順位（1〜10） |
+| `items[].movement` | string | 不可 | `NEW`（直前の上位 10 位になかった。F-33 ③）/ `UP`（上がった） |
+| `items[].rise` | integer | 可 | 上昇幅（1 以上。直前の順位 − 現在の順位。F-33 ⑨）。`NEW` のとき `null` |
+| `items[].performance` | PerformanceSummary | 不可 | 公演（`rating` は `null`） |
+
+```json
+{ "periodType": "WEEKLY", "genre": "ALL", "availability": "NO_PREVIOUS_RANKING",
+  "currentPeriod": { "start": "2026-10-26", "end": "2026-11-01" },
+  "previousPeriod": { "start": "2026-10-19", "end": "2026-10-25" },
+  "items": [] }
+```
+
+**エラー**: 400 `VALIDATION_FAILED`。
+
+#### API-22 GET `/api/genre-trends`（ジャンル別トレンド）
+
+**リクエスト**: なし（外部データの文を返さないので `lang` も受け取らない）。
+
+**処理**: 保存したジャンル別トレンドのうち、集計期間の末日が最も新しい期間を返す（04 の 4.11）。
+
+**レスポンス 200**
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `period` | Period | 可 | 集計期間（直近 30 日）。データがなければ `null`（画面は「この期間の統計データがありません」） |
+| `basis` | string | 可 | `SEOUL` / `NATIONAL`（R-50。画面の「ソウル基準」「全国基準」。02 の SC-03）。`period` が `null` なら `null` |
+| `items` | array | 不可 | ジャンルごと。割合の大きい順 → ジャンルのコードの順 |
+| `items[].genre` | string | 不可 | ジャンルのコード |
+| `items[].bookingCount` | integer | 不可 | 予約数 |
+| `items[].share` | number | 不可 | 割合（%、小数第1位。保存した値を `HALF_UP` で丸める）。合計がちょうど 100.0 にならないことがある |
+
+```json
+{ "period": { "start": "2026-10-06", "end": "2026-11-04" }, "basis": "NATIONAL", "items": [ { "genre": "GGGA", "bookingCount": 52031, "share": 41.2 } ] }
+```
+
+**エラー**: なし（7.3 の共通のものだけ）。
+
+### 8.5 認証・アカウントの申込（`auth`）
+
+#### API-30 GET `/api/auth/me`（ログイン状態）
+
+**リクエスト**: なし。
+
+**レスポンス 200**（いつも 200。7.4 のセッションの確認で無効になったセッションは未ログイン）。Cookie `XSRF-TOKEN` を付ける（7.4）。
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `authenticated` | boolean | 不可 | ログインしているか |
+| `role` | string | 可 | `USER` / `ADMIN`。未ログインは `null` |
+| `nickname` | string | 可 | 一般ユーザーのニックネーム（CM-01）。未ログイン・管理者は `null` |
+
+```json
+{ "authenticated": true, "role": "USER", "nickname": "Cat" }
+```
+
+#### API-31 POST `/api/auth/login`（ログイン）
+
+**リクエスト（本文）**
+
+| 項目 | 型 | 必須 | 入力チェック（理由） |
+|---|---|---|---|
+| `email` | string | 必須 | 前後の空白を除いて空でない（`REQUIRED`）。形・長さは確かめない（合わなければ `LOGIN_FAILED`） |
+| `password` | string | 必須 | 空でない（`REQUIRED`）。ルール（4.6）は確かめない |
+
+**処理（ADR 0013 5.、4.7）**: 次の順に判定する。1つのトランザクションでユーザーの行を `FOR UPDATE` で読み、失敗回数の更新が同時のログインでずれないようにする。
+
+1. メールアドレスのアカウントがない → `LOGIN_FAILED`（時間の差で存在が分からないよう、ダミーのハッシュと比べてから返す）。
+2. ロック中（`locked_at` がある）→ `ACCOUNT_LOCKED`（パスワードの正誤にかかわらない。回数は変えない）。
+3. パスワードが合わない（ルールに合わないパスワードはハッシュと比べずに「合わない」とする。bcrypt の 72 バイトの制限に当たらないように）:
+   - 有効なアカウント: 連続の失敗回数を 1 増やす。5 になったらロックし（`locked_at` に今の時刻）`ACCOUNT_LOCKED`、それ以外は `LOGIN_FAILED`（F-14 ①）。
+   - 認証前のアカウント: 回数を変えずに `LOGIN_FAILED`（認証前はログインの対象ではない）。
+4. パスワードが合う:
+   - 認証前のアカウント → `EMAIL_NOT_VERIFIED`（回数に数えない。F-12 ⑧）。
+   - 有効なアカウント → 失敗回数を 0 にし（F-14 ②）、セッションを作る（7.4）。
+- ロック中に正しいパスワードでも `ACCOUNT_LOCKED`（F-14 ③）。ロック中の誤りを `ACCOUNT_LOCKED` で返すのは、利用者が解除の方法（02 の SC-04）にたどり着けるようにするため（メールアドレスの登録の有無は F-12 ⑤ の会員登録でも分かるので、隠す利点が小さい）。
+
+**レスポンス 200**: API-30 と同じ形（ログインした状態）。Set-Cookie でセッションの Cookie（ADR 0013 決定8）。画面はこの後 API-30 を呼んで CSRF のトークンを受け取る。
+
+**エラー**: 400 `VALIDATION_FAILED`、401 `LOGIN_FAILED`・`ACCOUNT_LOCKED`・`EMAIL_NOT_VERIFIED`（画面の表示は 02 の SC-04）。
+
+#### API-32 POST `/api/auth/logout`（ログアウト）
+
+**リクエスト**: なし（CSRF のトークンは必要）。
+
+**処理**: セッションを無効にし、セッションの Cookie を消す（ADR 0013 決定4）。ログインしていなくても同じく 204。
+
+**レスポンス 204**。
+
+#### API-33 POST `/api/signup`（会員登録の申込）
+
+**リクエスト（本文）**
+
+| 項目 | 型 | 必須 | 入力チェック（理由） |
+|---|---|---|---|
+| `email` | string | 必須 | 前後の空白を除く。254 文字以内（`LENGTH`）、メールアドレスの形（`FORMAT`: Bean Validation の `@Email` に加え、`@` の後に `.` を含む `^[^@\s]+@[^@\s]+\.[^@\s]+$`） |
+| `password` | string | 必須 | パスワードのルール（4.6。`PASSWORD_RULE`） |
+| `nickname` | string | 必須 | 前後の空白を除き NFC に正規化した後 1〜20 文字（`REQUIRED`・`LENGTH`）、制御文字なし（`FORMAT`） |
+
+- 「パスワード（確認）」は画面だけで比べる（API は受け取らない。02 の SC-05）。
+
+**処理（4.7）**: ① メールの上限（503 `MAIL_LIMIT_REACHED`）→ ② 同じメールアドレスの有効なアカウント（管理者を含む）がある（409 `EMAIL_ALREADY_REGISTERED`）→ ③ ニックネームが有効なアカウントで使われている（409 `NICKNAME_ALREADY_USED`）→ ④ 同じメールアドレスの認証前の行があれば置き換え（そのトークンは無効）、なければ認証前の行を作る → ⑤ 会員登録のトークンを作る（7.6）→ ⑥ メールを送る（失敗は 503 `MAIL_SEND_FAILED`）→ ⑦ 送信の記録。④〜⑦ は1つのトランザクションで、⑥ が失敗したら何も保存しない（4.8）。同じメールアドレスの申込が同時に来たときは、メールアドレスの行を `FOR UPDATE` で読んで順番に処理する（形は 06）。
+
+**レスポンス 204**。
+
+**エラー**: 400 `VALIDATION_FAILED`、409 `EMAIL_ALREADY_REGISTERED`・`NICKNAME_ALREADY_USED`、503 `MAIL_LIMIT_REACHED`（画面は 02 の 6.2）・`MAIL_SEND_FAILED`。
+
+#### API-34 POST `/api/signup/verify`（メール認証の完了）
+
+**リクエスト（本文）**: `{ "token": string }`。`token` がない・43 文字の形（7.6）でないときも 400 `TOKEN_INVALID`（`VALIDATION_FAILED` にしない。画面の表示を1つにするため）。
+
+**処理**: 4.7 の 1.〜3.。ロックの取り方は 9.2（D-05）。
+
+**レスポンス 204**。
+
+**エラー**: 400 `TOKEN_INVALID`（02 の SC-06 の「リンクが無効か、期限が切れています」）、409 `NICKNAME_TAKEN_AT_VERIFICATION`（SC-06 のニックネームの失敗）。
+
+#### API-35 POST `/api/password-reset`（パスワード再設定の申込）
+
+**リクエスト（本文）**: `{ "email": string }`（チェックは API-33 の `email` と同じ）。
+
+**処理**: ① メールの上限（503）→ ② そのメールアドレスの有効なアカウント（一般ユーザー・管理者。F-15 ⑤）があれば、再設定のトークン（1 時間）を作りメールを送る（失敗は 503 `MAIL_SEND_FAILED`）。ない・認証前なら何もしない。どちらも 204（4.7）。
+
+**レスポンス 204**。
+
+**エラー**: 400 `VALIDATION_FAILED`、503 `MAIL_LIMIT_REACHED`・`MAIL_SEND_FAILED`。
+
+- `MAIL_SEND_FAILED` はアカウントがあるときだけ起きるので、送信の失敗のときに限りアカウントの有無が分かる。4.8（送信の失敗は 503）を優先し、受け入れる（通常は起きない）。
+
+#### API-36 POST `/api/password-reset/confirm`（新しいパスワードの設定）
+
+**リクエスト（本文）**
+
+| 項目 | 型 | 必須 | 入力チェック（理由） |
+|---|---|---|---|
+| `token` | string | 必須 | 形が違う・ないときは 400 `TOKEN_INVALID`（API-34 と同じ） |
+| `newPassword` | string | 必須 | パスワードのルール（4.6。`PASSWORD_RULE`） |
+
+**処理**: ① `newPassword` のチェック（400 `VALIDATION_FAILED`）→ ② トークン（用途が再設定、使っていない、期限内。400 `TOKEN_INVALID`）→ ③ 1つのトランザクションで: パスワードのハッシュを変え、`locked_at` を NULL、失敗回数を 0（F-15 ④）、トークンを使用済み、同じユーザーのほかの使っていない再設定のトークンも使用済み。ロックはユーザー → トークンの順（9.2）。ほかの端末のセッションは 7.4 で無効になる。
+
+**レスポンス 204**。
+
+**エラー**: 400 `VALIDATION_FAILED`（SC-08 の入力欄の下）・`TOKEN_INVALID`（SC-08 の「リンクが無効か、期限が切れています」）。
+
+#### API-37 POST `/api/unlock`（ロック解除の申込）
+
+**リクエスト（本文）**
+
+| 項目 | 型 | 必須 | 入力チェック（理由） |
+|---|---|---|---|
+| `email` | string | 必須 | API-33 の `email` と同じ |
+| `recaptchaToken` | string | 必須 | 1〜10,000 文字（`REQUIRED`・`LENGTH`） |
+
+**処理**: ① メールの上限（503 `MAIL_LIMIT_REACHED`。reCAPTCHA の無料の回数を使わないよう先に確かめる）→ ② reCAPTCHA の検証（7.5。通らなければ 400 `RECAPTCHA_FAILED`、呼び出しの失敗は 503 `RECAPTCHA_UNAVAILABLE`）→ ③ そのメールアドレスの有効なアカウントがロック中なら、ロック解除のトークン（1 時間）を作りメールを送る（失敗は 503 `MAIL_SEND_FAILED`）。それ以外は何もしない。どれも 204（4.7）。
+
+**レスポンス 204**。
+
+**エラー**: 400 `VALIDATION_FAILED`・`RECAPTCHA_FAILED`、503 `MAIL_LIMIT_REACHED`・`RECAPTCHA_UNAVAILABLE`・`MAIL_SEND_FAILED`（画面は 02 の SC-09・6.2）。
+
+#### API-38 POST `/api/unlock/confirm`（ロック解除の完了）
+
+**リクエスト（本文）**: `{ "token": string }`（形は API-34 と同じ扱い）。
+
+**処理**: トークン（用途がロック解除、使っていない、期限内）→ 1つのトランザクションで `locked_at` を NULL、失敗回数を 0、トークンを使用済み（F-14 ④(a)⑥）。すでにロックが解けていても 204。
+
+**レスポンス 204**。
+
+**エラー**: 400 `TOKEN_INVALID`。
+
+### 8.6 アカウント（`account`）
+
+#### API-40 PUT `/api/me/nickname`（ニックネームの変更）
+
+**リクエスト（本文）**: `{ "nickname": string }`（チェックは API-33 の `nickname` と同じ）。
+
+**処理**: 自分以外の有効なアカウントで使われていれば 409（DB の一意制約の違反も 409）。自分のいまのニックネームと同じとみなされる値（大文字・小文字の違いだけなど。D-02）は自分との重複にしない（表示の形だけが変わる）。
+
+**レスポンス 200**: `{ "nickname": "Cat" }`（保存した値）。
+
+**エラー**: 400 `VALIDATION_FAILED`、409 `NICKNAME_ALREADY_USED`。
+
+#### API-41 PUT `/api/me/password`（パスワードの変更）
+
+**リクエスト（本文）**
+
+| 項目 | 型 | 必須 | 入力チェック（理由） |
+|---|---|---|---|
+| `currentPassword` | string | 必須 | 空でない（`REQUIRED`）。ルールは確かめない（4.6） |
+| `newPassword` | string | 必須 | パスワードのルール（`PASSWORD_RULE`） |
+
+**処理**: ① 入力（400）→ ② 現在のパスワードがハッシュと合う（400 `CURRENT_PASSWORD_INCORRECT`。ログインの失敗回数には数えない。F-14 はログインの試行の制限のため）→ ③ ハッシュを変え、このセッションを無効にする（ADR 0013 決定9。ほかの端末は 7.4）。
+
+**レスポンス 204**（セッションの Cookie を消す）。画面は SC-04 へ移る（02 の SC-12）。
+
+**エラー**: 400 `VALIDATION_FAILED`・`CURRENT_PASSWORD_INCORRECT`。
+
+#### API-42 DELETE `/api/me`（退会）
+
+**リクエスト（本文）**: `{ "currentPassword": string }`（必須。空でない）。DELETE に本文を付ける（Angular の `HttpClient.delete(url, { body })` で送れる）。
+
+**処理**: ① 現在のパスワード（400 `CURRENT_PASSWORD_INCORRECT`）→ ② ユーザーの行を削除（レビュー・お気に入り・トークンは外部キーで一緒に消える。04 の 5.。F-18）→ ③ セッションを無効にする。
+
+**レスポンス 204**（セッションの Cookie を消す）。
+
+**エラー**: 400 `VALIDATION_FAILED`・`CURRENT_PASSWORD_INCORRECT`。
+
+### 8.7 お気に入り（`favorite`）
+
+#### API-43 GET `/api/me/favorites`（お気に入りの一覧）
+
+**リクエスト（クエリ）**: `lang`、`page`、`size`（7.1）。
+
+**レスポンス 200**: `Page<FavoriteItem>`。並び順は登録の新しい順 → お気に入りの行の ID の大きい順。非表示の公演は出さず、終わった公演は出す（F-20 ④⑤）。
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `favoritedAt` | datetime | 不可 | 登録日時 |
+| `performance` | PerformanceSummary | 不可 | 公演（`rating` あり） |
+
+#### API-44 PUT `/api/me/favorites/{performanceId}`（お気に入りの登録）
+
+**リクエスト**: パス `performanceId`。本文なし。
+
+**処理**: 公演があり非表示でない（404）→ 登録済みでなければ登録（登録済みは何もしない。一意制約の違反も成功とみなす）。終わった公演も登録できる。
+
+**レスポンス 204**。
+
+**エラー**: 404 `PERFORMANCE_NOT_FOUND`。
+
+#### API-45 DELETE `/api/me/favorites/{performanceId}`（お気に入りの解除）
+
+**リクエスト**: パス `performanceId`。本文なし。
+
+**処理**: 自分のその公演のお気に入りを削除する。登録していない・公演がない・非表示でも 204（何度実行しても同じ）。
+
+**レスポンス 204**。
+
+### 8.8 管理（`admin`）
+
+管理者の API は外部データを原文で返す（`lang` を受け取らない。02 の SC-13 の「公演名（原文）」）。修正できる項目の名前（API・DB）:
+
+| API の名前 | DB の `field_name`（04 の 4.4） | 型（API） | 入力チェック（API-52。理由） | `override_value` の文字列（9.5） |
+|---|---|---|---|---|
+| `title` | `title` | string | 前後の空白を除いて 1〜200 文字、制御文字なし | そのまま |
+| `startDate` | `start_date` | date | `YYYY-MM-DD` | `YYYY-MM-DD` |
+| `endDate` | `end_date` | date | `YYYY-MM-DD` | `YYYY-MM-DD` |
+| `genre` | `genre_code` | string | ジャンルのコードの一覧（`INVALID_VALUE`） | そのまま |
+| `cast` | `cast_text` | string | 前後の空白を除いて 1〜2,000 文字、改行以外の制御文字なし | そのまま |
+| `ticketPrice` | `ticket_price` | string | 同上 | そのまま |
+| `schedule` | `schedule_text` | string | 同上 | そのまま |
+| `runtime` | `runtime` | string | 前後の空白を除いて 1〜100 文字、制御文字なし | そのまま |
+| `ageLimit` | `age_limit` | string | 同上 | そのまま |
+| `isOpenRun` | `is_open_run` | boolean | `true` / `false` | `true` / `false` |
+| `bookingSites` | `booking_sites` | array | 0〜10 件（`LENGTH`。0 件は「予約サイトなし」への修正。04 の DB-02）。各要素の `name`: 前後の空白を除いて 1〜100 文字、制御文字なし。`url`: 1〜2,000 文字、`http://` か `https://` で始まる絶対 URL（`FORMAT`） | NULL（値は 04 の `booking_site` の `ADMIN` の行） |
+
+- 公演期間は、修正を反映した開始日 ≤ 修正を反映した終了日（`DATE_ORDER`）。API-52・53 の後の値で確かめる。
+
+#### API-50 GET `/api/admin/performances`（管理: 公演の検索）
+
+**リクエスト（クエリ）**
+
+| 名前 | 型 | 必須 | 入力チェック（理由） |
+|---|---|---|---|
+| `keyword` | string | 任意 | 前後の空白を除いて 0〜100 文字（0 なら指定なし）、制御文字なし。修正を反映した公演名（原文）または公演 ID に含むもの |
+| `visibility` | string | 任意 | `all`（既定）/ `visible` / `hidden`（`INVALID_VALUE`） |
+| `includeEnded` | boolean | 任意 | `true` / `false`（既定 `false`。`false` なら終わった公演を除く。`TYPE`） |
+| `page`, `size` | integer | 任意 | 7.1 |
+
+- 非表示・ソウル以外・180 日より先の公演も対象にする（1.6 の条件を使わない）。
+
+**レスポンス 200**: `Page<AdminPerformanceRow>`。並び順は修正を反映した公演開始日の新しい順 → 公演 ID の順。
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `performanceId` | string | 不可 | 公演 ID |
+| `title` | string | 不可 | 公演名（修正を反映した原文） |
+| `venueName` | string | 不可 | 会場名（原文） |
+| `startDate`, `endDate` | date | 不可 | 公演期間（修正を反映） |
+| `status` | string | 不可 | `ONGOING` / `UPCOMING` / `ENDED` |
+| `isHidden` | boolean | 不可 | 非表示か |
+| `hasOverride` | boolean | 不可 | 管理者の修正が1つ以上あるか |
+
+**エラー**: 400 `VALIDATION_FAILED`。
+
+#### API-51 GET `/api/admin/performances/{performanceId}`（管理: 公演の詳細）
+
+**リクエスト**: パス `performanceId`。
+
+**レスポンス 200**: `AdminPerformanceDetail`
+
+| 項目 | 型 | NULL | 内容 |
+|---|---|---|---|
+| `performanceId` | string | 不可 | 公演 ID |
+| `isHidden` | boolean | 不可 | 非表示か（F-27） |
+| `status` | string | 不可 | 修正を反映した公演期間での状態 |
+| `venue` | object | 不可 | `{ "venueId": string, "name": string, "address": string（可） }`（原文。修正できない。P-13） |
+| `posterUrl` | string | 可 | ポスター（修正できない） |
+| `hasAward` | boolean | 不可 | 受賞歴（修正できない） |
+| `totalShowCount` | integer | 可 | 上演回数（修正できない） |
+| `fields` | object | 不可 | 修正できる項目ごと（上の表の API の名前をキーにした 11 個）。それぞれ下の形 |
+| `fields.{名前}.collected` | 項目の型 | 可 | 自動収集の値（ないとき `null`。`bookingSites` は配列で `null` にしない） |
+| `fields.{名前}.override` | 項目の型 | 可 | 修正した値。修正していなければ `null`（`bookingSites` も `null`。修正して 0 件なら `[]`） |
+| `fields.{名前}.overriddenAt` | datetime | 可 | 修正した日時。修正していなければ `null` |
+
+- 画面の「現在の値」は `override` があればそれ、なければ `collected`（02 の SC-14）。`bookingSites` の要素は `{ "name": string, "url": string }`。
+
+```json
+{
+  "performanceId": "PF270001", "isHidden": false, "status": "ONGOING",
+  "venue": { "venueId": "FC001247", "name": "샤롯데씨어터", "address": "서울특별시 송파구 올림픽로 240" },
+  "posterUrl": null, "hasAward": true, "totalShowCount": 120,
+  "fields": {
+    "title": { "collected": "오페라의 유령", "override": null, "overriddenAt": null },
+    "ticketPrice": { "collected": "VIP석 190,000원", "override": "VIP석 180,000원", "overriddenAt": "2026-11-05T10:00:00+09:00" },
+    "isOpenRun": { "collected": false, "override": null, "overriddenAt": null },
+    "bookingSites": { "collected": [ { "name": "인터파크", "url": "https://tickets.interpark.com/" } ], "override": null, "overriddenAt": null }
+  }
+}
+```
+
+（例では `fields` の一部を省いた。実際は 11 個すべてを返す）
+
+**エラー**: 404 `PERFORMANCE_NOT_FOUND`（ないときだけ。非表示でも返す）。
+
+#### API-52 PATCH `/api/admin/performances/{performanceId}`（管理: 項目の修正）
+
+**リクエスト（本文）**: 修正する項目だけを入れたオブジェクト（上の表の API の名前と型）。入れない項目は変えない。
+
+```json
+{ "ticketPrice": "VIP석 180,000원", "bookingSites": [ { "name": "인터파크", "url": "https://tickets.interpark.com/" } ] }
+```
+
+- 項目が1つもない → 400（`errors` は `field` が空文字 `""`、理由 `REQUIRED`）。値が `null` → 400（その項目に `REQUIRED`。取り消しは API-53）。知らない項目 → 400（`UNKNOWN_FIELD`）。
+- 自動収集の値と同じ値でも修正として保存する（管理者が明示したため）。
+
+**処理**: 公演がある（404）→ チェック → 1つのトランザクションで、項目ごとに修正の行を追加・更新する（`overriddenAt` が変わる）。`bookingSites` は、その公演の `ADMIN` の予約サイトの行を消して入れ直し（並び順は配列の順 1, 2, …）、`booking_sites` の修正の行を追加・更新する。日本語の翻訳は次の B-01 の S7 で作る（4.10）。
+
+**レスポンス 200**: `AdminPerformanceDetail`（修正の後）。
+
+**エラー**: 400 `VALIDATION_FAILED`、404 `PERFORMANCE_NOT_FOUND`。
+
+#### API-53 DELETE `/api/admin/performances/{performanceId}/overrides/{field}`（管理: 修正の取り消し）
+
+**リクエスト**: パス `performanceId`、`field`（上の表の API の名前。ほかは 400 `INVALID_VALUE`。`field` の名前で返す）。本文なし。
+
+**処理**: 公演がある（404）→ 取り消した後の公演期間が正しい順（開始日 ≤ 終了日）であること（違えば 400、`field` に `DATE_ORDER`。先にもう片方を直す）→ 修正の行を削除する。`bookingSites` は `ADMIN` の予約サイトの行も同じトランザクションで削除する（04 の 4.4）。修正していない項目でも 204。
+
+**レスポンス 204**。
+
+**エラー**: 400 `VALIDATION_FAILED`、404 `PERFORMANCE_NOT_FOUND`。
+
+#### API-54 PUT `/api/admin/performances/{performanceId}/visibility`（管理: 非表示・非表示の解除）
+
+**リクエスト（本文）**: `{ "hidden": boolean }`（必須。`REQUIRED`）。
+
+**処理**: 非表示かどうかを指定の値にする（同じ値でも成功。F-27）。
+
+**レスポンス 200**: `{ "performanceId": "PF270001", "isHidden": true }`。
+
+**エラー**: 400 `VALIDATION_FAILED`、404 `PERFORMANCE_NOT_FOUND`。
+
+#### API-55 GET `/api/admin/performances/{performanceId}/reviews`（管理: レビューの一覧）
+
+**リクエスト**: パス `performanceId`、クエリ `page`・`size`。
+
+**レスポンス 200**: `Page<ReviewItem>`（全部の項目）。並び順は API-10 と同じ。非表示の公演でも返す。
+
+**エラー**: 404 `PERFORMANCE_NOT_FOUND`（ないときだけ）。
+
+#### API-56 DELETE `/api/admin/reviews/{reviewId}`（管理: レビューの削除）
+
+**リクエスト**: パス `reviewId`。本文なし。
+
+**処理**: レビューを削除する（どのユーザーのものでも。F-28。公演が非表示でも）。
+
+**レスポンス 204**。
+
+**エラー**: 404 `REVIEW_NOT_FOUND`（削除済みも 404）。
+
+## 9. Issue #20 で決めること（architect の案）
+
+| No. | 事項 | 案の場所 | 画面の振る舞い（02） | 人間の確認 |
+|---|---|---|---|---|
+| D-01 | 公演に結びつかない順位の行 | 9.1 | **02 の記述は変えない。ただし利用者に見える順位の番号が、01 の F-29 ⑤⑧・F-33 ⑩ の書き方（繰り上げは非表示の公演だけ）と違うことがある** | **要（確認2）** |
+| D-05 | B-04 と API-34 のロック | 9.2 | 変わらない | 不要 |
+| D-06 | API-21 で直前の期間の順位がないときの形 | 9.3 | 変わらない（02 の P-17 のとおり） | 不要 |
+| D-07 | エラーコードと本文の形 | 7.3 | 変わらない | 不要 |
+| D-09 | 管理者の修正を反映した値の読み方など（API に関わる分） | 9.5、5.1 | 変わらない | 不要 |
+
+### 9.1 D-01 公演に結びつかない順位の行（案）
+
+**起きるとき**: 順位の行（`ranking_entry`）の公演 ID の公演がまだ DB にない。B-01 は S2（順位）を保存した後に S4（足りない公演の補完）を行う（05 の 3.2）。S2 の組を保存した時点でその期間は表示の対象になる（4.9）ので、**毎日、S2 から S4 が終わるまでの数分間**、新しく順位に入った公演はこの状態になる。S4 がその公演だけ失敗したときは、次の日の B-01 まで続く（現在・直前の期間は毎日取り直すので、次の日に補われる）。
+
+**案（推奨）: 非表示の公演と同じく除いて、下の順位を繰り上げて振り直す。**
+
+- API-20・API-21・API-03 は、順位の行を `performance` と結び（INNER JOIN）、**結びつかない行と非表示の公演の行を除いて**、提供元の順位の順（同じ順位が複数あるときは公演 ID の順）に 1 から振り直す。上位 10 位を使う（F-29 ⑧⑨、F-33 ⑩ と同じ手順）。人気急上昇の直前の期間も同じ（ADR 0008 4. の ①②）。
+- 「結びつくか」は照会のときの `performance` で決める。S4 が補った時点で次の照会から出る（テーブルの形は 04 の DB-04 のまま。新しい列は要らない）。
+
+**画面の振る舞い（確認2 で人間に見せる内容）**
+
+| 画面・表示 | いまの 02 の記述 | この案での見え方 |
+|---|---|---|
+| SC-03 人気順位のタブ: 順位の番号と一覧 | 「最大10件: 順位（1〜10 に振り直したもの）、公演のカード」 | 記述は変わらない。ただし、例えば提供元の 3 位の公演がまだ DB にないと、提供元の 4 位が「3位」、提供元の 11 位が「10位」と表示される（非表示の公演がなくても番号がずれる）。その公演が補われると、次の照会から提供元の順位どおりに戻る |
+| SC-03 人気急上昇のタブ: 「NEW」・上昇幅 | 「NEW」または「▲上昇幅」、現在の順位 | 上と同じ振り直しの番号で計算するので、その間は上昇幅・「NEW」が補われた後と違うことがある |
+| SC-02 統計・評判: 人気順位（例: 「週次・全体 3位」） | 10 位以内に入っているものを表示 | 補われるまでの間、ほかの公演の順位が1つ上に表示されることがある（例: 4 位 → 3 位）。補われていない公演の SC-02 は、公演がないので開けない（いまと同じ） |
+
+- 01 との関係: F-29 ⑤ は「順位は提供元の順位データのまま表示される。ただし、非表示の公演がある場合は ⑧ のとおり繰り上げる」としており、繰り上げるのは非表示の公演のときだけと読める。この案は、**公演の情報がまだない行も繰り上げの理由に足す**ことになるので、要件の解釈の追加として人間の確認（Issue #20 の確認2）が要る。02 の文言・状態は変えない。
+
+**ほかの案（採らなかったもの）**
+
+| 案 | 見え方 | 採らない理由 |
+|---|---|---|
+| (b) 番号を残し、その行を出さない（例: 1, 2, 4, …） | 提供元の番号のまま。10 件より少なくなり、番号が飛ぶ | 02 の SC-03「1〜10 に振り直したもの」と合わず、02 の変更が要る。番号が飛ぶ理由が利用者に分からない |
+| (c) その行を「公演の情報を準備中です」のような仮の行で出す | 提供元の番号のまま 10 件 | 02 に新しい表示（カードのない行と文言）が要る。押しても公演詳細を開けない行ができる |
+| (d) 結びつかない行のある期間を「収集が終わっていない」とみなし、1つ前の期間を出す | 番号は提供元のまま、期間が古くなる | S4 が同じ公演でずっと失敗すると、新しい期間がいつまでも出ない。R-62 の「収集が終わっている直近の期間」と判断の基準が変わる |
+
+- 推奨の理由: 起きるのは毎日の数分間か、S4 の失敗のときに限られる。公演の情報（公演名・ポスター）がない行はどの案でもカードとして出せない。非表示の公演と同じ仕組みで扱えるので、API・画面に新しい場合分けが要らない。
+
+### 9.2 D-05 B-04 と API-34 が同時に動いたときのロック（案）
+
+**守ること**: ① 有効になったアカウントを B-04 が消さない。② 期限内のトークンの申込を B-04 が消さない（05 の 6.3）。③ 行が半分だけ変わった状態（アカウントは有効だがトークンが使用済みでない、など）を残さない。④ デッドロックを起こしにくい順でロックする。
+
+**ロックの順番（全体の決まり）**: `app_user` と `auth_token` の両方を書き換えるトランザクション（API-33・34・36・38、B-04、退会の API-42）は、**`app_user` の行 → `auth_token` の行**の順でロックする（B-04・API-42 の DELETE は `app_user` の行を消し、外部キーの CASCADE で `auth_token` の行を消すので、この順になる）。
+
+**API-34（1つのトランザクション。分離レベルは MySQL の既定 REPEATABLE READ）**
+
+1. トークンのハッシュで `auth_token` を読み（ロックしない読み）、`user_id` を得る。行がなければ 400 `TOKEN_INVALID`。
+2. `SELECT … FROM app_user WHERE id = ? FOR UPDATE`（ユーザーの行をロック）。行がなければ（B-04 などが先に消した）400 `TOKEN_INVALID`。
+3. `SELECT … FROM auth_token WHERE token_hash = ? FOR UPDATE`（トークンの行をロックし、最新の値を読み直す）。ない・用途が `SIGNUP` でない・`used_at` がある・`expires_at` ≤ 今の時刻・ユーザーが認証前でない → 400 `TOKEN_INVALID`。
+4. 4.7 の 2.（ニックネーム）→ 409 のときは、その `app_user` の行を削除（トークンは CASCADE）してコミットし 409。
+5. `UPDATE app_user SET status = 'ACTIVE' WHERE id = ? AND status = 'PENDING'`、`UPDATE auth_token SET used_at = ? WHERE id = ?`。一意制約（`active_nickname`）の違反は 4. と同じ扱い（ロールバックしてから、別のトランザクションで行を削除し 409）。
+
+**B-04（05 の 6.2 の 3. を具体化）**
+
+1. 基準の時刻 T を決める。
+2. 候補を読む（ロックしない読み）: 認証前で、`expires_at` > T の `SIGNUP` のトークンがない `app_user` の `id`。
+3. 候補の `id` を指定して、条件を付けた1つの DELETE で消す:
+   ```sql
+   DELETE FROM app_user
+    WHERE id IN (/* 2. の候補 */)
+      AND status = 'PENDING'
+      AND NOT EXISTS (SELECT 1 FROM auth_token t
+                       WHERE t.user_id = app_user.id
+                         AND t.purpose = 'SIGNUP'
+                         AND t.expires_at > /* T */)
+   ```
+   - 主キーで行をロックするので、`status` のインデックスの範囲（ギャップ）をロックせず、同じ時刻の API-33 の申込（新しい認証前の行の追加）を止めない。
+   - `status = 'PENDING'` を DELETE の中でもう一度確かめるのは、2. と 3. の間に API-34 が有効にした行を消さないため（ロックした行は最新のコミット済みの値で条件を確かめる）。トークンの `expires_at` は作った後に変わらない（同じメールアドレスの申込し直しは、古いトークンを無効にして新しいトークンを足す。新しいトークンは `expires_at` > T なので、その行は消えない）。
+4. 消した件数を記録する（05 の 6.2 の 4.）。
+
+**同時に動いたときの結果**
+
+| 先にロックを取ったもの | 後のものの結果 |
+|---|---|
+| API-34（ユーザーの行を `FOR UPDATE`） | B-04 の DELETE はその行で待つ。API-34 が有効にしてコミットしたら、`status = 'PENDING'` に当たらず消さない（①）。API-34 がニックネームで失敗して行を消したら、消す行がない |
+| B-04（DELETE でユーザーの行をロック） | API-34 の 2. は待つ。B-04 がコミットした後は行がないので 400 `TOKEN_INVALID`。B-04 が消すのは基準の時刻 T にすでに期限が切れていた行だけなので、利用者は期限の切れたリンクを開いたことになり、SC-06 の表示（「リンクが無効か、期限が切れています」）と合う（②） |
+
+- デッドロック・ロック待ちのタイムアウト（MySQL のエラー 1213・1205）は、API-34 は再試行せず 500 `INTERNAL_ERROR`（トークンが期限内なら利用者はもう一度リンクを開ける）、B-04 はその回を「失敗」として記録する（05 の 6.3。次の日に同じ行を消す）。
+- 06（クラス設計）では、この順番を Mapper のメソッドと `@Transactional` の範囲に落とす。04 に新しいテーブル・列は要らない（インデックスは 5.1 の H-04）。
+
+### 9.3 D-06 API-21 で直前の期間の順位がないときの形（案）
+
+`availability` の1つの項目で3つの場合を分け、画面はこの値だけで表示を決める（集計期間の有無から推測しない）。
+
+| `availability` | 条件 | `currentPeriod` | `previousPeriod` | `items` | 画面（02 の SC-03） |
+|---|---|---|---|---|---|
+| `NO_RANKING` | 表示できる期間がない（4.9） | `null` | `null` | `[]` | 「この期間の順位データがありません」 |
+| `NO_PREVIOUS_RANKING` | 現在の期間はあるが、直前の期間（暦の上で1つ前）の収集の完了の記録がない | 値あり | 値あり（暦から計算した期間） | `[]` | P-17「比べる期間（{`previousPeriod`}）の順位データがないため、人気急上昇を表示できません」と現在の期間の集計期間 |
+| `AVAILABLE` | 両方の期間の収集の完了の記録がある（0 件の期間を含む） | 値あり | 値あり | 0〜10 件 | 一覧（「NEW」・上昇幅） |
+
+- 直前の期間の記録があり行が 0 件のときは `AVAILABLE`（直前の上位 10 位が空なので、対象はすべて「NEW」。F-33 ③ のとおり）。
+- 採らなかった案: `previousPeriod` を `null` にして「ない」ことを表す（P-17 の文言に直前の期間の集計期間が要るので、値を返せなくなる）。真偽の項目 `hasPrevious` を足す（`NO_RANKING` と合わせて2つの項目の組み合わせを画面が解く必要がある）。
+
+### 9.4 D-07 エラーコードと本文の形
+
+7.3 のとおり。
+
+### 9.5 D-09 のうち API に関わるもの（案。テーブルの細部は db-designer）
+
+**管理者の修正を反映した値（4.10）の使い方**
+
+| 使う場所 | 修正を反映した値を使う項目 |
+|---|---|
+| 表示（API-01〜03・05・20・21・43、API-50 の一覧の公演名・期間） | 公演名、公演期間、ジャンル、出演者、チケット価格、公演時間の案内、上演時間、観覧年齢、オープンランか、予約サイト |
+| 絞り込み（1.6 の「公開中の公演」、4.1 の期間・ジャンル・状態・キーワード、API-50 のキーワード・`includeEnded`） | 公演開始日・終了日、ジャンル、公演名（日本語のキーワードは修正を反映した公演名の翻訳） |
+| 並び順（API-01・05 の開始日の早い順、API-50 の開始日の新しい順） | 公演開始日 |
+| 公演の状態（`status`）、レビューの投稿の開始日（API-11、API-03 の `reviewOpen`） | 公演開始日・終了日 |
+| 翻訳を引く原文（7.2 の `LocalizedText`） | 表示する原文（修正があれば修正した値） |
+
+- 修正しない項目（P-13）: 会場、ポスター、受賞歴、上演回数、非表示、ソウルの公演か。これらは `performance` の値をそのまま使う。
+- `override_value` の文字列の形は 8.8 の表（日付は `YYYY-MM-DD`、真偽は `true` / `false`、ほかはそのままの文字列）。API-52 だけが書き、読む側（ビューまたはクエリ）はこの形を前提に型を変える。
+- 読み方（ビューか、クエリごとに結ぶか）は db-designer が 04 で決める（5.1 の H-01）。03 は「1つの SQL で、上の絞り込みと並び順ができる」ことだけを前提にする。
+
+**そのほか**
+
+- `ranking_entry` の一意制約: 03 は、同じ提供元の順位が複数あっても動くように並び順を決めた（9.1: 提供元の順位 → 公演 ID）。制約を付けるかは db-designer（5.1 の H-03）。
+- `station.line`: API は 1〜8 の整数で返す（8.2）。DB の持ち方は db-designer（H-05）。
+- 管理者の `nickname`: API は返さない（API-30 は `null`）。値は db-designer（H-08）。
+- 古い記録: API が読むのは、`mail_send_log` の直近 24 時間と、トークンのハッシュの一致する行だけなので、古い行を消さなくても API の結果は変わらない。
+
+### 9.6 03 の詳細で決めたそのほかの事項（reviewer の確認の対象）
+
+| 事項 | 決めたこと | 書いた場所 | 利用者に見えるか |
+|---|---|---|---|
+| ロック中のログインの応答 | パスワードの正誤にかかわらず `ACCOUNT_LOCKED`。5 回目の失敗の応答も `ACCOUNT_LOCKED` | 8.5 の API-31 | 見える（02 の SC-04 の「ロック中」の表示が、5 回目の失敗の直後から出る。02 の記述の範囲） |
+| ほかの端末のセッション | パスワードの変更・再設定で、ほかの端末のセッションも無効にする | 7.4 | 見える（ほかの端末では次の操作で 02 の 3.5 の自動ログアウトの表示になる。文言は「一定時間操作がなかったため」のまま） |
+| ニックネームの NFC の正規化 | 確かめる前に NFC にする | 7.1 | ほぼ見えない |
+| メールの言語 | 韓国語と日本語を1通に併記 | 7.6 | 見える（02 はメールの文面を決めていない） |
+| 現在のパスワードの誤り | ログインの失敗回数に数えない | 8.6 の API-41 | 見えない |
+| 申込のメールの送信の失敗 | API-35・37 でも 503 `MAIL_SEND_FAILED` | 8.5 | 見える（02 の 6.2 は上限だけを書いているので、3.6 の「エラー」の表示になる） |
+
 ---
 
 ## 한국어
 
 ### 03. API 설계서
 
-- 상태: 기본설계: 승인(2026-11-06, Issue #15 코멘트 6678921752). 상세는 공정 4. 요청·응답의 상세(항목·JSON 예시·입력 검사 세부·오류 코드 전체)는 공정 4에서 쓴다
+- 상태: 기본설계: 승인(2026-11-06, Issue #15 코멘트 6678921752). 상세설계: 작성 중(공정 4, Issue #20). 상세는 7.(공통)·8.(API별)·9.(Issue #20에서 정할 것)에 썼다
 - 담당: architect
 - 최종 갱신: 2026-11-06
 - 전제: [01. 요건정의서](01-requirements.md)(R-62~R-64 반영), [02. 화면 설계서](02-screens.md), ADR 0006~0016
@@ -323,6 +1385,7 @@
 - `P-xx`는 02의 8.의 판단. P-01~P-15는 사람이 결정했다(2026-11-05, Issue #15 코멘트 6651238358)
 - 인증 전 신청과 닉네임 처리(04의 Q-01)는 사람이 결정했다(2026-11-06, Issue #15 코멘트 6677710885. 안 B: 닉네임은 인증을 완료할 때 확정한다). 4.7에 반영했다
 - 관문 3 reviewer의 지적(Issue #15 코멘트 6678542365)과 사람의 결정(2026-11-06, 코멘트 6678516145)을 반영했다: 3.과 6.의 요건 ID 일치(경미 1), 비밀번호 규칙(경미 3. 01의 R-64. 4.6), 공연과 연결되지 않은 순위 행(경미 6. 4.9)
+- 공정 4(Issue #20): 1.~6.은 기본설계 내용 그대로(참조용 번호를 바꾸지 않는다). 상세를 7.~9.에 더했다. Issue #20의 D-01·D-05·D-06·D-07 안과, D-09 중 API에 관계된 것은 9.. 사람의 결정 D-08(Issue #20 코멘트 6679098450)은 4.6과 02의 SC-05·SC-08·SC-12에 맞춰져 있다
 
 ### 1. 공통 규칙
 
@@ -360,7 +1423,7 @@
 
 #### 1.5 오류
 
-- 오류 본문은 공통 형태(오류 코드, 메시지, 입력 오류일 때는 항목별 내용)로 한다. 자세한 형태와 코드 목록은 공정 4에서 쓴다.
+- 오류 본문은 공통 형태(오류 코드, 메시지, 입력 오류일 때는 항목별 내용)로 한다. 자세한 형태와 코드 목록은 7.3(D-07).
 - 주요 상태 코드: 400 입력 오류·업무 조건에 맞지 않음, 401 비로그인·로그인 실패, 403 권한 없음·CSRF, 404 없음·숨긴 공연, 409 중복(이메일 주소·닉네임·리뷰), 503 외부 서비스 상한·정지(메일·reCAPTCHA).
 
 #### 1.6 공개 중인 공연·표시할 수 있는 공연
@@ -498,7 +1561,7 @@
 - **회원가입 신청(API-33. P-10)**: 메일 상한(4.8)을 확인하고, 상한이면 아무것도 저장하지 않고 503. 이메일 주소가 가입됨(인증을 마친 계정이 있음)이면 409. 닉네임이 **가입을 완료한 계정**(유효한 계정. 관리자 포함)에서 쓰이고 있으면 409. **인증 전 신청은 닉네임을 차지하지 않는다**: 같은 닉네임의 인증 전 신청이 따로 있어도 받는다(사람의 결정. Issue #15 코멘트 6677710885의 Q-01의 B). 인증 전의 같은 이메일 주소 신청이 있으면 대체한다(이전 토큰은 무효가 된다). 인증 메일 링크는 24시간 유효.
 - **메일 인증 완료(API-34)**: 하나의 트랜잭션으로 다음 순서로 판정한다.
   1. 토큰이 무효(없음·기한 만료·사용됨)이면 400(오류 종류: 토큰이 무효). 아무것도 바꾸지 않는다.
-  2. 신청한 닉네임이 그 시점에 **가입을 완료한 계정**에서 쓰이고 있으면 **가입은 실패**하고 409(오류 종류: 인증 시점에 닉네임이 쓰이고 있음. API-33의 409 종류(이메일 주소·닉네임)와는 오류 코드로 구별한다. 코드 이름·본문 형태는 공정 4). 이때 그 **인증 전 행을 삭제**한다(토큰도 함께 지워지고, 같은 링크는 그 뒤로 1.의 "무효"가 된다). 행이 남지 않으므로 이용자는 같은 이메일 주소로, 다른 닉네임으로 바로 다시 신청할 수 있다(02의 SC-06).
+  2. 신청한 닉네임이 그 시점에 **가입을 완료한 계정**에서 쓰이고 있으면 **가입은 실패**하고 409(오류 종류: 인증 시점에 닉네임이 쓰이고 있음. API-33의 409 종류(이메일 주소·닉네임)와는 오류 코드로 구별한다. 코드는 `NICKNAME_TAKEN_AT_VERIFICATION`. 7.3). 이때 그 **인증 전 행을 삭제**한다(토큰도 함께 지워지고, 같은 링크는 그 뒤로 1.의 "무효"가 된다). 행이 남지 않으므로 이용자는 같은 이메일 주소로, 다른 닉네임으로 바로 다시 신청할 수 있다(02의 SC-06).
   3. 1·2에 해당하지 않으면 계정을 유효로 하고 토큰을 사용됨으로 한다(F-12 ⑦).
   - 2의 판정부터 유효로 할 때까지 사이에 같은 닉네임의 다른 신청이 먼저 유효가 될 수 있다. 이를 막기 위해 **유효한 계정 사이의 닉네임 중복은 DB 유일 제약으로도 막는다**(인증 전 행에는 적용하지 않는다. 04의 DB-06을 db-designer가 고친다). 제약 위반은 2와 같은 처리(행 삭제와 409)로 한다.
 - **F-12 ③과의 관계**: F-12 ③ "다른 사용자가 쓰고 있는 닉네임으로는 가입할 수 없다"의 "가입"은 ⑦대로 메일 인증 완료로 성립한다. 따라서 신청(API-33)과 인증 완료(API-34) 양쪽에서 그 시점의 가입을 완료한 계정과 비교하면 ③을 충족한다(인증 완료 때 쓰이고 있으면 ③에 따라 가입할 수 없다). 인증 전 신청은 ⑧대로 로그인할 수 없는 상태이며 "다른 사용자"에 포함하지 않는다. 닉네임 변경(API-40. F-17 ③)도 마찬가지로 가입을 완료한 계정과만 비교한다(인증 전 신청과 같은 닉네임으로 바꿀 수 있다. 그 신청은 인증 완료 때 2.에서 실패한다).
@@ -524,8 +1587,8 @@
   - 조합마다 정하므로, S2 도중(일부 장르만 저장이 끝났을 때)에 조회하면 장르에 따라 집계 기간이 다를 수 있다. 화면은 돌려받은 집계 기간을 그대로 보여준다.
 - **인기 급상승(API-21)**: 위 기간을 현재 기간으로 하고, 그 하나 앞 기간(달력상 하나 앞. F-33 ②)과 비교한다. 하나 앞 기간의 수집이 끝나지 않았으면 비교하지 않고, 현재 기간의 집계 기간·직전 기간의 집계 기간과 "직전 기간의 순위가 없음"을 돌려준다(화면은 이것으로 "비교할 기간({직전 기간의 집계 기간})의 순위 데이터가 없어 인기 급상승을 표시할 수 없습니다"를 보여준다. 02의 결정 P-17).
 - 보여줄 수 있는 기간이 전혀 없을 때(서비스 시작 전 등)는 0건과 "기간이 없음"을 돌려준다(화면은 "이 기간의 순위 데이터가 없습니다").
-- 응답 항목의 상세(집계 기간의 항목명, 직전 기간이 없을 때의 형태)는 공정 4에서 쓴다.
-- **공연(performance)과 연결되지 않는 순위 행**의 처리는 공정 4에서 정한다. 화면에 보이는 동작이 바뀌는 경우에는 공정 4에서 사람에게 확인한다(관문 3의 경미 6. 사람의 결정: Issue #15 코멘트 6678516145).
+- 응답 항목의 상세(집계 기간의 항목명, 직전 기간이 없을 때의 형태)는 8.의 API-20·API-21과 9.3(D-06).
+- **공연(performance)과 연결되지 않는 순위 행**의 처리는 9.1(D-01. 안. 사람의 확인(Issue #20의 확인 2) 대상).
 
 #### 4.10 관리자 수정 (F-26. P-13)
 
@@ -559,6 +1622,22 @@
 
 - 탈퇴(F-18)에서는 그 사용자의 리뷰·즐겨찾기·토큰을 함께 지운다. 외래 키의 삭제 처리는 04에서 정한다.
 - 공연 데이터는 지우지 않는다(F-09 ②).
+
+#### 5.1 공정 4에서 더하거나 구체화한 것 (Issue #20. db-designer에게)
+
+03 상세(7.~9.)에서, 04의 테이블 형태(3.·4.)에 **새 테이블·열은 필요 없다**는 것을 확인했다. 04 상세(타입 길이·콜레이션·인덱스·제약)에서 받아 주었으면 하는 것을 든다.
+
+| No. | 사항 | 03의 전제 | 04에서 정해 주었으면 하는 것 |
+|---|---|---|---|
+| H-01 | 관리자 수정을 반영한 값을 읽는 방법(D-09) | 일반 사용자용 모든 API는 표시·거르기·정렬·1.6의 조건에 **수정을 반영한 값**(수정이 있으면 그 값, 없으면 자동 수집 값)을 쓴다(9.5). 대상 항목과 `override_value`의 문자열 형태는 9.5의 표 | 뷰로 할지, 쿼리마다 조인할지. 수정을 반영한 공연 시작일·종료일·장르·공연명으로 거르기와 공연 시작일로 정렬(API-01·02·05·06·43·50)을 SQL 하나로 쓸 수 있을 것. 인덱스(04의 6.의 마지막 항목) |
+| H-02 | 입력 상한과 열 길이 | 8.의 입력 검사 상한: 이메일 주소 254, 닉네임 20(NFC로 정규화한 뒤의 코드 포인트), 리뷰 본문 1,000, 관리자 수정: 공연명 200, 출연진·티켓 가격·공연 시간 안내 2,000, 상연 시간·관람 연령 100, 예매처 이름 100·URL 2,000·최대 10건 | 열 길이를 위 상한 이상으로 한다(특히 `booking_site.name`·`url`은 `ADMIN` 행이 들어간다). `override_value`는 TEXT 그대로. 공연 ID·공연장 ID(`kopis_performance_id`·`kopis_venue_id`)의 길이(API는 경로 형태 확인에 이 길이를 쓴다. 7.1) |
+| H-03 | 공연과 연결되지 않는 순위 행(D-01) | 9.1: 순위를 읽을 때 `performance`와 조인(INNER JOIN)하고, 연결되지 않는 행과 숨긴 공연을 빼고 다시 매긴다. 같은 제공처 순위가 여럿이면 공연 ID 순 | DB-04 그대로(외래 키 없음). `ranking_entry`의 유일 제약을 (`ranking_collection_id`, `provider_rank`)에도 붙일지(D-09). 붙이지 않아도 9.1의 순서로 정렬된다 |
+| H-04 | B-04와 API-34의 잠금(D-05) | 9.2: `app_user` → `auth_token` 순으로 잠근다. API-34는 `SELECT ... FOR UPDATE`로 행을 잠근 뒤 확인한다. B-04는 기본 키로, 조건(인증 전·유효 기한 안의 회원가입 토큰 없음)을 붙인 DELETE 하나로 지운다 | 격리 수준은 MySQL 기본(REPEATABLE READ) 그대로. 9.2의 SQL에서 쓰는 인덱스(04의 6.의 `auth_token` (`user_id`, `purpose`, `expires_at`)·`app_user` (`status`))로 충분한지 |
+| H-05 | `station.line` 표기(D-09) | API는 노선을 **1~8의 정수**로 돌려준다(8.의 API-04. 표시 문구는 화면 사전. ADR 0007 결정 3) | DB에 갖는 방법(정수로 가질지, `1호선` 같은 문자로 가지고 변환할지) |
+| H-06 | 세션 확인(7.4) | 인증이 필요한 요청마다 사용자를 기본 키로 읽고 상태와 비밀번호 해시를 확인한다 | 새 열은 필요 없다(기본 키로 1행을 읽을 뿐) |
+| H-07 | 토큰(7.6) | 용도별로 유효한 토큰은 최신 1개뿐(새로 만들 때 같은 사용자·용도의 쓰지 않은 토큰의 `used_at`을 넣는다). 토큰 문자열은 43자, 저장하는 것은 SHA-256 16진 64자 | 04의 4.13 그대로 |
+| H-08 | 관리자 `nickname`(D-09) | API는 관리자 닉네임을 돌려주지 않는다(API-30에서 `null`). 관리자 행은 유효하므로 그 닉네임은 일반 사용자가 쓸 수 없다(4.7. 409) | 값(닉네임 규칙(4.6)을 충족하고, 이용자가 쓸 것 같지 않은 값) |
+| H-09 | 이메일 주소·닉네임 비교 방법(D-02·D-03) | API는 값을 소문자로 바꾸지 않는다. 이메일 주소는 앞뒤 공백만 제거, 닉네임은 앞뒤 공백 제거와 NFC 정규화만 하고, 같은지는 DB 콜레이션으로 비교한다. 닉네임의 대소문자는 같은 것으로 본다(D-02 사람의 결정) | 콜레이션(D-03). 이메일 주소도 대소문자를 같게 보는 콜레이션을 권한다(`A@example.com`과 `a@example.com`이 다른 계정이 되지 않도록) |
 
 ### 6. 요건 대응표 (요건 → 화면 → API → 배치)
 
@@ -623,3 +1702,1048 @@
 - 모든 배치(05)에 요건 ID가 있다.
 - API 열이 "—"인 기능 요건은 F-36뿐. F-36은 브라우저 안에서만 끝난다(전환한 값을 `localStorage`에 기억한다. 02의 3.8)므로 API를 두지 않는다. 로그인한 이용자의 설정으로 서버에 저장하는 기능은 요건에 없다(F-36 ③은 "브라우저에 기억").
 - 요건에 없는 기능(예: 리뷰 "좋아요", 알림, 검색 조건 저장, 메일 재전송 버튼)은 두지 않았다(X-05~X-07 등).
+
+### 7. 공통 상세 (공정 4)
+
+#### 7.1 요청의 공통 규칙
+
+| 항목 | 규칙 |
+|---|---|
+| 본문 | JSON(`Content-Type: application/json`). 본문이 있는 것은 POST·PUT·PATCH와 API-42(DELETE)뿐. 다른 형식은 415(`UNSUPPORTED_MEDIA_TYPE`). JSON으로 읽을 수 없거나 항목 타입이 다를 때(숫자 항목에 문자열 등)는 400(`MALFORMED_REQUEST`) |
+| 모르는 항목 | 본문의 모르는 항목은 무시한다(Spring Boot 기본). **API-52만 400**(`VALIDATION_FAILED`, 이유 `UNKNOWN_FIELD`. 부분 갱신에서 항목명 오타가 조용히 무시되지 않도록) |
+| 앞뒤 공백 | 이메일 주소·닉네임·키워드·관리자 수정 문자열은 앞뒤 공백(Unicode 공백. Java `String.strip()`)을 제거한 뒤 확인하고, 제거한 값을 쓴다. 비밀번호·토큰·리뷰 본문은 제거하지 않는다(4.6) |
+| 글자 수 | Unicode 코드 포인트로 센다(4.6). 닉네임은 확인하기 전에 Unicode **NFC**로 정규화한다(한글은 분해된 형태로 입력되는 일이 있어, 보기에는 같아도 다른 문자열이 되어 중복 확인을 빠져나가기 때문) |
+| 제어 문자 | 한 줄 항목(닉네임, 키워드, 관리자 수정의 공연명·상연 시간·관람 연령·예매처 이름과 URL)은 제어 문자(Unicode 일반 범주 Cc)를 하나라도 포함하면 400(이유 `FORMAT`). 여러 줄 항목(리뷰 본문, 관리자 수정의 출연진·티켓 가격·공연 시간 안내)은 Cc 중 줄바꿈(LF·CR)만 허용한다 |
+| 반복 쿼리 | 여러 값은 같은 이름을 반복한다(`genre=AAAA&genre=GGGA`). 같은 값은 하나로 본다 |
+| `lang` | `ko` / `ja`. 생략하면 `ko`. 다른 값은 400(이유 `INVALID_VALUE`). 받는 API는 8.에 쓴다 |
+| 페이지네이션 | `page`: 0~10,000 정수(기본 0). `size`: 1~100 정수(기본 20). 범위 밖은 400(이유 `RANGE`). 마지막 페이지보다 뒤는 200이고 `items`가 비어 있다 |
+| 공연 ID·공연장 ID(경로) | KOPIS ID(`mt20id`·`mt10id`). 영숫자만, 길이는 04의 열(`kopis_performance_id`·`kopis_venue_id`) 길이 이내. 형태가 맞지 않으면 400으로 하지 않고 없는 ID로 보아 404 |
+| 리뷰 ID(경로) | 1 이상의 정수(JSON 숫자). 형태가 맞지 않으면 404 |
+| "오늘"·현재 시각 | 요청 하나 안에서 한 번만 구하고(Asia/Seoul), 그 안의 모든 판정에 쓴다 |
+
+#### 7.2 응답의 공통 규칙
+
+| 항목 | 규칙 |
+|---|---|
+| 형식 | JSON(UTF-8). 항목명은 lowerCamelCase |
+| NULL | 8.의 표에 쓴 항목은 **항상 내보낸다**(생략하지 않는다). 값이 없으면 `null`. 배열은 값이 없어도 `[]`(`null`로 하지 않는다) |
+| 날짜 | `"2026-11-05"`(`YYYY-MM-DD`) |
+| 일시 | `"2026-11-05T14:03:00+09:00"`(ISO 8601. Asia/Seoul 오프셋 포함. 초까지) |
+| 좌표 | JSON 숫자(소수 여섯째 자리까지) |
+| 거리 | `distanceMeters`: 정수(m. 반올림. 02의 SC-01). 500m 이내 판정은 반올림 전 값으로 한다(4.5). 지구 반지름은 6,371,000 m |
+| 상태 값 | 공연 상태 `ONGOING`(공연 중) / `UPCOMING`(공연 예정) / `ENDED`(종료). 기간 종류 `DAILY` / `WEEKLY` / `MONTHLY`. 역할 `USER` / `ADMIN` |
+| 성공 상태 코드 | GET은 200. 생성(API-11)은 201. 본문을 돌려주지 않는 조작은 204 |
+| 캐시 | Spring Security 기본 헤더(`Cache-Control: no-cache, no-store, ...`) 그대로(로그인으로 내용이 바뀌는 API가 있기 때문) |
+
+**공통 타입**
+
+`LocalizedText`(외부 데이터 문장. 1.2, 02의 3.4)
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `value` | string | 불가 | 표시할 문장. `lang=ja`이고 번역이 있으면 일본어 번역, 그 밖에는 한국어 원문 |
+| `original` | string | 불가 | 한국어 원문 |
+| `translated` | boolean | 불가 | `value`가 번역인지. `lang=ko`에서는 항상 `false` |
+
+```json
+{ "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true }
+```
+
+- 화면은 `lang=ja`이고 `translated = false`일 때 "원문"으로 표시한다(P-06). 공연명·공연장명·역명은 `translated = true`일 때 `original`을 병기한다(F-11 ②). 그 밖에는 `value`만 표시한다(F-11 ③).
+- 번역은 표시할 원문(관리자 수정을 반영한 값)의 해시로 찾는다(04의 DB-05).
+- 역명은 `lang=ja`이고 공식 일본어 표기(ADR 0009)가 있으면 그것을 `value`로 하고 `translated = true`. 없으면 번역, 그것도 없으면 원문.
+- 항목 값 자체가 없을 때(예: 출연진이 없음)는 `LocalizedText`가 아니라 `null`.
+
+`Period`(집계 기간): `{ "start": "2026-10-26", "end": "2026-11-01" }`(둘 다 date, NULL 불가. 일간은 `start` = `end`).
+
+`Rating`(평점. 4.4)
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `average` | number | 가능 | 평균(소수 첫째 자리. P-03). `count`가 0이면 `null` |
+| `count` | integer | 불가 | 리뷰 수 |
+
+- 평균은 DB에서 별의 합계와 건수를 읽고, 앱에서 `BigDecimal` 나눗셈(소수 첫째 자리, `RoundingMode.HALF_UP`)으로 구한다. SQL의 `AVG`는 중간에 자릿수를 반올림하므로 경계 값(4.25 등)에서 P-03과 어긋날 수 있다.
+
+`PerformanceSummary`(공연 카드. 02의 3.7)
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `performanceId` | string | 불가 | 공연 ID(KOPIS `mt20id`) |
+| `title` | LocalizedText | 불가 | 공연명 |
+| `venue` | object | 불가 | `{ "venueId": string, "name": LocalizedText }`(둘 다 NULL 불가) |
+| `startDate` | date | 불가 | 공연 시작일 |
+| `endDate` | date | 불가 | 공연 종료일 |
+| `genre` | string | 불가 | 장르 코드(KOPIS. 예: `AAAA`. 표시는 화면 사전) |
+| `status` | string | 불가 | `ONGOING` / `UPCOMING` / `ENDED`(오늘과 공연 기간으로 계산한다. 1.6) |
+| `posterUrl` | string | 가능 | 포스터 URL |
+| `hasAward` | boolean | 불가 | 수상 이력(F-31) |
+| `rating` | Rating | 가능 | 평점(F-30). API-20·21에서는 계산하지 않고 `null`(02의 SC-03 카드는 평점을 뺀다) |
+
+- 공연 값(공연명·기간·장르 등)은 모두 관리자 수정을 반영한 값(4.10·9.5).
+
+`ReviewItem`(리뷰)
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `reviewId` | integer | 불가 | 리뷰 ID |
+| `rating` | integer | 불가 | 별(1~5) |
+| `body` | string | 가능 | 본문. 본문이 없는 리뷰, 또는 비로그인에 대한 응답(F-23 ①)에서는 `null` |
+| `nickname` | string | 가능 | 작성자 닉네임. 비로그인에 대한 응답(F-23 ④)에서는 `null` |
+| `createdAt` | datetime | 가능 | 작성 일시. 비로그인에 대한 응답에서는 `null`(02의 SC-02) |
+
+`Page<T>`(목록. 1.4)
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `items` | array(T) | 불가 | 그 페이지의 행 |
+| `page` | integer | 불가 | 요청한 페이지(0부터) |
+| `size` | integer | 불가 | 요청한 건수 |
+| `totalElements` | integer | 불가 | 전체 건수 |
+| `totalPages` | integer | 불가 | 페이지 수(0건이면 0) |
+
+#### 7.3 오류 (D-07)
+
+**본문 형태(모든 API 공통)**
+
+```json
+{
+  "code": "VALIDATION_FAILED",
+  "message": "Request validation failed",
+  "errors": [
+    { "field": "password", "reason": "PASSWORD_RULE" },
+    { "field": "nickname", "reason": "LENGTH" }
+  ]
+}
+```
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `code` | string | 불가 | 오류 코드(아래 표). **화면은 이 값으로 표시 문구를 정한다**(화면 사전. 02) |
+| `message` | string | 불가 | 개발자용 짧은 설명(영어). 화면에 표시하지 않는다. 내부 정보(SQL·스택 트레이스·예외 클래스명·입력된 비밀번호)를 넣지 않는다 |
+| `errors` | array | 불가 | 항목별 오류. `VALIDATION_FAILED`일 때만 요소가 있다. 그 밖에는 `[]` |
+| `errors[].field` | string | 불가 | 항목명. 본문은 JSON 항목 경로(예: `bookingSites[0].url`), 쿼리·경로는 그 이름 |
+| `errors[].reason` | string | 불가 | 이유 코드(아래 표) |
+
+- 여러 항목이 틀렸으면 `errors`에 모두 넣는다(순서는 정하지 않는다).
+- Spring Security가 돌려주는 401·403과 Spring 예외(405·415 등)도 이 형태로 한다. Spring Security 기본 본문·Spring Boot 기본 오류 응답은 쓰지 않는다.
+- 채택하지 않은 안: RFC 9457(Problem Details. Spring의 `ProblemDetail`). 표준 형태지만 `type`·`title` 등 화면이 쓰지 않는 항목이 늘어난다. 화면이 보는 것은 `code`와 `errors`뿐이므로 작은 자체 형태로 했다(새 라이브러리는 필요 없다).
+
+**오류 코드**
+
+| 상태 | `code` | 언제 | API |
+|---|---|---|---|
+| 400 | `VALIDATION_FAILED` | 입력 오류(필수·길이·형태·범위·조합). `errors`에 항목별 이유 | 입력이 있는 모든 API |
+| 400 | `MALFORMED_REQUEST` | 본문을 JSON으로 읽을 수 없음·항목 타입이 다름 | 본문이 있는 API |
+| 400 | `REVIEW_NOT_OPEN` | 공연 시작일 전의 리뷰 작성(F-21 ⑦) | API-11 |
+| 400 | `TOKEN_INVALID` | 메일 링크의 토큰이 무효(없음·형태가 다름·기한 만료·사용됨·용도가 다름) | API-34, 36, 38 |
+| 400 | `CURRENT_PASSWORD_INCORRECT` | 현재 비밀번호가 틀림(P-14) | API-41, 42 |
+| 400 | `RECAPTCHA_FAILED` | reCAPTCHA 검증을 통과하지 못함 | API-37 |
+| 401 | `UNAUTHENTICATED` | 로그인하지 않음(세션 없음·끊김·무효가 됨. 7.4) | 인가가 "일반" "관리자"인 API |
+| 401 | `LOGIN_FAILED` | 이메일 주소나 비밀번호가 틀림(없는 이메일 주소도 같음) | API-31 |
+| 401 | `ACCOUNT_LOCKED` | 잠김(F-14 ③) | API-31 |
+| 401 | `EMAIL_NOT_VERIFIED` | 메일 인증이 끝나지 않음(F-12 ⑧) | API-31 |
+| 403 | `FORBIDDEN` | 권한 없음(일반 사용자가 관리자 API, 관리자가 "일반" API, 남의 리뷰 수정·삭제) | 인가가 "일반" "관리자"인 API, API-12, 13 |
+| 403 | `CSRF_INVALID` | CSRF 토큰이 없거나 맞지 않음 | 상태를 바꾸는 모든 API |
+| 404 | `NOT_FOUND` | API 경로가 없음 | — |
+| 404 | `PERFORMANCE_NOT_FOUND` | 공연이 없거나 숨김(일반 사용자용 API). 관리자 API에서는 없을 때만 | API-03, 10, 11, 44, 51~55 |
+| 404 | `VENUE_NOT_FOUND` | 공연장이 없음 | API-04 |
+| 404 | `REVIEW_NOT_FOUND` | 리뷰가 없음(API-12·13에서는 리뷰의 공연이 숨김일 때도) | API-12, 13, 56 |
+| 405 | `METHOD_NOT_ALLOWED` | 그 경로에 없는 메서드 | — |
+| 409 | `EMAIL_ALREADY_REGISTERED` | 이메일 주소가 가입됨(F-12 ⑤) | API-33 |
+| 409 | `NICKNAME_ALREADY_USED` | 닉네임을 유효한 계정이 쓰고 있음(F-12 ③, F-17 ③) | API-33, 40 |
+| 409 | `NICKNAME_TAKEN_AT_VERIFICATION` | 인증 시점에 닉네임이 쓰이고 있어 가입에 실패함(4.7의 API-34의 2.) | API-34 |
+| 409 | `REVIEW_ALREADY_EXISTS` | 같은 공연 리뷰를 이미 작성함(F-21 ⑤) | API-11 |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | 본문이 JSON이 아님 | 본문이 있는 API |
+| 503 | `MAIL_LIMIT_REACHED` | 메일 최근 24시간 상한(4.8) | API-33, 35, 37 |
+| 503 | `MAIL_SEND_FAILED` | 메일 발송 실패(4.8) | API-33, 35, 37 |
+| 503 | `RECAPTCHA_UNAVAILABLE` | reCAPTCHA 상한(429)·오류·타임아웃(ADR 0011) | API-37 |
+| 500 | `INTERNAL_ERROR` | 예기치 않은 오류(상세는 로그에만 남긴다) | 전부 |
+
+**`errors[].reason`**
+
+| `reason` | 의미 | Bean Validation과의 대응(06에서 씀) |
+|---|---|---|
+| `REQUIRED` | 필수 항목이 없거나 비어 있음(앞뒤 공백 제거 후) | `@NotNull`·`@NotBlank` |
+| `LENGTH` | 글자 수·요소 수가 범위 밖 | `@Size` |
+| `FORMAT` | 형태가 다름(이메일 주소, 날짜, URL, ID, 제어 문자) | `@Email`·`@Pattern`·자체 |
+| `RANGE` | 숫자·날짜가 범위 밖 | `@Min`·`@Max`·`@DecimalMin`·`@DecimalMax` |
+| `INVALID_VALUE` | 정해진 값 목록에 없음(장르·구·`status`·`period`·`lang`·`visibility`·수정할 수 있는 항목 이름) | 자체 |
+| `PASSWORD_RULE` | 비밀번호 규칙(4.6. 길이 포함)에 맞지 않음 | 자체(이름은 06) |
+| `DATE_ORDER` | 시작일이 종료일보다 뒤(API-01의 `from` > `to`, API-52·53의 공연 기간) | 자체 |
+| `CONFLICT` | 동시에 지정할 수 없는 조건(구·지도 범위·공연장. 4.1, P-04). 지정한 항목마다 1개 | 자체 |
+| `INCOMPLETE` | 묶어서 지정하는 항목의 일부만(지도 범위의 4개) | 자체 |
+| `UNKNOWN_FIELD` | 모르는 항목(API-52만) | — |
+| `TYPE` | 쿼리·경로 값의 타입이 다름(예: `page=abc`) | —(타입 변환 실패) |
+
+**화면과의 관계(02의 3.3·3.5·3.6)**
+
+- 02의 3.5의 "API가 '비로그인'을 돌려주면"은 **`code = UNAUTHENTICATED`**일 때만을 가리킨다. API-31의 `LOGIN_FAILED`·`ACCOUNT_LOCKED`·`EMAIL_NOT_VERIFIED`는 같은 401이지만 SC-04의 결과 표시에 쓰고, 자동 로그아웃으로 다루지 않는다.
+- `VALIDATION_FAILED`는 `errors[].field`의 입력란 아래에 표시한다(02의 3.3). `CURRENT_PASSWORD_INCORRECT`는 "현재 비밀번호" 입력란 아래에 표시한다(02의 SC-12).
+- 8.의 각 API "오류"에 화면 표시가 쓰여 있지 않은 코드(`INTERNAL_ERROR` 등)는 02의 3.6의 "오류(통신·서버)" 표시로 한다.
+
+#### 7.4 인증·세션·판정 순서 (1.3, ADR 0013)
+
+- 로그인 성공(API-31)에서 세션 ID를 바꾼다(세션 고정 공격 대책. Spring Security 기본). 세션에는 사용자 ID와 로그인했을 때의 비밀번호 해시 값을 둔다.
+- **세션이 있는 요청의 확인(ADR 0013 결정 9를 구체화. 구현 형태는 06)**: 요청마다 그 사용자를 DB에서 읽고(기본 키), 다음 중 하나에 해당하면 그 세션을 무효로 하고 비로그인으로 다룬다(인가가 "일반" "관리자"인 API는 401 `UNAUTHENTICATED`, API-30은 비로그인 응답, "모두(내용이 바뀜)" API는 비로그인 내용).
+  1. 행이 없음(탈퇴함. F-18 ②)
+  2. 상태가 유효가 아님
+  3. 비밀번호 해시가 세션 값과 다름(다른 기기에서 비밀번호를 변경·재설정함. 옛 비밀번호로 로그인한 세션을 남기지 않는다. F-16 ②·F-15 ②)
+  - 잠금(F-14)은 로그인 시도 제한이므로 이미 있는 세션은 무효로 하지 않는다.
+  - 닉네임·역할은 세션에 두지 않고 매번 이 읽기 값을 쓴다(API-40의 변경이 다른 기기에도 바로 반영된다).
+- **CSRF(1.3)**: 로그인 성공·로그아웃 성공으로 CSRF 토큰 쿠키는 지워지고, 토큰은 쓰일 때까지 만들어지지 않는다(Spring Security 기본. 공식, 확인일 2026-11-06). 그래서 **API-30은 응답할 때마다 CSRF 토큰을 읽어 들여 쿠키 `XSRF-TOKEN`을 응답에 붙인다**(방법은 06). 화면은 처음 표시할 때와 로그인·로그아웃 직후에 API-30을 부른다(02의 3.5).
+- **판정 순서**(8.의 각 API는 이 순서로 처음 걸린 오류를 돌려준다. API마다 다른 순서는 8.에 쓴다): ① CSRF(403 `CSRF_INVALID`. Spring Security 필터에서 먼저 판정된다) → ② 로그인(401 `UNAUTHENTICATED`) → ③ 역할(403 `FORBIDDEN`) → ④ 입력(400 `VALIDATION_FAILED`·`MALFORMED_REQUEST`) → ⑤ 존재(404) → ⑥ 업무 조건(400·409·503).
+- 확인한 공식 문서(확인일 2026-11-06): Spring Security CSRF(`csrf.spa()`. 로그인 성공·로그아웃 성공으로 쿠키가 지워짐, 토큰 읽기는 지연됨, 실패는 `AccessDeniedHandler`로 넘어가 403): https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html
+
+#### 7.5 API 안에서 부르는 외부 서비스
+
+| 호출 | 쓰는 API | 실패했을 때 |
+|---|---|---|
+| Gmail SMTP(ADR 0012) | API-33, 35, 37 | 503 `MAIL_SEND_FAILED`. 재시도하지 않는다(이용자가 다시 보낸다). 타임아웃 값은 06(ADR 0012 결정 3) |
+| reCAPTCHA `CreateAssessment`(ADR 0011) | API-37 | 429·5xx·타임아웃·통신 오류는 503 `RECAPTCHA_UNAVAILABLE`. 재시도하지 않는다. 타임아웃 값은 06 |
+
+- **reCAPTCHA 호출**(확인일 2026-11-06. https://docs.cloud.google.com/recaptcha/docs/create-assessment-website ): `POST https://recaptchaenterprise.googleapis.com/v1/projects/{프로젝트 ID}/assessments?key={API 키}`, 본문 `{ "event": { "token": "{화면에서 받은 토큰}", "siteKey": "{사이트 키}" } }`. 응답의 `tokenProperties.valid`가 `true`면 통과, `false`면 400 `RECAPTCHA_FAILED`. 체크박스 부품에서는 `action`을 쓰지 않으므로 `action`은 비교하지 않는다(공식: 체크박스에서 `action`을 설정하지 않았으면 이 확인을 생략). 프로젝트 ID·API 키·사이트 키는 환경 변수(ADR 0011. 이름은 06).
+- **메일 하루 상한 세는 법(4.8)**: 보내기 직전에 `mail_send_log`의 최근 24시간 수를 세어 400 이상이면 보내지 않는다. 발송에 성공하면 1행을 더한다. 동시 신청으로 세기와 발송 사이에 차이가 생겨 400통을 조금 넘을 수는 있지만, Gmail의 500통(ADR 0012)까지의 여유 안에 들어간다.
+
+#### 7.6 메일 링크와 토큰 (4.7)
+
+- 토큰: 32바이트 암호학적 난수(`SecureRandom`)를 Base64URL(패딩 없음)로 만든 **43자**(`[A-Za-z0-9_-]`). DB에는 그 SHA-256 16진(64자. 04의 `auth_token.token_hash`)만 저장한다.
+- 링크: `{공개 URL}/signup/verify?token=…`(SC-06), `{공개 URL}/password-reset/confirm?token=…`(SC-08), `{공개 URL}/unlock/confirm?token=…`(SC-10). 공개 URL은 환경 변수(ADR 0010. 이름은 06).
+- 새 토큰을 만들 때 같은 사용자·같은 용도의 쓰지 않은 토큰은 사용됨(`used_at`에 현재 시각)으로 한다. 유효한 링크는 용도별로 항상 최신 1개뿐.
+- 유효 기한: 회원가입 24시간, 비밀번호 재설정 1시간, 잠금 해제 1시간(P-10). "유효 기한 > 현재 시각"이면 유효.
+- 메일 본문은 한국어와 일본어를 한 통 안에 병기한다(신청 API가 표시 언어를 받지 않기 때문. 문구는 06·구현). 제목·본문에 토큰 외의 비밀 정보(비밀번호 등)를 넣지 않는다.
+
+### 8. API별 상세
+
+- 각 API의 인가·정렬·화면·요건 ID는 3.의 표. 여기서는 요청·응답·오류를 쓴다.
+- "타입"의 `date`·`datetime`은 7.2 형태의 문자열. "NULL"의 "가능"은 JSON에서 `null`이 될 수 있다는 뜻.
+- 입력 검사의 "이유"는 7.3의 `errors[].reason`.
+- "오류"에는 7.4 판정 순서의 ①~③(`CSRF_INVALID`·`UNAUTHENTICATED`·`FORBIDDEN`)과 `INTERNAL_ERROR`·`MALFORMED_REQUEST`·`UNSUPPORTED_MEDIA_TYPE`를 쓰지 않는다(인가 구분으로 정해진다).
+
+#### 8.1 공연·공연장 (`performance`)
+
+##### API-01 GET `/api/performances` (공연 검색)
+
+**요청(쿼리)**
+
+| 이름 | 타입 | 필수 | 입력 검사(이유) |
+|---|---|---|---|
+| `lang` | string | 선택 | 7.1 |
+| `page`, `size` | integer | 선택 | 7.1 |
+| `from` | date | 선택 | `YYYY-MM-DD`(`TYPE`). `from`과 `to`가 둘 다 있으면 `from` ≤ `to`(`DATE_ORDER`). 하나만 있어도 된다(4.1 판정의 한쪽만 쓴다) |
+| `to` | date | 선택 | 위와 같음 |
+| `district` | string(반복) | 선택 | 서울 25개 구 이름(원문. 예: `종로구`. 앱 상수) 중 하나(`INVALID_VALUE`) |
+| `swLat`, `swLng`, `neLat`, `neLng` | number | 선택 | 4개를 갖춘다(일부만이면 없는 것에 `INCOMPLETE`). 위도 -90~90·경도 -180~180(`RANGE`). `swLat` ≤ `neLat`, `swLng` ≤ `neLng`(다르면 `neLat`·`neLng`에 `RANGE`) |
+| `venueId` | string | 선택 | 영숫자(`FORMAT`). 없는 공연장은 0건(404로 하지 않는다) |
+| `genre` | string(반복) | 선택 | 장르 코드 목록(앱 상수. 05의 7.에서 확정한다) 중 하나(`INVALID_VALUE`) |
+| `status` | string(반복) | 선택 | `ongoing` / `upcoming`(`INVALID_VALUE`) |
+| `keyword` | string | 선택 | 앞뒤 공백 제거 후 0~100자(`LENGTH`). 0자면 지정 없음. 제어 문자 없음(`FORMAT`) |
+
+- `district`·지도 범위·`venueId` 중 2개 이상을 지정하면 400(지정한 것마다 `CONFLICT`. 지도 범위는 `swLat`에 붙인다). P-04.
+- 키워드는 "포함"으로 찾는다(SQL `LIKE`. `%`·`_`·`\`는 이스케이프한다). 대소문자 등의 처리는 04의 콜레이션(D-03). `lang=ja`일 때는 원문 공연명이나 번역한 공연명 중 하나에 포함되면 결과에 나온다(F-02 ⑥).
+- SC-01에서 공연장 마커를 골랐을 때("그 공연장의 공연(지금 검색 조건에 맞는 것)")는, 화면이 지금 조건 중 장소 조건(구·지도 범위)을 빼고 `venueId`를 더해 부른다(마커는 그 장소 조건에 맞는 공연장에만 나와 있으므로 결과는 같다. P-04의 400을 피한다).
+
+**응답 200**: `Page<PerformanceSummary>`(7.2). 정렬은 3.(수정을 반영한 공연 시작일이 빠른 순 → 공연 ID 순).
+
+```json
+{
+  "items": [
+    {
+      "performanceId": "PF270001",
+      "title": { "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true },
+      "venue": { "venueId": "FC001247", "name": { "value": "シャルロッテシアター", "original": "샤롯데씨어터", "translated": true } },
+      "startDate": "2026-09-01",
+      "endDate": "2027-02-28",
+      "genre": "GGGA",
+      "status": "ONGOING",
+      "posterUrl": "http://www.kopis.or.kr/upload/pfmPoster/PF_PF270001.gif",
+      "hasAward": false,
+      "rating": { "average": 4.3, "count": 12 }
+    }
+  ],
+  "page": 0, "size": 20, "totalElements": 1, "totalPages": 1
+}
+```
+
+**오류**: 400 `VALIDATION_FAILED`.
+
+##### API-02 GET `/api/performances/markers` (지도 마커)
+
+**요청(쿼리)**: API-01과 같음(`page`·`size`는 없음). 검사도 같음.
+
+**응답 200**
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `markers` | array | 불가 | 공연장마다 1개(P-01). 좌표가 없는 공연장은 넣지 않는다(P-11). 정렬은 공연장 ID 순 |
+| `markers[].venueId` | string | 불가 | 공연장 ID |
+| `markers[].name` | LocalizedText | 불가 | 공연장명(마커의 `aria-label` 등에 쓴다) |
+| `markers[].latitude` | number | 불가 | 위도 |
+| `markers[].longitude` | number | 불가 | 경도 |
+| `markers[].performanceCount` | integer | 불가 | 조건에 맞는 공개 중인 공연 수(1 이상) |
+
+```json
+{ "markers": [ { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false }, "latitude": 37.511044, "longitude": 127.099164, "performanceCount": 2 } ] }
+```
+
+**오류**: 400 `VALIDATION_FAILED`.
+
+##### API-03 GET `/api/performances/{performanceId}` (공연 상세)
+
+**요청**: 경로 `performanceId`(7.1), 쿼리 `lang`.
+
+**응답 200**
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `performanceId` | string | 불가 | 공연 ID |
+| `title` | LocalizedText | 불가 | 공연명 |
+| `status` | string | 불가 | `ONGOING` / `UPCOMING` / `ENDED`(`ENDED`는 "종료". F-03 ④) |
+| `startDate`, `endDate` | date | 불가 | 공연 기간 |
+| `genre` | string | 불가 | 장르 코드 |
+| `venue` | object | 불가 | 아래 표 |
+| `cast` | LocalizedText | 가능 | 출연진 |
+| `ticketPrice` | LocalizedText | 가능 | 티켓 가격 |
+| `schedule` | LocalizedText | 가능 | 공연 시간 안내 |
+| `runtime` | LocalizedText | 가능 | 상연 시간 |
+| `ageLimit` | LocalizedText | 가능 | 관람 연령 |
+| `posterUrl` | string | 가능 | 포스터 URL |
+| `isOpenRun` | boolean | 불가 | 오픈런인지(F-32 ①) |
+| `totalShowCount` | integer | 가능 | 개막부터의 누계 상연 횟수(F-32 ②). 아직 얻지 못했으면 `null`(화면은 표시하지 않는다) |
+| `hasAward` | boolean | 불가 | 수상 이력(F-31) |
+| `bookingSites` | array | 불가 | 예매처(정렬 순서대로). `[]`이면 화면은 "예매처 정보가 없습니다"(F-04) |
+| `bookingSites[].name` | LocalizedText | 불가 | 예매처 이름 |
+| `bookingSites[].url` | string | 불가 | URL |
+| `rating` | Rating | 불가 | 평점(F-30) |
+| `reviewOpen` | boolean | 불가 | 오늘 ≥ 공연 시작일(리뷰를 작성할 수 있는 기간. F-21 ⑥⑦). `false`일 때 화면은 "공연 시작일(`startDate`)부터 작성할 수 있습니다" |
+| `rankings` | array | 불가 | 들어 있는 인기 순위(4.3, P-02. 최대 6). 정렬은 `DAILY` → `WEEKLY` → `MONTHLY`, 각각 `ALL` → 장르 |
+| `rankings[].periodType` | string | 불가 | `DAILY` / `WEEKLY` / `MONTHLY` |
+| `rankings[].genre` | string | 불가 | `ALL`(전체) 또는 장르 코드 |
+| `rankings[].rank` | integer | 불가 | 다시 매긴 순위(1~10. 9.1) |
+| `rankings[].period` | Period | 불가 | 집계 기간(4.9) |
+| `viewer` | object | 가능 | 일반 사용자로 로그인했을 때만. 비로그인·관리자는 `null` |
+| `viewer.isFavorite` | boolean | 불가 | 즐겨찾기에 등록했는지(F-19) |
+| `viewer.myReview` | ReviewItem | 가능 | 내 리뷰(없으면 `null`) |
+
+`venue`
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `venueId` | string | 불가 | 공연장 ID(API-04에 쓴다) |
+| `name` | LocalizedText | 불가 | 공연장명 |
+| `address` | LocalizedText | 가능 | 주소 |
+| `hasLocation` | boolean | 불가 | 좌표가 있는지. `false`면 화면은 API-04를 부르지 않고 "공연장 위치 정보가 없어 주변 정보를 표시할 수 없습니다"(P-11) |
+
+- `rankings`의 장르는 그 공연의 수정을 반영한 장르. 기간 종류·장르 조합마다 API-20과 같은 기간·같은 다시 매기기(9.1)로 상위 10위를 구하고, 이 공연이 들어 있는 것만 넣는다.
+- 예매처는 관리자 수정(`booking_sites`)이 있으면 수정 행, 없으면 자동 수집 행(04의 DB-02).
+
+```json
+{
+  "performanceId": "PF270001",
+  "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false },
+  "status": "ONGOING", "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA",
+  "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false }, "address": { "value": "서울특별시 송파구 올림픽로 240", "original": "서울특별시 송파구 올림픽로 240", "translated": false }, "hasLocation": true },
+  "cast": { "value": "조승우, 최재림", "original": "조승우, 최재림", "translated": false },
+  "ticketPrice": { "value": "VIP석 190,000원", "original": "VIP석 190,000원", "translated": false },
+  "schedule": null, "runtime": { "value": "2시간 30분", "original": "2시간 30분", "translated": false }, "ageLimit": null,
+  "posterUrl": null, "isOpenRun": false, "totalShowCount": 120, "hasAward": true,
+  "bookingSites": [ { "name": { "value": "인터파크", "original": "인터파크", "translated": false }, "url": "https://tickets.interpark.com/" } ],
+  "rating": { "average": null, "count": 0 },
+  "reviewOpen": true,
+  "rankings": [ { "periodType": "WEEKLY", "genre": "ALL", "rank": 3, "period": { "start": "2026-10-26", "end": "2026-11-01" } } ],
+  "viewer": { "isFavorite": true, "myReview": null }
+}
+```
+
+**오류**: 404 `PERFORMANCE_NOT_FOUND`(없음·숨김. F-03 ⑤. 화면은 SC-99).
+
+##### API-06 GET `/api/venues` (공연장 후보)
+
+**요청(쿼리)**
+
+| 이름 | 타입 | 필수 | 입력 검사(이유) |
+|---|---|---|---|
+| `keyword` | string | 필수 | 앞뒤 공백 제거 후 1~50자(`REQUIRED`·`LENGTH`). 제어 문자 없음(`FORMAT`) |
+| `lang` | string | 선택 | 7.1 |
+
+- 공연장명(원문)에 포함되는 공연장. `lang=ja`일 때는 번역한 공연장명에 포함되는 것도. 공개 중인 공연(1.6)이 1개 이상 있는 공연장만. 최대 20건(페이지 없음). 정렬은 공연장명(원문) 순, 같으면 공연장 ID 순.
+
+**응답 200**
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `items` | array | 불가 | 최대 20 |
+| `items[].venueId` | string | 불가 | 공연장 ID(API-01·02의 `venueId`에 쓴다) |
+| `items[].name` | LocalizedText | 불가 | 공연장명 |
+| `items[].district` | string | 가능 | 구 이름(원문. 정하지 못한 공연장은 `null`. 4.2) |
+
+**오류**: 400 `VALIDATION_FAILED`.
+
+#### 8.2 주변 (`surrounding`)
+
+공통 타입 `StationItem`·`LockerItem`:
+
+| 타입 | 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|---|
+| StationItem | `name` | LocalizedText | 불가 | 역명(7.2의 역명 규칙) |
+| | `line` | integer | 불가 | 노선(1~8. 표시 문구는 화면 사전. ADR 0007 결정 3) |
+| | `distanceMeters` | integer | 불가 | 거리(7.2) |
+| LockerItem | `stationName` | LocalizedText | 불가 | 속한 역의 역명 |
+| | `line` | integer | 불가 | 노선(1~8) |
+| | `location` | LocalizedText | 불가 | 위치 설명(F-06 ③. 예: `1번 출입구 주변`) |
+| | `distanceMeters` | integer | 불가 | 속한 역의 좌표로 잰 거리(F-06 ②) |
+
+- 역 정렬: 거리(반올림 전)가 가까운 순 → 역명(원문) → 노선. 물품보관함: 거리가 가까운 순 → 역명(원문) → 노선 → 위치 설명(원문). 건수 상한을 두지 않는다(500m 이내라 적다).
+
+##### API-04 GET `/api/venues/{venueId}/surroundings` (공연장 주변)
+
+**요청**: 경로 `venueId`(7.1), 쿼리 `lang`.
+
+**응답 200**
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `venue` | object | 불가 | `{ "venueId": string, "name": LocalizedText, "address": LocalizedText(가능), "latitude": number(가능), "longitude": number(가능) }`(SC-01의 공연장 정보에 쓴다) |
+| `hasLocation` | boolean | 불가 | 공연장 좌표가 있는지. `false`면 `stations`·`lockers`는 `[]`(P-11) |
+| `stations` | array(StationItem) | 불가 | 500m 이내 역(F-05). `[]`이면 화면은 "500m 이내에 역이 없습니다" |
+| `lockers` | array(LockerItem) | 불가 | 500m 이내 물품보관함(F-06). `[]`이면 "500m 이내에 물품보관함이 없습니다" |
+
+**오류**: 404 `VENUE_NOT_FOUND`.
+
+##### API-05 GET `/api/surroundings` (현재 위치 주변)
+
+**요청(쿼리)**
+
+| 이름 | 타입 | 필수 | 입력 검사(이유) |
+|---|---|---|---|
+| `lat` | number | 필수 | -90~90(`REQUIRED`·`RANGE`·`TYPE`) |
+| `lng` | number | 필수 | -180~180(위와 같음) |
+| `lang` | string | 선택 | 7.1 |
+
+**응답 200**
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `venues` | array | 불가 | 500m 이내의, 공개 중인 공연(1.6)이 있는 공연장(좌표가 있는 공연장만). 거리가 가까운 순 → 공연장 ID 순 |
+| `venues[].venueId` | string | 불가 | 공연장 ID |
+| `venues[].name` | LocalizedText | 불가 | 공연장명 |
+| `venues[].latitude`, `venues[].longitude` | number | 불가 | 좌표(지도 마커) |
+| `venues[].distanceMeters` | integer | 불가 | 현재 위치에서의 거리 |
+| `venues[].performances` | array(PerformanceSummary) | 불가 | 그 공연장의 공개 중인 공연(1건 이상). 정렬은 API-01과 같음 |
+| `stations` | array(StationItem) | 불가 | 500m 이내 역(거리는 현재 위치에서) |
+| `lockers` | array(LockerItem) | 불가 | 500m 이내 물품보관함 |
+
+- 페이지는 없다(대학로처럼 공연장이 많은 곳에서도 수백 건 정도로 예상). 서울 밖 좌표여도 오류로 하지 않고 빈 결과가 된다(4.5).
+
+**오류**: 400 `VALIDATION_FAILED`.
+
+#### 8.3 리뷰 (`review`)
+
+##### API-10 GET `/api/performances/{performanceId}/reviews` (리뷰 목록)
+
+**요청**: 경로 `performanceId`, 쿼리 `page`·`size`(7.1).
+
+**응답 200**: `Page<ReviewItem>`. 정렬은 작성 일시 최신순 → 리뷰 ID가 큰 순. 로그인하지 않았으면 각 행의 `body`·`nickname`·`createdAt`을 `null`로 한다(F-23 ①④. 서버에서 지운다. 화면에서 숨기는 것이 아니다). 일반 사용자·관리자에게는 전부 돌려준다.
+
+```json
+{ "items": [ { "reviewId": 31, "rating": 5, "body": "최고였어요", "nickname": "Cat", "createdAt": "2026-11-05T14:03:00+09:00" } ], "page": 0, "size": 20, "totalElements": 1, "totalPages": 1 }
+```
+
+**오류**: 404 `PERFORMANCE_NOT_FOUND`(없음·숨김).
+
+##### API-11 POST `/api/performances/{performanceId}/reviews` (리뷰 작성)
+
+**요청(본문)**
+
+| 항목 | 타입 | 필수 | 입력 검사(이유) |
+|---|---|---|---|
+| `rating` | integer | 필수 | 1~5 정수(`REQUIRED`·`RANGE`. 소수는 `MALFORMED_REQUEST`) |
+| `body` | string | 선택 | 1,000자 이내(`LENGTH`). 줄바꿈 외 제어 문자 없음(`FORMAT`). `null`·빈 문자열·공백뿐이면 본문 없음으로 저장한다(앞뒤 공백은 제거하지 않는다) |
+
+```json
+{ "rating": 5, "body": "최고였어요" }
+```
+
+**처리**: ① 공연이 있고 숨김이 아님(404) → ② 오늘 ≥ 수정을 반영한 공연 시작일(400 `REVIEW_NOT_OPEN`) → ③ 같은 사람의 같은 공연 리뷰가 없음(409. DB 유일 제약 위반도 409) → 저장.
+
+**응답 201**: `ReviewItem`(모든 항목).
+
+**오류**: 400 `VALIDATION_FAILED`·`REVIEW_NOT_OPEN`, 404 `PERFORMANCE_NOT_FOUND`, 409 `REVIEW_ALREADY_EXISTS`(화면은 "이 공연에는 이미 리뷰를 작성했습니다". 02의 SC-02).
+
+##### API-12 PUT `/api/reviews/{reviewId}` (내 리뷰 수정)
+
+**요청**: 경로 `reviewId`(7.1), 본문은 API-11과 같음(`rating`은 필수. `body`를 `null`로 하면 본문을 지운다).
+
+**처리**: ① 리뷰가 있고 그 공연이 숨김이 아님(404 `REVIEW_NOT_FOUND`) → ② 내 리뷰(403 `FORBIDDEN`. F-24 ③) → 갱신(`updated_at`). 공연 시작일은 확인하지 않는다(작성할 수 있었던 리뷰의 수정이므로).
+
+**응답 200**: `ReviewItem`.
+
+**오류**: 400 `VALIDATION_FAILED`, 403 `FORBIDDEN`, 404 `REVIEW_NOT_FOUND`.
+
+##### API-13 DELETE `/api/reviews/{reviewId}` (내 리뷰 삭제)
+
+**요청**: 경로 `reviewId`. 본문 없음.
+
+**처리**: API-12의 ①② → 행 삭제(F-22 ③④).
+
+**응답 204**.
+
+**오류**: 403 `FORBIDDEN`, 404 `REVIEW_NOT_FOUND`(삭제된 것도 404).
+
+#### 8.4 인기 순위·트렌드 (`ranking`)
+
+##### API-20 GET `/api/rankings` (인기 순위)
+
+**요청(쿼리)**
+
+| 이름 | 타입 | 필수 | 입력 검사(이유) |
+|---|---|---|---|
+| `period` | string | 필수 | `daily` / `weekly` / `monthly`(`REQUIRED`·`INVALID_VALUE`) |
+| `genre` | string | 선택 | `ALL`(기본) 또는 장르 코드(`INVALID_VALUE`) |
+| `lang` | string | 선택 | 7.1 |
+
+**처리**: 4.9의 보여줄 기간을 정하고, 9.1의 다시 매기기로 상위 10위를 돌려준다(F-29 ③⑤⑥⑧⑨).
+
+**응답 200**
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `periodType` | string | 불가 | `DAILY` / `WEEKLY` / `MONTHLY` |
+| `genre` | string | 불가 | `ALL` 또는 장르 코드 |
+| `period` | Period | 가능 | 보여줄 기간의 집계 기간(F-29 ④). 보여줄 수 있는 기간이 없을 때(4.9) `null` |
+| `items` | array | 불가 | 최대 10. `rank` 순. `period`가 `null`이거나 그 기간의 행이 0건이면 `[]`(화면은 "이 기간의 순위 데이터가 없습니다") |
+| `items[].rank` | integer | 불가 | 다시 매긴 순위(1~10) |
+| `items[].performance` | PerformanceSummary | 불가 | 공연(`rating`은 `null`. 끝난 공연도 나온다. F-09 ④) |
+
+```json
+{ "periodType": "WEEKLY", "genre": "ALL", "period": { "start": "2026-10-26", "end": "2026-11-01" },
+  "items": [ { "rank": 1, "performance": { "performanceId": "PF270001", "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false }, "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false } }, "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA", "status": "ONGOING", "posterUrl": null, "hasAward": true, "rating": null } } ] }
+```
+
+**오류**: 400 `VALIDATION_FAILED`.
+
+##### API-21 GET `/api/rankings/rising` (인기 급상승)
+
+**요청(쿼리)**: API-20과 같음.
+
+**처리**: 4.9의 보여줄 기간을 현재 기간으로 하고, 달력상 하나 앞 기간(일간은 전날, 주간은 7일 전부터의 주, 월간은 전달)을 직전 기간으로 한다. ADR 0008 4.의 절차(두 기간 모두 9.1의 다시 매기기로 정렬)로 계산한다.
+
+**응답 200**(형태는 9.3(D-06))
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `periodType` | string | 불가 | 기간 종류 |
+| `genre` | string | 불가 | `ALL` 또는 장르 코드 |
+| `availability` | string | 불가 | `AVAILABLE` / `NO_PREVIOUS_RANKING` / `NO_RANKING`(9.3) |
+| `currentPeriod` | Period | 가능 | 현재 기간의 집계 기간(F-33 ②). `NO_RANKING`일 때 `null` |
+| `previousPeriod` | Period | 가능 | 비교할 직전 기간의 집계 기간. `NO_RANKING`일 때 `null`. `NO_PREVIOUS_RANKING`일 때도 값을 넣는다(화면 문구 P-17에 쓴다) |
+| `items` | array | 불가 | `AVAILABLE`일 때만 요소가 있을 수 있다(최대 10. 정렬은 F-33 ⑨). 그 밖에는 `[]` |
+| `items[].rank` | integer | 불가 | 현재 기간의 다시 매긴 순위(1~10) |
+| `items[].movement` | string | 불가 | `NEW`(직전 상위 10위에 없었음. F-33 ③) / `UP`(올랐음) |
+| `items[].rise` | integer | 가능 | 상승폭(1 이상. 직전 순위 − 현재 순위. F-33 ⑨). `NEW`일 때 `null` |
+| `items[].performance` | PerformanceSummary | 불가 | 공연(`rating`은 `null`) |
+
+```json
+{ "periodType": "WEEKLY", "genre": "ALL", "availability": "NO_PREVIOUS_RANKING",
+  "currentPeriod": { "start": "2026-10-26", "end": "2026-11-01" },
+  "previousPeriod": { "start": "2026-10-19", "end": "2026-10-25" },
+  "items": [] }
+```
+
+**오류**: 400 `VALIDATION_FAILED`.
+
+##### API-22 GET `/api/genre-trends` (장르별 트렌드)
+
+**요청**: 없음(외부 데이터 문장을 돌려주지 않으므로 `lang`도 받지 않는다).
+
+**처리**: 저장한 장르별 트렌드 중 집계 기간 마지막 날이 가장 최근인 기간을 돌려준다(04의 4.11).
+
+**응답 200**
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `period` | Period | 가능 | 집계 기간(최근 30일). 데이터가 없으면 `null`(화면은 "이 기간의 통계 데이터가 없습니다") |
+| `basis` | string | 가능 | `SEOUL` / `NATIONAL`(R-50. 화면의 "서울 기준" "전국 기준". 02의 SC-03). `period`가 `null`이면 `null` |
+| `items` | array | 불가 | 장르별. 비중이 큰 순 → 장르 코드 순 |
+| `items[].genre` | string | 불가 | 장르 코드 |
+| `items[].bookingCount` | integer | 불가 | 예매 수 |
+| `items[].share` | number | 불가 | 비중(%, 소수 첫째 자리. 저장한 값을 `HALF_UP`으로 반올림). 합계가 딱 100.0이 되지 않을 수 있다 |
+
+```json
+{ "period": { "start": "2026-10-06", "end": "2026-11-04" }, "basis": "NATIONAL", "items": [ { "genre": "GGGA", "bookingCount": 52031, "share": 41.2 } ] }
+```
+
+**오류**: 없음(7.3의 공통 오류뿐).
+
+#### 8.5 인증·계정 신청 (`auth`)
+
+##### API-30 GET `/api/auth/me` (로그인 상태)
+
+**요청**: 없음.
+
+**응답 200**(항상 200. 7.4의 세션 확인으로 무효가 된 세션은 비로그인). 쿠키 `XSRF-TOKEN`을 붙인다(7.4).
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `authenticated` | boolean | 불가 | 로그인했는지 |
+| `role` | string | 가능 | `USER` / `ADMIN`. 비로그인은 `null` |
+| `nickname` | string | 가능 | 일반 사용자의 닉네임(CM-01). 비로그인·관리자는 `null` |
+
+```json
+{ "authenticated": true, "role": "USER", "nickname": "Cat" }
+```
+
+##### API-31 POST `/api/auth/login` (로그인)
+
+**요청(본문)**
+
+| 항목 | 타입 | 필수 | 입력 검사(이유) |
+|---|---|---|---|
+| `email` | string | 필수 | 앞뒤 공백 제거 후 비어 있지 않음(`REQUIRED`). 형태·길이는 확인하지 않는다(맞지 않으면 `LOGIN_FAILED`) |
+| `password` | string | 필수 | 비어 있지 않음(`REQUIRED`). 규칙(4.6)은 확인하지 않는다 |
+
+**처리(ADR 0013 5., 4.7)**: 다음 순서로 판정한다. 하나의 트랜잭션에서 사용자 행을 `FOR UPDATE`로 읽어, 실패 횟수 갱신이 동시 로그인으로 어긋나지 않게 한다.
+
+1. 그 이메일 주소의 계정이 없음 → `LOGIN_FAILED`(시간 차이로 존재를 알 수 없도록 더미 해시와 비교한 뒤 돌려준다).
+2. 잠김(`locked_at`이 있음) → `ACCOUNT_LOCKED`(비밀번호가 맞든 틀리든. 횟수는 바꾸지 않는다).
+3. 비밀번호가 맞지 않음(규칙에 맞지 않는 비밀번호는 해시와 비교하지 않고 "맞지 않음"으로 한다. bcrypt의 72바이트 제한에 걸리지 않도록):
+   - 유효한 계정: 연속 실패 횟수를 1 늘린다. 5가 되면 잠그고(`locked_at`에 현재 시각) `ACCOUNT_LOCKED`, 그 밖에는 `LOGIN_FAILED`(F-14 ①).
+   - 인증 전 계정: 횟수를 바꾸지 않고 `LOGIN_FAILED`(인증 전은 로그인 대상이 아니다).
+4. 비밀번호가 맞음:
+   - 인증 전 계정 → `EMAIL_NOT_VERIFIED`(횟수에 세지 않는다. F-12 ⑧).
+   - 유효한 계정 → 실패 횟수를 0으로 하고(F-14 ②), 세션을 만든다(7.4).
+- 잠긴 동안 비밀번호가 맞아도 `ACCOUNT_LOCKED`(F-14 ③). 잠긴 동안의 틀림을 `ACCOUNT_LOCKED`로 돌려주는 것은 이용자가 해제 방법(02의 SC-04)에 닿을 수 있게 하기 위해서다(이메일 주소의 가입 여부는 F-12 ⑤의 회원가입에서도 알 수 있으므로 숨기는 이점이 작다).
+
+**응답 200**: API-30과 같은 형태(로그인한 상태). Set-Cookie로 세션 쿠키(ADR 0013 결정 8). 화면은 이 뒤 API-30을 불러 CSRF 토큰을 받는다.
+
+**오류**: 400 `VALIDATION_FAILED`, 401 `LOGIN_FAILED`·`ACCOUNT_LOCKED`·`EMAIL_NOT_VERIFIED`(화면 표시는 02의 SC-04).
+
+##### API-32 POST `/api/auth/logout` (로그아웃)
+
+**요청**: 없음(CSRF 토큰은 필요).
+
+**처리**: 세션을 무효로 하고 세션 쿠키를 지운다(ADR 0013 결정 4). 로그인하지 않았어도 똑같이 204.
+
+**응답 204**.
+
+##### API-33 POST `/api/signup` (회원가입 신청)
+
+**요청(본문)**
+
+| 항목 | 타입 | 필수 | 입력 검사(이유) |
+|---|---|---|---|
+| `email` | string | 필수 | 앞뒤 공백 제거. 254자 이내(`LENGTH`), 이메일 주소 형태(`FORMAT`: Bean Validation `@Email`에 더해, `@` 뒤에 `.`을 포함하는 `^[^@\s]+@[^@\s]+\.[^@\s]+$`) |
+| `password` | string | 필수 | 비밀번호 규칙(4.6. `PASSWORD_RULE`) |
+| `nickname` | string | 필수 | 앞뒤 공백 제거·NFC 정규화 후 1~20자(`REQUIRED`·`LENGTH`), 제어 문자 없음(`FORMAT`) |
+
+- "비밀번호(확인)"는 화면에서만 비교한다(API는 받지 않는다. 02의 SC-05).
+
+**처리(4.7)**: ① 메일 상한(503 `MAIL_LIMIT_REACHED`) → ② 같은 이메일 주소의 유효한 계정(관리자 포함)이 있음(409 `EMAIL_ALREADY_REGISTERED`) → ③ 닉네임을 유효한 계정이 쓰고 있음(409 `NICKNAME_ALREADY_USED`) → ④ 같은 이메일 주소의 인증 전 행이 있으면 교체(그 토큰은 무효), 없으면 인증 전 행을 만든다 → ⑤ 회원가입 토큰을 만든다(7.6) → ⑥ 메일을 보낸다(실패는 503 `MAIL_SEND_FAILED`) → ⑦ 발송 기록. ④~⑦은 하나의 트랜잭션이고, ⑥이 실패하면 아무것도 저장하지 않는다(4.8). 같은 이메일 주소의 신청이 동시에 오면 이메일 주소 행을 `FOR UPDATE`로 읽어 차례로 처리한다(형태는 06).
+
+**응답 204**.
+
+**오류**: 400 `VALIDATION_FAILED`, 409 `EMAIL_ALREADY_REGISTERED`·`NICKNAME_ALREADY_USED`, 503 `MAIL_LIMIT_REACHED`(화면은 02의 6.2)·`MAIL_SEND_FAILED`.
+
+##### API-34 POST `/api/signup/verify` (메일 인증 완료)
+
+**요청(본문)**: `{ "token": string }`. `token`이 없거나 43자 형태(7.6)가 아닐 때도 400 `TOKEN_INVALID`(`VALIDATION_FAILED`로 하지 않는다. 화면 표시를 하나로 하기 위해).
+
+**처리**: 4.7의 1.~3.. 잠금 방법은 9.2(D-05).
+
+**응답 204**.
+
+**오류**: 400 `TOKEN_INVALID`(02의 SC-06 "링크가 무효이거나 기한이 지났습니다"), 409 `NICKNAME_TAKEN_AT_VERIFICATION`(SC-06의 닉네임 실패).
+
+##### API-35 POST `/api/password-reset` (비밀번호 재설정 신청)
+
+**요청(본문)**: `{ "email": string }`(검사는 API-33의 `email`과 같음).
+
+**처리**: ① 메일 상한(503) → ② 그 이메일 주소의 유효한 계정(일반 사용자·관리자. F-15 ⑤)이 있으면 재설정 토큰(1시간)을 만들고 메일을 보낸다(실패는 503 `MAIL_SEND_FAILED`). 없거나 인증 전이면 아무것도 하지 않는다. 어느 쪽이든 204(4.7).
+
+**응답 204**.
+
+**오류**: 400 `VALIDATION_FAILED`, 503 `MAIL_LIMIT_REACHED`·`MAIL_SEND_FAILED`.
+
+- `MAIL_SEND_FAILED`는 계정이 있을 때만 일어나므로, 발송 실패일 때에 한해 계정 유무를 알 수 있다. 4.8(발송 실패는 503)을 우선하고 받아들인다(보통은 일어나지 않는다).
+
+##### API-36 POST `/api/password-reset/confirm` (새 비밀번호 설정)
+
+**요청(본문)**
+
+| 항목 | 타입 | 필수 | 입력 검사(이유) |
+|---|---|---|---|
+| `token` | string | 필수 | 형태가 다르거나 없으면 400 `TOKEN_INVALID`(API-34와 같음) |
+| `newPassword` | string | 필수 | 비밀번호 규칙(4.6. `PASSWORD_RULE`) |
+
+**처리**: ① `newPassword` 검사(400 `VALIDATION_FAILED`) → ② 토큰(용도가 재설정, 쓰지 않음, 기한 안. 400 `TOKEN_INVALID`) → ③ 하나의 트랜잭션에서: 비밀번호 해시를 바꾸고, `locked_at`을 NULL, 실패 횟수를 0(F-15 ④), 토큰을 사용됨, 같은 사용자의 다른 쓰지 않은 재설정 토큰도 사용됨. 잠금은 사용자 → 토큰 순(9.2). 다른 기기의 세션은 7.4로 무효가 된다.
+
+**응답 204**.
+
+**오류**: 400 `VALIDATION_FAILED`(SC-08 입력란 아래)·`TOKEN_INVALID`(SC-08 "링크가 무효이거나 기한이 지났습니다").
+
+##### API-37 POST `/api/unlock` (잠금 해제 신청)
+
+**요청(본문)**
+
+| 항목 | 타입 | 필수 | 입력 검사(이유) |
+|---|---|---|---|
+| `email` | string | 필수 | API-33의 `email`과 같음 |
+| `recaptchaToken` | string | 필수 | 1~10,000자(`REQUIRED`·`LENGTH`) |
+
+**처리**: ① 메일 상한(503 `MAIL_LIMIT_REACHED`. reCAPTCHA 무료 횟수를 쓰지 않도록 먼저 확인한다) → ② reCAPTCHA 검증(7.5. 통과하지 못하면 400 `RECAPTCHA_FAILED`, 호출 실패는 503 `RECAPTCHA_UNAVAILABLE`) → ③ 그 이메일 주소의 유효한 계정이 잠겨 있으면 잠금 해제 토큰(1시간)을 만들고 메일을 보낸다(실패는 503 `MAIL_SEND_FAILED`). 그 밖에는 아무것도 하지 않는다. 모두 204(4.7).
+
+**응답 204**.
+
+**오류**: 400 `VALIDATION_FAILED`·`RECAPTCHA_FAILED`, 503 `MAIL_LIMIT_REACHED`·`RECAPTCHA_UNAVAILABLE`·`MAIL_SEND_FAILED`(화면은 02의 SC-09·6.2).
+
+##### API-38 POST `/api/unlock/confirm` (잠금 해제 완료)
+
+**요청(본문)**: `{ "token": string }`(형태는 API-34와 같은 처리).
+
+**처리**: 토큰(용도가 잠금 해제, 쓰지 않음, 기한 안) → 하나의 트랜잭션에서 `locked_at`을 NULL, 실패 횟수를 0, 토큰을 사용됨(F-14 ④(a)⑥). 이미 잠금이 풀려 있어도 204.
+
+**응답 204**.
+
+**오류**: 400 `TOKEN_INVALID`.
+
+#### 8.6 계정 (`account`)
+
+##### API-40 PUT `/api/me/nickname` (닉네임 변경)
+
+**요청(본문)**: `{ "nickname": string }`(검사는 API-33의 `nickname`과 같음).
+
+**처리**: 나 이외의 유효한 계정이 쓰고 있으면 409(DB 유일 제약 위반도 409). 내 지금 닉네임과 같다고 보는 값(대소문자 차이뿐 등. D-02)은 나와의 중복으로 보지 않는다(표시 형태만 바뀐다).
+
+**응답 200**: `{ "nickname": "Cat" }`(저장한 값).
+
+**오류**: 400 `VALIDATION_FAILED`, 409 `NICKNAME_ALREADY_USED`.
+
+##### API-41 PUT `/api/me/password` (비밀번호 변경)
+
+**요청(본문)**
+
+| 항목 | 타입 | 필수 | 입력 검사(이유) |
+|---|---|---|---|
+| `currentPassword` | string | 필수 | 비어 있지 않음(`REQUIRED`). 규칙은 확인하지 않는다(4.6) |
+| `newPassword` | string | 필수 | 비밀번호 규칙(`PASSWORD_RULE`) |
+
+**처리**: ① 입력(400) → ② 현재 비밀번호가 해시와 맞음(400 `CURRENT_PASSWORD_INCORRECT`. 로그인 실패 횟수에는 세지 않는다. F-14는 로그인 시도 제한이므로) → ③ 해시를 바꾸고 이 세션을 무효로 한다(ADR 0013 결정 9. 다른 기기는 7.4).
+
+**응답 204**(세션 쿠키를 지운다). 화면은 SC-04로 간다(02의 SC-12).
+
+**오류**: 400 `VALIDATION_FAILED`·`CURRENT_PASSWORD_INCORRECT`.
+
+##### API-42 DELETE `/api/me` (탈퇴)
+
+**요청(본문)**: `{ "currentPassword": string }`(필수. 비어 있지 않음). DELETE에 본문을 붙인다(Angular `HttpClient.delete(url, { body })`로 보낼 수 있다).
+
+**처리**: ① 현재 비밀번호(400 `CURRENT_PASSWORD_INCORRECT`) → ② 사용자 행을 삭제(리뷰·즐겨찾기·토큰은 외래 키로 함께 지워진다. 04의 5.. F-18) → ③ 세션을 무효로 한다.
+
+**응답 204**(세션 쿠키를 지운다).
+
+**오류**: 400 `VALIDATION_FAILED`·`CURRENT_PASSWORD_INCORRECT`.
+
+#### 8.7 즐겨찾기 (`favorite`)
+
+##### API-43 GET `/api/me/favorites` (즐겨찾기 목록)
+
+**요청(쿼리)**: `lang`, `page`, `size`(7.1).
+
+**응답 200**: `Page<FavoriteItem>`. 정렬은 등록 최신순 → 즐겨찾기 행 ID가 큰 순. 숨긴 공연은 내보내지 않고, 끝난 공연은 내보낸다(F-20 ④⑤).
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `favoritedAt` | datetime | 불가 | 등록 일시 |
+| `performance` | PerformanceSummary | 불가 | 공연(`rating` 있음) |
+
+##### API-44 PUT `/api/me/favorites/{performanceId}` (즐겨찾기 등록)
+
+**요청**: 경로 `performanceId`. 본문 없음.
+
+**처리**: 공연이 있고 숨김이 아님(404) → 등록되어 있지 않으면 등록(이미 등록되어 있으면 아무것도 하지 않는다. 유일 제약 위반도 성공으로 본다). 끝난 공연도 등록할 수 있다.
+
+**응답 204**.
+
+**오류**: 404 `PERFORMANCE_NOT_FOUND`.
+
+##### API-45 DELETE `/api/me/favorites/{performanceId}` (즐겨찾기 해제)
+
+**요청**: 경로 `performanceId`. 본문 없음.
+
+**처리**: 내 그 공연 즐겨찾기를 삭제한다. 등록하지 않았거나 공연이 없거나 숨김이어도 204(몇 번 해도 같다).
+
+**응답 204**.
+
+#### 8.8 관리 (`admin`)
+
+관리자 API는 외부 데이터를 원문으로 돌려준다(`lang`을 받지 않는다. 02의 SC-13 "공연명(원문)"). 수정할 수 있는 항목 이름(API·DB):
+
+| API 이름 | DB `field_name`(04의 4.4) | 타입(API) | 입력 검사(API-52. 이유) | `override_value` 문자열(9.5) |
+|---|---|---|---|---|
+| `title` | `title` | string | 앞뒤 공백 제거 후 1~200자, 제어 문자 없음 | 그대로 |
+| `startDate` | `start_date` | date | `YYYY-MM-DD` | `YYYY-MM-DD` |
+| `endDate` | `end_date` | date | `YYYY-MM-DD` | `YYYY-MM-DD` |
+| `genre` | `genre_code` | string | 장르 코드 목록(`INVALID_VALUE`) | 그대로 |
+| `cast` | `cast_text` | string | 앞뒤 공백 제거 후 1~2,000자, 줄바꿈 외 제어 문자 없음 | 그대로 |
+| `ticketPrice` | `ticket_price` | string | 위와 같음 | 그대로 |
+| `schedule` | `schedule_text` | string | 위와 같음 | 그대로 |
+| `runtime` | `runtime` | string | 앞뒤 공백 제거 후 1~100자, 제어 문자 없음 | 그대로 |
+| `ageLimit` | `age_limit` | string | 위와 같음 | 그대로 |
+| `isOpenRun` | `is_open_run` | boolean | `true` / `false` | `true` / `false` |
+| `bookingSites` | `booking_sites` | array | 0~10건(`LENGTH`. 0건은 "예매처 없음"으로 수정. 04의 DB-02). 각 요소의 `name`: 앞뒤 공백 제거 후 1~100자, 제어 문자 없음. `url`: 1~2,000자, `http://`나 `https://`로 시작하는 절대 URL(`FORMAT`) | NULL(값은 04의 `booking_site`의 `ADMIN` 행) |
+
+- 공연 기간은 수정을 반영한 시작일 ≤ 수정을 반영한 종료일(`DATE_ORDER`). API-52·53 뒤의 값으로 확인한다.
+
+##### API-50 GET `/api/admin/performances` (관리: 공연 검색)
+
+**요청(쿼리)**
+
+| 이름 | 타입 | 필수 | 입력 검사(이유) |
+|---|---|---|---|
+| `keyword` | string | 선택 | 앞뒤 공백 제거 후 0~100자(0이면 지정 없음), 제어 문자 없음. 수정을 반영한 공연명(원문)이나 공연 ID에 포함되는 것 |
+| `visibility` | string | 선택 | `all`(기본) / `visible` / `hidden`(`INVALID_VALUE`) |
+| `includeEnded` | boolean | 선택 | `true` / `false`(기본 `false`. `false`면 끝난 공연을 뺀다. `TYPE`) |
+| `page`, `size` | integer | 선택 | 7.1 |
+
+- 숨김·서울 이외·180일보다 뒤의 공연도 대상으로 한다(1.6의 조건을 쓰지 않는다).
+
+**응답 200**: `Page<AdminPerformanceRow>`. 정렬은 수정을 반영한 공연 시작일 최신순 → 공연 ID 순.
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `performanceId` | string | 불가 | 공연 ID |
+| `title` | string | 불가 | 공연명(수정을 반영한 원문) |
+| `venueName` | string | 불가 | 공연장명(원문) |
+| `startDate`, `endDate` | date | 불가 | 공연 기간(수정 반영) |
+| `status` | string | 불가 | `ONGOING` / `UPCOMING` / `ENDED` |
+| `isHidden` | boolean | 불가 | 숨김인지 |
+| `hasOverride` | boolean | 불가 | 관리자 수정이 하나 이상 있는지 |
+
+**오류**: 400 `VALIDATION_FAILED`.
+
+##### API-51 GET `/api/admin/performances/{performanceId}` (관리: 공연 상세)
+
+**요청**: 경로 `performanceId`.
+
+**응답 200**: `AdminPerformanceDetail`
+
+| 항목 | 타입 | NULL | 내용 |
+|---|---|---|---|
+| `performanceId` | string | 불가 | 공연 ID |
+| `isHidden` | boolean | 불가 | 숨김인지(F-27) |
+| `status` | string | 불가 | 수정을 반영한 공연 기간으로 본 상태 |
+| `venue` | object | 불가 | `{ "venueId": string, "name": string, "address": string(가능) }`(원문. 수정할 수 없다. P-13) |
+| `posterUrl` | string | 가능 | 포스터(수정할 수 없다) |
+| `hasAward` | boolean | 불가 | 수상 이력(수정할 수 없다) |
+| `totalShowCount` | integer | 가능 | 상연 횟수(수정할 수 없다) |
+| `fields` | object | 불가 | 수정할 수 있는 항목별(위 표의 API 이름을 키로 한 11개). 각각 아래 형태 |
+| `fields.{이름}.collected` | 항목 타입 | 가능 | 자동 수집 값(없으면 `null`. `bookingSites`는 배열이고 `null`로 하지 않는다) |
+| `fields.{이름}.override` | 항목 타입 | 가능 | 수정한 값. 수정하지 않았으면 `null`(`bookingSites`도 `null`. 수정해서 0건이면 `[]`) |
+| `fields.{이름}.overriddenAt` | datetime | 가능 | 수정한 일시. 수정하지 않았으면 `null` |
+
+- 화면의 "현재 값"은 `override`가 있으면 그것, 없으면 `collected`(02의 SC-14). `bookingSites` 요소는 `{ "name": string, "url": string }`.
+
+```json
+{
+  "performanceId": "PF270001", "isHidden": false, "status": "ONGOING",
+  "venue": { "venueId": "FC001247", "name": "샤롯데씨어터", "address": "서울특별시 송파구 올림픽로 240" },
+  "posterUrl": null, "hasAward": true, "totalShowCount": 120,
+  "fields": {
+    "title": { "collected": "오페라의 유령", "override": null, "overriddenAt": null },
+    "ticketPrice": { "collected": "VIP석 190,000원", "override": "VIP석 180,000원", "overriddenAt": "2026-11-05T10:00:00+09:00" },
+    "isOpenRun": { "collected": false, "override": null, "overriddenAt": null },
+    "bookingSites": { "collected": [ { "name": "인터파크", "url": "https://tickets.interpark.com/" } ], "override": null, "overriddenAt": null }
+  }
+}
+```
+
+(예시에서는 `fields` 일부를 생략했다. 실제로는 11개 모두 돌려준다)
+
+**오류**: 404 `PERFORMANCE_NOT_FOUND`(없을 때만. 숨김이어도 돌려준다).
+
+##### API-52 PATCH `/api/admin/performances/{performanceId}` (관리: 항목 수정)
+
+**요청(본문)**: 수정할 항목만 넣은 객체(위 표의 API 이름과 타입). 넣지 않은 항목은 바꾸지 않는다.
+
+```json
+{ "ticketPrice": "VIP석 180,000원", "bookingSites": [ { "name": "인터파크", "url": "https://tickets.interpark.com/" } ] }
+```
+
+- 항목이 하나도 없음 → 400(`errors`는 `field`가 빈 문자열 `""`, 이유 `REQUIRED`). 값이 `null` → 400(그 항목에 `REQUIRED`. 취소는 API-53). 모르는 항목 → 400(`UNKNOWN_FIELD`).
+- 자동 수집 값과 같은 값이어도 수정으로 저장한다(관리자가 명시했으므로).
+
+**처리**: 공연이 있음(404) → 검사 → 하나의 트랜잭션에서 항목마다 수정 행을 추가·갱신한다(`overriddenAt`이 바뀐다). `bookingSites`는 그 공연의 `ADMIN` 예매처 행을 지우고 다시 넣으며(정렬 순서는 배열 순 1, 2, …), `booking_sites` 수정 행을 추가·갱신한다. 일본어 번역은 다음 B-01의 S7에서 만든다(4.10).
+
+**응답 200**: `AdminPerformanceDetail`(수정 뒤).
+
+**오류**: 400 `VALIDATION_FAILED`, 404 `PERFORMANCE_NOT_FOUND`.
+
+##### API-53 DELETE `/api/admin/performances/{performanceId}/overrides/{field}` (관리: 수정 취소)
+
+**요청**: 경로 `performanceId`, `field`(위 표의 API 이름. 다른 것은 400 `INVALID_VALUE`. `field`라는 이름으로 돌려준다). 본문 없음.
+
+**처리**: 공연이 있음(404) → 취소한 뒤의 공연 기간이 올바른 순서(시작일 ≤ 종료일)일 것(다르면 400, `field`에 `DATE_ORDER`. 먼저 다른 쪽을 고친다) → 수정 행을 삭제한다. `bookingSites`는 `ADMIN` 예매처 행도 같은 트랜잭션에서 삭제한다(04의 4.4). 수정하지 않은 항목이어도 204.
+
+**응답 204**.
+
+**오류**: 400 `VALIDATION_FAILED`, 404 `PERFORMANCE_NOT_FOUND`.
+
+##### API-54 PUT `/api/admin/performances/{performanceId}/visibility` (관리: 숨기기·숨김 해제)
+
+**요청(본문)**: `{ "hidden": boolean }`(필수. `REQUIRED`).
+
+**처리**: 숨김 여부를 지정한 값으로 한다(같은 값이어도 성공. F-27).
+
+**응답 200**: `{ "performanceId": "PF270001", "isHidden": true }`.
+
+**오류**: 400 `VALIDATION_FAILED`, 404 `PERFORMANCE_NOT_FOUND`.
+
+##### API-55 GET `/api/admin/performances/{performanceId}/reviews` (관리: 리뷰 목록)
+
+**요청**: 경로 `performanceId`, 쿼리 `page`·`size`.
+
+**응답 200**: `Page<ReviewItem>`(모든 항목). 정렬은 API-10과 같음. 숨긴 공연이어도 돌려준다.
+
+**오류**: 404 `PERFORMANCE_NOT_FOUND`(없을 때만).
+
+##### API-56 DELETE `/api/admin/reviews/{reviewId}` (관리: 리뷰 삭제)
+
+**요청**: 경로 `reviewId`. 본문 없음.
+
+**처리**: 리뷰를 삭제한다(어느 사용자 것이든. F-28. 공연이 숨김이어도).
+
+**응답 204**.
+
+**오류**: 404 `REVIEW_NOT_FOUND`(삭제된 것도 404).
+
+### 9. Issue #20에서 정할 것 (architect의 안)
+
+| No. | 사항 | 안의 위치 | 화면 동작(02) | 사람의 확인 |
+|---|---|---|---|---|
+| D-01 | 공연과 연결되지 않는 순위 행 | 9.1 | **02의 기술은 바꾸지 않는다. 다만 이용자에게 보이는 순위 번호가 01의 F-29 ⑤⑧·F-33 ⑩의 표현(끌어올리기는 숨긴 공연일 때만)과 다를 수 있다** | **필요(확인 2)** |
+| D-05 | B-04와 API-34의 잠금 | 9.2 | 바뀌지 않음 | 불필요 |
+| D-06 | API-21에서 직전 기간 순위가 없을 때의 형태 | 9.3 | 바뀌지 않음(02의 P-17대로) | 불필요 |
+| D-07 | 오류 코드와 본문 형태 | 7.3 | 바뀌지 않음 | 불필요 |
+| D-09 | 관리자 수정을 반영한 값을 읽는 방법 등(API에 관계된 부분) | 9.5, 5.1 | 바뀌지 않음 | 불필요 |
+
+#### 9.1 D-01 공연과 연결되지 않는 순위 행 (안)
+
+**일어날 때**: 순위 행(`ranking_entry`)의 공연 ID에 해당하는 공연이 아직 DB에 없다. B-01은 S2(순위)를 저장한 뒤 S4(부족한 공연 보완)를 한다(05의 3.2). S2의 조합을 저장한 시점에 그 기간은 표시 대상이 되므로(4.9), **매일 S2부터 S4가 끝날 때까지의 몇 분 동안** 새로 순위에 든 공연은 이 상태가 된다. S4가 그 공연만 실패했을 때는 다음 날의 B-01까지 이어진다(현재·직전 기간은 매일 다시 가져오므로 다음 날 보완된다).
+
+**안(권장): 숨긴 공연과 같이 빼고, 아래 순위를 끌어올려 다시 매긴다.**
+
+- API-20·API-21·API-03은 순위 행을 `performance`와 조인(INNER JOIN)하고, **연결되지 않는 행과 숨긴 공연 행을 빼고** 제공처 순위 순(같은 순위가 여럿이면 공연 ID 순)으로 1부터 다시 매긴다. 상위 10위를 쓴다(F-29 ⑧⑨, F-33 ⑩과 같은 절차). 인기 급상승의 직전 기간도 같다(ADR 0008 4.의 ①②).
+- "연결되는지"는 조회할 때의 `performance`로 정한다. S4가 보완한 시점에 다음 조회부터 나온다(테이블 형태는 04의 DB-04 그대로. 새 열은 필요 없다).
+
+**화면 동작(확인 2에서 사람에게 보여줄 내용)**
+
+| 화면·표시 | 지금 02의 기술 | 이 안에서 보이는 모습 |
+|---|---|---|
+| SC-03 인기 순위 탭: 순위 번호와 목록 | "최대 10건: 순위(1~10으로 다시 매긴 것), 공연 카드" | 기술은 바뀌지 않는다. 다만 예를 들어 제공처 3위 공연이 아직 DB에 없으면 제공처 4위가 "3위", 제공처 11위가 "10위"로 표시된다(숨긴 공연이 없어도 번호가 밀린다). 그 공연이 보완되면 다음 조회부터 제공처 순위대로 돌아간다 |
+| SC-03 인기 급상승 탭: "NEW"·상승폭 | "NEW" 또는 "▲상승폭", 현재 순위 | 위와 같은 다시 매긴 번호로 계산하므로, 그동안은 상승폭·"NEW"가 보완된 뒤와 다를 수 있다 |
+| SC-02 통계·평판: 인기 순위(예: "주간·전체 3위") | 10위 안에 든 것을 표시 | 보완될 때까지 다른 공연의 순위가 하나 위로 표시될 수 있다(예: 4위 → 3위). 보완되지 않은 공연의 SC-02는 공연이 없으므로 열 수 없다(지금과 같음) |
+
+- 01과의 관계: F-29 ⑤는 "순위는 제공처의 순위 데이터 그대로 표시된다. 다만 숨긴 공연이 있는 경우는 ⑧대로 끌어올린다"로 되어 있어, 끌어올리는 것은 숨긴 공연일 때뿐이라고 읽힌다. 이 안은 **공연 정보가 아직 없는 행도 끌어올리는 이유에 더하는** 것이므로, 요건 해석의 추가로서 사람의 확인(Issue #20의 확인 2)이 필요하다. 02의 문구·상태는 바꾸지 않는다.
+
+**다른 안(채택하지 않은 것)**
+
+| 안 | 보이는 모습 | 채택하지 않는 이유 |
+|---|---|---|
+| (b) 번호를 남기고 그 행을 내보내지 않는다(예: 1, 2, 4, …) | 제공처 번호 그대로. 10건보다 적어지고 번호가 건너뛴다 | 02의 SC-03 "1~10으로 다시 매긴 것"과 맞지 않아 02 변경이 필요하다. 번호가 건너뛰는 이유를 이용자가 알 수 없다 |
+| (c) 그 행을 "공연 정보를 준비 중입니다" 같은 임시 행으로 내보낸다 | 제공처 번호 그대로 10건 | 02에 새 표시(카드 없는 행과 문구)가 필요하다. 눌러도 공연 상세를 열 수 없는 행이 생긴다 |
+| (d) 연결되지 않는 행이 있는 기간을 "수집이 끝나지 않음"으로 보고 하나 앞 기간을 내보낸다 | 번호는 제공처 그대로, 기간이 오래된 것이 된다 | S4가 같은 공연에서 계속 실패하면 새 기간이 언제까지나 나오지 않는다. R-62의 "수집이 끝난 가장 최근 기간"과 판단 기준이 바뀐다 |
+
+- 권장 이유: 일어나는 것은 매일 몇 분 동안이나 S4가 실패했을 때뿐이다. 공연 정보(공연명·포스터)가 없는 행은 어느 안에서도 카드로 내보낼 수 없다. 숨긴 공연과 같은 구조로 다룰 수 있으므로 API·화면에 새 경우 나누기가 필요 없다.
+
+#### 9.2 D-05 B-04와 API-34가 동시에 돌 때의 잠금 (안)
+
+**지킬 것**: ① 유효해진 계정을 B-04가 지우지 않는다. ② 기한 안의 토큰이 있는 신청을 B-04가 지우지 않는다(05의 6.3). ③ 행이 절반만 바뀐 상태(계정은 유효인데 토큰이 사용됨이 아님 등)를 남기지 않는다. ④ 데드락이 일어나기 어려운 순서로 잠근다.
+
+**잠금 순서(전체 규칙)**: `app_user`와 `auth_token`을 둘 다 고치는 트랜잭션(API-33·34·36·38, B-04, 탈퇴 API-42)은 **`app_user` 행 → `auth_token` 행** 순으로 잠근다(B-04·API-42의 DELETE는 `app_user` 행을 지우고 외래 키 CASCADE로 `auth_token` 행을 지우므로 이 순서가 된다).
+
+**API-34(하나의 트랜잭션. 격리 수준은 MySQL 기본 REPEATABLE READ)**
+
+1. 토큰 해시로 `auth_token`을 읽고(잠그지 않는 읽기) `user_id`를 얻는다. 행이 없으면 400 `TOKEN_INVALID`.
+2. `SELECT … FROM app_user WHERE id = ? FOR UPDATE`(사용자 행을 잠금). 행이 없으면(B-04 등이 먼저 지웠음) 400 `TOKEN_INVALID`.
+3. `SELECT … FROM auth_token WHERE token_hash = ? FOR UPDATE`(토큰 행을 잠그고 최신 값을 다시 읽는다). 없음·용도가 `SIGNUP`이 아님·`used_at`이 있음·`expires_at` ≤ 현재 시각·사용자가 인증 전이 아님 → 400 `TOKEN_INVALID`.
+4. 4.7의 2.(닉네임) → 409일 때는 그 `app_user` 행을 삭제(토큰은 CASCADE)하고 커밋한 뒤 409.
+5. `UPDATE app_user SET status = 'ACTIVE' WHERE id = ? AND status = 'PENDING'`, `UPDATE auth_token SET used_at = ? WHERE id = ?`. 유일 제약(`active_nickname`) 위반은 4.와 같은 처리(롤백한 뒤 별도 트랜잭션에서 행을 삭제하고 409).
+
+**B-04(05의 6.2의 3.을 구체화)**
+
+1. 기준 시각 T를 정한다.
+2. 후보를 읽는다(잠그지 않는 읽기): 인증 전이고, `expires_at` > T인 `SIGNUP` 토큰이 없는 `app_user`의 `id`.
+3. 후보 `id`를 지정하고 조건을 붙인 DELETE 하나로 지운다:
+   ```sql
+   DELETE FROM app_user
+    WHERE id IN (/* 2.의 후보 */)
+      AND status = 'PENDING'
+      AND NOT EXISTS (SELECT 1 FROM auth_token t
+                       WHERE t.user_id = app_user.id
+                         AND t.purpose = 'SIGNUP'
+                         AND t.expires_at > /* T */)
+   ```
+   - 기본 키로 행을 잠그므로 `status` 인덱스의 범위(갭)를 잠그지 않고, 같은 시각의 API-33 신청(새 인증 전 행 추가)을 막지 않는다.
+   - `status = 'PENDING'`을 DELETE 안에서 다시 확인하는 것은 2.와 3. 사이에 API-34가 유효로 만든 행을 지우지 않기 위해서다(잠근 행은 최신 커밋 값으로 조건을 확인한다). 토큰의 `expires_at`은 만든 뒤 바뀌지 않는다(같은 이메일 주소의 재신청은 옛 토큰을 무효로 하고 새 토큰을 더한다. 새 토큰은 `expires_at` > T이므로 그 행은 지워지지 않는다).
+4. 지운 건수를 기록한다(05의 6.2의 4.).
+
+**동시에 돌았을 때의 결과**
+
+| 먼저 잠금을 잡은 것 | 뒤의 것의 결과 |
+|---|---|
+| API-34(사용자 행을 `FOR UPDATE`) | B-04의 DELETE는 그 행에서 기다린다. API-34가 유효로 하고 커밋하면 `status = 'PENDING'`에 해당하지 않아 지우지 않는다(①). API-34가 닉네임으로 실패해 행을 지웠으면 지울 행이 없다 |
+| B-04(DELETE로 사용자 행을 잠금) | API-34의 2.는 기다린다. B-04가 커밋한 뒤에는 행이 없으므로 400 `TOKEN_INVALID`. B-04가 지우는 것은 기준 시각 T에 이미 기한이 지난 행뿐이므로, 이용자는 기한이 지난 링크를 연 셈이 되어 SC-06 표시("링크가 무효이거나 기한이 지났습니다")와 맞는다(②) |
+
+- 데드락·잠금 대기 타임아웃(MySQL 오류 1213·1205)은, API-34는 재시도하지 않고 500 `INTERNAL_ERROR`(토큰이 기한 안이면 이용자는 링크를 다시 열 수 있다), B-04는 그 회를 "실패"로 기록한다(05의 6.3. 다음 날 같은 행을 지운다).
+- 06(클래스 설계)에서는 이 순서를 Mapper 메서드와 `@Transactional` 범위로 옮긴다. 04에 새 테이블·열은 필요 없다(인덱스는 5.1의 H-04).
+
+#### 9.3 D-06 API-21에서 직전 기간 순위가 없을 때의 형태 (안)
+
+`availability` 항목 하나로 세 경우를 나누고, 화면은 이 값만으로 표시를 정한다(집계 기간 유무로 추측하지 않는다).
+
+| `availability` | 조건 | `currentPeriod` | `previousPeriod` | `items` | 화면(02의 SC-03) |
+|---|---|---|---|---|---|
+| `NO_RANKING` | 보여줄 수 있는 기간이 없음(4.9) | `null` | `null` | `[]` | "이 기간의 순위 데이터가 없습니다" |
+| `NO_PREVIOUS_RANKING` | 현재 기간은 있지만 직전 기간(달력상 하나 앞)의 수집 완료 기록이 없음 | 값 있음 | 값 있음(달력으로 계산한 기간) | `[]` | P-17 "비교할 기간({`previousPeriod`})의 순위 데이터가 없어 인기 급상승을 표시할 수 없습니다"와 현재 기간의 집계 기간 |
+| `AVAILABLE` | 두 기간 모두 수집 완료 기록이 있음(0건인 기간 포함) | 값 있음 | 값 있음 | 0~10건 | 목록("NEW"·상승폭) |
+
+- 직전 기간의 기록이 있고 행이 0건일 때는 `AVAILABLE`(직전 상위 10위가 비어 있으므로 대상은 모두 "NEW". F-33 ③대로).
+- 채택하지 않은 안: `previousPeriod`를 `null`로 해서 "없음"을 나타낸다(P-17 문구에 직전 기간의 집계 기간이 필요하므로 값을 돌려줄 수 없게 된다). 참/거짓 항목 `hasPrevious`를 더한다(`NO_RANKING`과 합쳐 두 항목의 조합을 화면이 풀어야 한다).
+
+#### 9.4 D-07 오류 코드와 본문 형태
+
+7.3대로.
+
+#### 9.5 D-09 중 API에 관계된 것 (안. 테이블 세부는 db-designer)
+
+**관리자 수정을 반영한 값(4.10)의 사용**
+
+| 쓰는 곳 | 수정을 반영한 값을 쓰는 항목 |
+|---|---|
+| 표시(API-01~03·05·20·21·43, API-50 목록의 공연명·기간) | 공연명, 공연 기간, 장르, 출연진, 티켓 가격, 공연 시간 안내, 상연 시간, 관람 연령, 오픈런 여부, 예매처 |
+| 거르기(1.6의 "공개 중인 공연", 4.1의 기간·장르·상태·키워드, API-50의 키워드·`includeEnded`) | 공연 시작일·종료일, 장르, 공연명(일본어 키워드는 수정을 반영한 공연명의 번역) |
+| 정렬(API-01·05의 시작일이 빠른 순, API-50의 시작일 최신순) | 공연 시작일 |
+| 공연 상태(`status`), 리뷰 작성 시작일(API-11, API-03의 `reviewOpen`) | 공연 시작일·종료일 |
+| 번역을 찾는 원문(7.2의 `LocalizedText`) | 표시할 원문(수정이 있으면 수정한 값) |
+
+- 수정하지 않는 항목(P-13): 공연장, 포스터, 수상 이력, 상연 횟수, 숨김, 서울 공연 여부. 이것들은 `performance` 값을 그대로 쓴다.
+- `override_value`의 문자열 형태는 8.8의 표(날짜는 `YYYY-MM-DD`, 참/거짓은 `true` / `false`, 그 밖에는 그대로의 문자열). API-52만 쓰고, 읽는 쪽(뷰 또는 쿼리)은 이 형태를 전제로 타입을 바꾼다.
+- 읽는 방법(뷰로 할지, 쿼리마다 조인할지)은 db-designer가 04에서 정한다(5.1의 H-01). 03은 "SQL 하나로 위의 거르기와 정렬을 할 수 있다"는 것만 전제로 한다.
+
+**그 밖**
+
+- `ranking_entry`의 유일 제약: 03은 같은 제공처 순위가 여럿이어도 동작하도록 정렬 순서를 정했다(9.1: 제공처 순위 → 공연 ID). 제약을 붙일지는 db-designer(5.1의 H-03).
+- `station.line`: API는 1~8의 정수로 돌려준다(8.2). DB에 갖는 방법은 db-designer(H-05).
+- 관리자 `nickname`: API는 돌려주지 않는다(API-30은 `null`). 값은 db-designer(H-08).
+- 오래된 기록: API가 읽는 것은 `mail_send_log`의 최근 24시간과, 토큰 해시가 일치하는 행뿐이므로, 오래된 행을 지우지 않아도 API 결과는 바뀌지 않는다.
+
+#### 9.6 03 상세에서 정한 그 밖의 사항 (reviewer 확인 대상)
+
+| 사항 | 정한 것 | 쓴 곳 | 이용자에게 보이는가 |
+|---|---|---|---|
+| 잠긴 동안의 로그인 응답 | 비밀번호가 맞든 틀리든 `ACCOUNT_LOCKED`. 5번째 실패의 응답도 `ACCOUNT_LOCKED` | 8.5의 API-31 | 보인다(02의 SC-04 "잠김" 표시가 5번째 실패 직후부터 나온다. 02의 기술 범위) |
+| 다른 기기의 세션 | 비밀번호 변경·재설정으로 다른 기기의 세션도 무효로 한다 | 7.4 | 보인다(다른 기기에서는 다음 조작에서 02의 3.5 자동 로그아웃 표시가 된다. 문구는 "일정 시간 조작이 없어" 그대로) |
+| 닉네임 NFC 정규화 | 확인하기 전에 NFC로 한다 | 7.1 | 거의 보이지 않는다 |
+| 메일 언어 | 한국어와 일본어를 한 통에 병기 | 7.6 | 보인다(02는 메일 문면을 정하지 않았다) |
+| 현재 비밀번호 틀림 | 로그인 실패 횟수에 세지 않는다 | 8.6의 API-41 | 보이지 않는다 |
+| 신청 메일 발송 실패 | API-35·37에서도 503 `MAIL_SEND_FAILED` | 8.5 | 보인다(02의 6.2는 상한만 썼으므로 3.6의 "오류" 표시가 된다) |
