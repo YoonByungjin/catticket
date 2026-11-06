@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CatTicket 인기·트렌드 (SC-03) Mobile</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4338CA',
+            'on-primary': '#FFFFFF',
+            'primary-container': '#EEF2FF',
+            'tertiary-text': '#B45309',
+            'tertiary-bg': '#FFFBEB',
+            'status-green-text': '#166534',
+            'status-green-bg': '#F0FDF4',
+            'status-indigo-text': '#4338CA',
+            'status-indigo-bg': '#EEF2FF',
+            outline: '#D1D5DB',
+            'text-main': '#1F2937',
+            'text-secondary': '#4B5563',
+            'placeholder-gray': '#E5E7EB',
+            'footer-bg': '#F9FAFB'
+          },
+          fontFamily: {
+            sans: ['"Noto Sans KR"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    * {
+      font-family: 'Noto Sans KR', sans-serif !important;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background-color: #F3F4F6;
+      margin: 0;
+      padding: 0;
+      color: #1F2937;
+      display: flex;
+      justify-content: center;
+    }
+    /* Mobile frame container strictly 390px */
+    .mobile-frame {
+      width: 390px;
+      min-height: 100vh;
+      background-color: #FFFFFF;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+    /* Touch target min 44px */
+    .min-touch {
+      min-width: 44px;
+      min-height: 44px;
+    }
+  </style>
+</head>
+<body class="bg-white">
+<div class="w-full">
+<!-- 1. Header bar (56px, white, bottom border #D1D5DB) -->
+<header class="h-[56px] w-full bg-white border-b border-[#D1D5DB] px-4 flex items-center justify-between sticky top-0 z-30">
+<div class="text-[20px] font-medium text-[#4338CA] tracking-tight flex items-center">
+        CatTicket
+      </div>
+<div class="flex items-center gap-2">
+<!-- Segmented language toggle: 한국어 (selected) / 日本語 -->
+<div class="inline-flex rounded-full border border-[#D1D5DB] p-[2px] bg-white">
+<button class="px-2.5 py-1 text-[13px] font-medium rounded-full bg-[#EEF2FF] text-[#4338CA] transition-colors" type="button">
+            한국어
+          </button>
+<button class="px-2.5 py-1 text-[13px] font-normal text-[#4B5563] hover:text-[#1F2937] transition-colors" type="button">
+            日本語
+          </button>
+</div>
+<!-- Hamburger menu icon button (min 44px touch) -->
+<button aria-label="메뉴" class="min-touch w-[44px] h-[44px] flex items-center justify-center text-[#1F2937] rounded-full hover:bg-gray-100 transition-colors" type="button">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<line x1="3" x2="21" y1="6" y2="6"></line>
+<line x1="3" x2="21" y1="12" y2="12"></line>
+<line x1="3" x2="21" y1="18" y2="18"></line>
+</svg>
+</button>
+</div>
+</header>
+<!-- Main Content Area with 16px side padding -->
+<main class="w-full px-4 pt-5 pb-8 flex-1">
+<!-- 2. Page title "인기·트렌드" (24px) -->
+<h1 class="text-[24px] font-medium text-[#1F2937] leading-tight mb-4">
+        인기·트렌드
+      </h1>
+<!-- 3. Material tab bar with 3 tabs: "인기 순위" (selected, #4338CA underline), "인기 급상승", "장르별 트렌드" -->
+<div class="w-full border-b border-[#D1D5DB] flex mb-4">
+<button class="flex-1 pb-3 text-center text-[15px] font-medium text-[#4338CA] relative" type="button">
+          인기 순위
+          <div class="absolute bottom-0 left-0 right-0 h-[2px] bg-[#4338CA]"></div>
+</button>
+<button class="flex-1 pb-3 text-center text-[15px] font-normal text-[#4B5563] hover:text-[#1F2937]" type="button">
+          인기 급상승
+        </button>
+<button class="flex-1 pb-3 text-center text-[15px] font-normal text-[#4B5563] hover:text-[#1F2937]" type="button">
+          장르별 트렌드
+        </button>
+</div>
+<!-- 4. Segmented button group with 3 options: "일간", "주간" (selected), "월간" -->
+<div class="w-full mb-3">
+<div class="w-full grid grid-cols-3 rounded-full border border-[#D1D5DB] p-[3px] bg-white">
+<button class="min-touch h-[44px] flex items-center justify-center text-[14px] font-normal text-[#4B5563] rounded-full hover:bg-gray-50 transition-colors" type="button">
+            일간
+          </button>
+<button class="min-touch h-[44px] flex items-center justify-center text-[14px] font-medium bg-[#4338CA] text-white rounded-full transition-colors shadow-sm" type="button">
+            주간
+          </button>
+<button class="min-touch h-[44px] flex items-center justify-center text-[14px] font-normal text-[#4B5563] rounded-full hover:bg-gray-50 transition-colors" type="button">
+            월간
+          </button>
+</div>
+</div>
+<!-- 5. Outlined dropdown select, label "장르", value "전체" (4px corners, touch target >= 44px) -->
+<div class="w-full mb-3">
+<label class="block text-[12px] font-medium text-[#4B5563] mb-1">장르</label>
+<div class="relative w-full">
+<div class="w-full min-touch h-[44px] px-3.5 bg-white border border-[#D1D5DB] rounded-[4px] flex items-center justify-between cursor-pointer hover:border-[#4338CA] transition-colors">
+<span class="text-[14px] font-normal text-[#1F2937]">전체</span>
+<!-- Dropdown Chevron SVG -->
+<svg class="w-5 h-5 text-[#4B5563]" fill="currentColor" viewbox="0 0 20 20">
+<path clip-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+</div>
+<!-- 6. Small text "집계 기간: 2026-10-26 ~ 2026-11-01" (12px, #4B5563) -->
+<div class="w-full mb-4">
+<p class="text-[12px] font-normal text-[#4B5563]">
+          집계 기간: 2026-10-26 ~ 2026-11-01
+        </p>
+</div>
+<!-- 7. Ranked list of 4 visible items (the list continues to 10) -->
+<div class="w-full flex flex-col gap-3">
+<!-- Item 1 -->
+<div class="w-full flex items-center gap-2">
+<!-- Rank number (20px, 500, #4338CA) -->
+<div class="w-6 shrink-0 text-[20px] font-medium text-[#4338CA] text-center">
+            1
+          </div>
+<!-- Card (white, outlined, 12px corners, no shadow, whole card clickable) -->
+<div class="flex-1 bg-white border border-[#D1D5DB] rounded-[12px] p-3 flex gap-3 cursor-pointer hover:border-[#4338CA] transition-colors">
+<!-- Poster Box 72x96px -->
+<div class="w-[72px] h-[96px] bg-[#E5E7EB] rounded-[8px] shrink-0 flex items-center justify-center text-[12px] font-normal text-[#4B5563]">
+              포스터
+            </div>
+<!-- Details -->
+<div class="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+<div>
+<h2 class="text-[16px] font-medium text-[#1F2937] leading-snug truncate">
+                  뮤지컬 〈별빛 정거장〉
+                </h2>
+<p class="text-[14px] font-normal text-[#4B5563] truncate mt-0.5">
+                  대학로 소나무극장
+                </p>
+<p class="text-[12px] font-normal text-[#4B5563] truncate mt-0.5">
+                  2026-10-01 ~ 2026-12-31
+                </p>
+</div>
+<!-- Labels: "뮤지컬" (gray outline), "공연 중" (green), "수상작" (amber) -->
+<div class="flex flex-wrap gap-1.5 mt-2">
+<span class="inline-flex items-center px-2 py-0.5 text-[11px] font-medium border border-[#D1D5DB] text-[#4B5563] rounded-[8px]">
+                  뮤지컬
+                </span>
+<span class="inline-flex items-center px-2 py-0.5 text-[11px] font-medium bg-[#F0FDF4] text-[#166534] rounded-[8px]">
+                  공연 중
+                </span>
+<span class="inline-flex items-center px-2 py-0.5 text-[11px] font-medium bg-[#FFFBEB] text-[#B45309] rounded-[8px]">
+                  수상작
+                </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="w-full flex items-center gap-2">
+<!-- Rank number (20px, 500, #4338CA) -->
+<div class="w-6 shrink-0 text-[20px] font-medium text-[#4338CA] text-center">
+            2
+          </div>
+<!-- Card -->
+<div class="flex-1 bg-white border border-[#D1D5DB] rounded-[12px] p-3 flex gap-3 cursor-pointer hover:border-[#4338CA] transition-colors">
+<!-- Poster Box 72x96px -->
+<div class="w-[72px] h-[96px] bg-[#E5E7EB] rounded-[8px] shrink-0 flex items-center justify-center text-[12px] font-normal text-[#4B5563]">
+              포스터
+            </div>
+<!-- Details -->
+<div class="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+<div>
+<h2 class="text-[16px] font-medium text-[#1F2937] leading-snug truncate">
+                  연극 〈봄날의 편지〉
+                </h2>
+<p class="text-[14px] font-normal text-[#4B5563] truncate mt-0.5">
+                  서울 한빛아트홀
+                </p>
+<p class="text-[12px] font-normal text-[#4B5563] truncate mt-0.5">
+                  2026-11-20 ~ 2027-01-15
+                </p>
+</div>
+<!-- Labels: "연극", "공연 예정" (indigo) -->
+<div class="flex flex-wrap gap-1.5 mt-2">
+<span class="inline-flex items-center px-2 py-0.5 text-[11px] font-medium border border-[#D1D5DB] text-[#4B5563] rounded-[8px]">
+                  연극
+                </span>
+<span class="inline-flex items-center px-2 py-0.5 text-[11px] font-medium bg-[#EEF2FF] text-[#4338CA] rounded-[8px]">
+                  공연 예정
+                </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="w-full flex items-center gap-2">
+<!-- Rank number (20px, 500, #4338CA) -->
+<div class="w-6 shrink-0 text-[20px] font-medium text-[#4338CA] text-center">
+            3
+          </div>
+<!-- Card -->
+<div class="flex-1 bg-white border border-[#D1D5DB] rounded-[12px] p-3 flex gap-3 cursor-pointer hover:border-[#4338CA] transition-colors">
+<!-- Poster Box 72x96px -->
+<div class="w-[72px] h-[96px] bg-[#E5E7EB] rounded-[8px] shrink-0 flex items-center justify-center text-[12px] font-normal text-[#4B5563]">
+              포스터
+            </div>
+<!-- Details -->
+<div class="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+<div>
+<h2 class="text-[16px] font-medium text-[#1F2937] leading-snug truncate">
+                  뮤지컬 〈고양이 극장〉
+                </h2>
+<p class="text-[14px] font-normal text-[#4B5563] truncate mt-0.5">
+                  홍대 달빛소극장
+                </p>
+<p class="text-[12px] font-normal text-[#4B5563] truncate mt-0.5">
+                  2026-09-15 ~ 2026-11-30
+                </p>
+</div>
+<!-- Labels: "뮤지컬", "공연 중" -->
+<div class="flex flex-wrap gap-1.5 mt-2">
+<span class="inline-flex items-center px-2 py-0.5 text-[11px] font-medium border border-[#D1D5DB] text-[#4B5563] rounded-[8px]">
+                  뮤지컬
+                </span>
+<span class="inline-flex items-center px-2 py-0.5 text-[11px] font-medium bg-[#F0FDF4] text-[#166534] rounded-[8px]">
+                  공연 중
+                </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="w-full flex items-center gap-2">
+<!-- Rank number (20px, 500, #4338CA) -->
+<div class="w-6 shrink-0 text-[20px] font-medium text-[#4338CA] text-center">
+            4
+          </div>
+<!-- Card -->
+<div class="flex-1 bg-white border border-[#D1D5DB] rounded-[12px] p-3 flex gap-3 cursor-pointer hover:border-[#4338CA] transition-colors">
+<!-- Poster Box 72x96px -->
+<div class="w-[72px] h-[96px] bg-[#E5E7EB] rounded-[8px] shrink-0 flex items-center justify-center text-[12px] font-normal text-[#4B5563]">
+              포스터
+            </div>
+<!-- Details -->
+<div class="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+<div>
+<h2 class="text-[16px] font-medium text-[#1F2937] leading-snug truncate">
+                  콘서트 〈가을 밤 재즈〉
+                </h2>
+<p class="text-[14px] font-normal text-[#4B5563] truncate mt-0.5">
+                  서울 숲속홀
+                </p>
+<p class="text-[12px] font-normal text-[#4B5563] truncate mt-0.5">
+                  2026-11-01 ~ 2026-11-09
+                </p>
+</div>
+<!-- Labels: "대중음악", "공연 중" -->
+<div class="flex flex-wrap gap-1.5 mt-2">
+<span class="inline-flex items-center px-2 py-0.5 text-[11px] font-medium border border-[#D1D5DB] text-[#4B5563] rounded-[8px]">
+                  대중음악
+                </span>
+<span class="inline-flex items-center px-2 py-0.5 text-[11px] font-medium bg-[#F0FDF4] text-[#166534] rounded-[8px]">
+                  공연 중
+                </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- 8. Footer (background #F9FAFB, 12px text #4B5563, two lines) -->
+<footer class="w-full bg-[#F9FAFB] border-t border-[#D1D5DB] px-4 py-5 text-center text-[12px] text-[#4B5563] leading-relaxed">
+<p>출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)</p>
+<p class="mt-1">서울교통공사 공공데이터(역 좌표·주소, 물품보관함 위치, 역명 다국어 표기 – 공공누리 제1유형)</p>
+</footer>
+</div>
+</body>
+</html>

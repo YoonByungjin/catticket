@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=1440, initial-scale=1.0" name="viewport"/>
+<title>CatTicket 지도 및 검색 (SC-01)</title>
+<!-- Noto Sans KR 400, 500 only -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4338CA',
+            'on-primary': '#FFFFFF',
+            'primary-container': '#EEF2FF',
+            tertiary: '#B45309',
+            'tertiary-container': '#FFFBEB',
+            'status-ongoing-text': '#166534',
+            'status-ongoing-bg': '#F0FDF4',
+            'status-upcoming-text': '#4338CA',
+            'status-upcoming-bg': '#EEF2FF',
+            'left-panel-bg': '#F9FAFB',
+            outline: '#D1D5DB',
+            'placeholder-gray': '#E5E7EB',
+            body: '#1F2937',
+            secondary: '#4B5563'
+          },
+          fontFamily: {
+            sans: ['"Noto Sans KR"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    * {
+      font-family: 'Noto Sans KR', sans-serif !important;
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #FFFFFF;
+      color: #1F2937;
+      margin: 0;
+      padding: 0;
+      width: 1440px;
+      min-width: 1440px;
+      overflow-x: hidden;
+    }
+    /* Custom Scrollbar for Left Panel */
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background-color: #D1D5DB;
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background-color: #F9FAFB;
+    }
+  </style>
+</head>
+<body class="bg-white text-body flex flex-col min-h-screen">
+<!-- 1. Header Bar (64px, white, bottom border #D1D5DB) -->
+<header class="w-full h-16 bg-white border-b border-outline px-6 flex items-center justify-between flex-shrink-0 z-30">
+<!-- Left: Brand & Nav Buttons -->
+<div class="flex items-center gap-6">
+<span class="text-xl font-medium text-primary tracking-tight">CatTicket</span>
+<nav class="flex items-center gap-2">
+<!-- Active Nav Button "지도" -->
+<button class="h-11 px-4 rounded-full text-sm font-medium text-primary bg-primary-container min-h-[44px] flex items-center justify-center transition-colors" type="button">
+          지도
+        </button>
+<!-- Inactive Nav Button "인기·트렌드" -->
+<button class="h-11 px-4 rounded-full text-sm font-normal text-secondary hover:text-body min-h-[44px] flex items-center justify-center transition-colors" type="button">
+          인기·트렌드
+        </button>
+</nav>
+</div>
+<!-- Right: Auth Buttons & Language Toggle -->
+<div class="flex items-center gap-3">
+<!-- Text Button "로그인" -->
+<button class="h-11 px-4 rounded-full text-sm font-medium text-primary hover:bg-primary-container/50 min-h-[44px] flex items-center justify-center transition-colors" type="button">
+        로그인
+      </button>
+<!-- Stroked Button "회원가입" -->
+<button class="h-11 px-5 rounded-full text-sm font-medium text-primary border border-outline hover:bg-primary-container/30 min-h-[44px] flex items-center justify-center transition-colors" type="button">
+        회원가입
+      </button>
+<!-- Segmented Language Toggle "한국어" (selected) / "日本語" -->
+<div class="flex border border-outline rounded-full overflow-hidden p-0.5 bg-white h-11 items-center">
+<button class="h-9 px-3 rounded-full bg-primary-container text-primary text-xs font-medium min-h-[36px] flex items-center justify-center" type="button">
+          한국어
+        </button>
+<button class="h-9 px-3 rounded-full text-secondary hover:text-body text-xs font-normal min-h-[36px] flex items-center justify-center" type="button">
+          日本語
+        </button>
+</div>
+</div>
+</header>
+<!-- 2. Main Area (Split in Two: Left Panel & Right Map Area) -->
+<main class="flex flex-1 w-full h-[calc(100vh-64px-58px)] min-h-[760px] overflow-hidden">
+<!-- LEFT PANEL (Fixed 400px wide, bg #F9FAFB, scrollable) -->
+<aside class="w-[400px] flex-shrink-0 bg-left-panel-bg border-r border-outline flex flex-col h-full overflow-y-auto custom-scroll p-4">
+<!-- Top Part: Search Conditions -->
+<section class="flex flex-col gap-3 pb-4">
+<!-- a. Section title "검색 조건" -->
+<h2 class="text-base font-medium text-body">검색 조건</h2>
+<!-- b. Date range field (outlined, calendar icon), label "기간", value "2026-11-06 ~ 2026-11-30" -->
+<div class="flex flex-col gap-1">
+<label class="text-xs font-normal text-secondary">기간</label>
+<div class="h-11 px-3 border border-outline rounded-[4px] bg-white flex items-center justify-between min-h-[44px]">
+<span class="text-sm font-normal text-body">2026-11-06 ~ 2026-11-30</span>
+<svg class="w-5 h-5 text-secondary flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+</div>
+<!-- c. Label "장소" and 3-option segmented button group "구" (selected) / "지도 범위" / "공연장" -->
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-normal text-secondary">장소</label>
+<div class="grid grid-cols-3 border border-outline rounded-full p-0.5 bg-white h-11 items-center text-center">
+<button class="h-9 rounded-full bg-primary-container text-primary text-xs font-medium flex items-center justify-center" type="button">
+              구
+            </button>
+<button class="h-9 rounded-full text-secondary text-xs font-normal flex items-center justify-center" type="button">
+              지도 범위
+            </button>
+<button class="h-9 rounded-full text-secondary text-xs font-normal flex items-center justify-center" type="button">
+              공연장
+            </button>
+</div>
+<!-- Below: Outlined multi-select dropdown label "구" with value "종로구, 마포구" -->
+<div class="h-11 px-3 border border-outline rounded-[4px] bg-white flex items-center justify-between min-h-[44px] mt-1">
+<span class="text-sm font-normal text-body">종로구, 마포구</span>
+<svg class="flex-shrink-0" fill="none" height="20" stroke="#4B5563" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 20 20" width="20"><path d="M5 7.5L10 12.5L15 7.5"></path></svg>
+</div>
+</div>
+<!-- d. Outlined multi-select dropdown label "장르", value "뮤지컬, 연극" -->
+<div class="flex flex-col gap-1">
+<label class="text-xs font-normal text-secondary">장르</label>
+<div class="h-11 px-3 border border-outline rounded-[4px] bg-white flex items-center justify-between min-h-[44px]">
+<span class="text-sm font-normal text-body">뮤지컬, 연극</span>
+<svg class="flex-shrink-0" fill="none" height="20" stroke="#4B5563" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 20 20" width="20"><path d="M5 7.5L10 12.5L15 7.5"></path></svg>
+</div>
+</div>
+<!-- e. Label "공연 상태" with two checkboxes "공연 중" (checked) and "공연 예정" (checked) -->
+<div class="flex flex-col gap-1.5">
+<span class="text-xs font-normal text-secondary">공연 상태</span>
+<div class="flex items-center gap-6 h-11">
+<!-- Checkbox 1 -->
+<label class="flex items-center gap-2 cursor-pointer min-h-[44px]">
+<div class="w-5 h-5 rounded-[4px] bg-primary flex items-center justify-center text-white"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+<span class="text-sm font-normal text-body">공연 중</span>
+</label>
+<!-- Checkbox 2 -->
+<label class="flex items-center gap-2 cursor-pointer min-h-[44px]">
+<div class="w-5 h-5 rounded-[4px] bg-primary flex items-center justify-center text-white"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+<span class="text-sm font-normal text-body">공연 예정</span>
+</label>
+</div>
+</div>
+<!-- f. Outlined text field label "키워드(공연명)" (empty) -->
+<div class="flex flex-col gap-1">
+<label class="text-xs font-normal text-secondary">키워드(공연명)</label>
+<div class="h-11 px-3 border border-outline rounded-[4px] bg-white flex items-center min-h-[44px]">
+<input class="w-full bg-transparent outline-none text-sm text-body placeholder-secondary" placeholder="" type="text"/>
+</div>
+</div>
+<!-- g. Row with filled primary button "검색" and stroked button "조건 지우기" -->
+<div class="flex items-center gap-2 pt-1">
+<button class="flex-1 h-11 rounded-full bg-primary text-on-primary text-sm font-medium min-h-[44px] flex items-center justify-center transition-colors" type="button">
+            검색
+          </button>
+<button class="flex-1 h-11 rounded-full border border-outline bg-white text-secondary text-sm font-medium min-h-[44px] flex items-center justify-center transition-colors hover:bg-placeholder-gray/20" type="button">
+            조건 지우기
+          </button>
+</div>
+</section>
+<!-- h. Divider, then text "검색 결과 128건" -->
+<div class="w-full border-t border-outline my-2"></div>
+<div class="py-2">
+<span class="text-sm font-medium text-body">검색 결과 128건</span>
+</div>
+<!-- i. 3 performance cards stacked (white, outlined, 12px corners, whole card clickable) -->
+<div class="flex flex-col gap-3">
+<!-- Card 1 -->
+<div class="bg-white border border-outline rounded-[12px] p-3 flex gap-3 cursor-pointer hover:border-primary transition-colors" role="button" tabindex="0">
+<!-- Left gray poster box 72x96px -->
+<div class="w-[72px] h-[96px] flex-shrink-0 bg-placeholder-gray rounded-[4px] flex items-center justify-center">
+<span class="text-xs font-normal text-secondary">포스터</span>
+</div>
+<!-- Right info -->
+<div class="flex flex-col justify-between flex-1 min-w-0">
+<div>
+<h3 class="text-base font-medium text-body truncate">뮤지컬 〈별빛 정거장〉</h3>
+<p class="text-sm font-normal text-secondary truncate mt-0.5">대학로 소나무극장</p>
+<p class="text-xs font-normal text-secondary mt-0.5">2026-10-01 ~ 2026-12-31</p>
+</div>
+<div>
+<!-- Labels row -->
+<div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+<span class="px-2 py-0.5 text-[11px] font-normal border border-outline rounded-[8px] text-secondary">뮤지컬</span>
+<span class="px-2 py-0.5 text-[11px] font-normal rounded-[8px] bg-status-ongoing-bg text-status-ongoing-text">공연 중</span>
+<span class="px-2 py-0.5 text-[11px] font-normal rounded-[8px] bg-tertiary-container text-tertiary">수상작</span>
+</div>
+<!-- Rating -->
+<div class="flex items-center gap-1 text-xs">
+<span class="text-tertiary font-medium">★ 4.3 (12)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-white border border-outline rounded-[12px] p-3 flex gap-3 cursor-pointer hover:border-primary transition-colors" role="button" tabindex="0">
+<!-- Left gray poster box 72x96px -->
+<div class="w-[72px] h-[96px] flex-shrink-0 bg-placeholder-gray rounded-[4px] flex items-center justify-center">
+<span class="text-xs font-normal text-secondary">포스터</span>
+</div>
+<!-- Right info -->
+<div class="flex flex-col justify-between flex-1 min-w-0">
+<div>
+<h3 class="text-base font-medium text-body truncate">연극 〈봄날의 편지〉</h3>
+<p class="text-sm font-normal text-secondary truncate mt-0.5">서울 한빛아트홀</p>
+<p class="text-xs font-normal text-secondary mt-0.5">2026-11-20 ~ 2027-01-15</p>
+</div>
+<div>
+<!-- Labels row -->
+<div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+<span class="px-2 py-0.5 text-[11px] font-normal border border-outline rounded-[8px] text-secondary">연극</span>
+<span class="px-2 py-0.5 text-[11px] font-normal rounded-[8px] bg-status-upcoming-bg text-status-upcoming-text">공연 예정</span>
+</div>
+<!-- Rating text -->
+<div class="text-xs text-secondary font-normal">
+                아직 리뷰가 없습니다
+              </div>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-white border border-outline rounded-[12px] p-3 flex gap-3 cursor-pointer hover:border-primary transition-colors" role="button" tabindex="0">
+<!-- Left gray poster box 72x96px -->
+<div class="w-[72px] h-[96px] flex-shrink-0 bg-placeholder-gray rounded-[4px] flex items-center justify-center">
+<span class="text-xs font-normal text-secondary">포스터</span>
+</div>
+<!-- Right info -->
+<div class="flex flex-col justify-between flex-1 min-w-0">
+<div>
+<h3 class="text-base font-medium text-body truncate">뮤지컬 〈고양이 극장〉</h3>
+<p class="text-sm font-normal text-secondary truncate mt-0.5">홍대 달빛소극장</p>
+<p class="text-xs font-normal text-secondary mt-0.5">2026-09-15 ~ 2026-11-30</p>
+</div>
+<div>
+<!-- Labels row -->
+<div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+<span class="px-2 py-0.5 text-[11px] font-normal border border-outline rounded-[8px] text-secondary">뮤지컬</span>
+<span class="px-2 py-0.5 text-[11px] font-normal rounded-[8px] bg-status-ongoing-bg text-status-ongoing-text">공연 중</span>
+</div>
+<!-- Rating -->
+<div class="flex items-center gap-1 text-xs">
+<span class="text-tertiary font-medium">★ 3.8 (5)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- j. Pagination Control (Material paginator style, no page-size selector): "1 – 20 / 128" with previous/next icon buttons -->
+<div class="flex items-center justify-end gap-3 mt-4 pt-2 text-secondary text-xs font-normal"><span>1 – 20 / 128</span><div class="flex items-center gap-1"><button class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-placeholder-gray/40 min-h-[44px] min-w-[44px] transition-colors" type="button"><svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"></path></svg></button><button class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-placeholder-gray/40 min-h-[44px] min-w-[44px] transition-colors" type="button"><svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path></svg></button></div></div>
+</aside>
+<!-- RIGHT = MAP AREA filling the rest (Plain light gray #E5E7EB rectangle) -->
+<div class="flex-1 bg-placeholder-gray relative overflow-hidden flex items-center justify-center">
+<!-- Small centered gray label "지도 영역 (Google Maps)" -->
+<span class="text-sm font-normal text-secondary select-none pointer-events-none">
+        지도 영역 (Google Maps)
+      </span>
+<!-- 6 circular venue markers (32px, fill #4338CA, white number inside: "3", "1", "2", "5", "1", "2") -->
+<!-- Marker 1: "3" -->
+<div class="absolute w-8 h-8 rounded-full bg-primary text-on-primary text-xs font-medium flex items-center justify-center shadow-md select-none" style="top: 28%; left: 24%;">
+        3
+      </div>
+<!-- Marker 2: "1" -->
+<div class="absolute w-8 h-8 rounded-full bg-primary text-on-primary text-xs font-medium flex items-center justify-center shadow-md select-none" style="top: 18%; left: 62%;">
+        1
+      </div>
+<!-- Marker 3: "2" -->
+<div class="absolute w-8 h-8 rounded-full bg-primary text-on-primary text-xs font-medium flex items-center justify-center shadow-md select-none" style="top: 48%; left: 45%;">
+        2
+      </div>
+<!-- Marker 4: "5" -->
+<div class="absolute w-8 h-8 rounded-full bg-primary text-on-primary text-xs font-medium flex items-center justify-center shadow-md select-none" style="top: 36%; left: 74%;">
+        5
+      </div>
+<!-- Marker 5: "1" -->
+<div class="absolute w-8 h-8 rounded-full bg-primary text-on-primary text-xs font-medium flex items-center justify-center shadow-md select-none" style="top: 62%; left: 29%;">
+        1
+      </div>
+<!-- Marker 6: "2" -->
+<div class="absolute w-8 h-8 rounded-full bg-primary text-on-primary text-xs font-medium flex items-center justify-center shadow-md select-none" style="top: 68%; left: 68%;">
+        2
+      </div>
+<!-- Floating filled primary button with my_location icon "근처 보기" at the top-right of the map with an elevation shadow -->
+<button class="absolute top-5 right-5 h-11 px-5 rounded-full bg-primary text-on-primary text-sm font-medium flex items-center gap-2 shadow-lg hover:brightness-105 active:brightness-95 transition-all min-h-[44px]" type="button">
+<svg class="w-5 h-5 text-white flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" fill="currentColor" r="2"></circle><path d="M12 2v3m0 14v3M2 12h3m14 0h3" stroke-linecap="round"></path></svg>
+<span>근처 보기</span>
+</button>
+</div>
+</main>
+<!-- 3. Footer full width at the bottom (background #F9FAFB, 12px text #4B5563) -->
+<footer class="w-full bg-left-panel-bg border-t border-outline py-3 px-6 text-center text-xs text-secondary flex-shrink-0 flex flex-col gap-1">
+<p class="m-0 leading-tight">출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)</p>
+<p class="m-0 leading-tight">서울교통공사 공공데이터(역 좌표·주소, 물품보관함 위치, 역명 다국어 표기 – 공공누리 제1유형)</p>
+</footer>
+</body>
+</html>

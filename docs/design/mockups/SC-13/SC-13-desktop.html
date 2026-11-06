@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CatTicket 공연 목록 (관리)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* Reset & Base Tokens */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      font-weight: 400;
+      background-color: #FFFFFF;
+      color: #1F2937;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout Containers */
+    .header-wrapper {
+      width: 100%;
+      height: 64px;
+      background-color: #FFFFFF;
+      border-bottom: 1px solid #D1D5DB;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .header-inner {
+      max-width: 1200px;
+      height: 100%;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .brand-logo {
+      font-size: 20px;
+      font-weight: 500;
+      color: #4338CA;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 400;
+      color: #1F2937;
+      padding: 8px 16px;
+      min-height: 44px;
+      border-radius: 9999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .nav-btn:hover {
+      background-color: #EEF2FF;
+    }
+
+    .nav-btn.active {
+      font-weight: 500;
+      color: #4338CA;
+      background-color: #EEF2FF;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logout-btn {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 400;
+      color: #4B5563;
+      padding: 8px 12px;
+      min-height: 44px;
+      border-radius: 9999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .logout-btn:hover {
+      background-color: #F3F4F6;
+      color: #1F2937;
+    }
+
+    /* Segmented Toggle */
+    .segmented-toggle {
+      display: inline-flex;
+      background-color: #F3F4F6;
+      border-radius: 9999px;
+      padding: 3px;
+      border: 1px solid #D1D5DB;
+    }
+
+    .segmented-item {
+      border: none;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 6px 14px;
+      min-height: 36px;
+      border-radius: 9999px;
+      cursor: pointer;
+      background: transparent;
+      color: #4B5563;
+      font-weight: 400;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .segmented-item.selected {
+      background-color: #4338CA;
+      color: #FFFFFF;
+      font-weight: 500;
+    }
+
+    /* Main Content */
+    main {
+      flex: 1 0 auto;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+    }
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 500;
+      color: #1F2937;
+      margin-bottom: 24px;
+      line-height: 1.3;
+    }
+
+    /* Search Conditions Row */
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    /* Material Outlined Input & Select */
+    .outlined-field {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .field-label {
+      position: absolute;
+      top: -9px;
+      left: 10px;
+      background-color: #FFFFFF;
+      padding: 0 4px;
+      font-size: 12px;
+      color: #4B5563;
+      font-weight: 400;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .text-input {
+      font-family: inherit;
+      font-size: 14px;
+      color: #1F2937;
+      background: #FFFFFF;
+      border: 1px solid #D1D5DB;
+      border-radius: 4px;
+      height: 44px;
+      width: 280px;
+      padding: 0 12px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .text-input:focus {
+      border-color: #4338CA;
+    }
+
+    .select-wrapper {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .select-input {
+      font-family: inherit;
+      font-size: 14px;
+      color: #1F2937;
+      background: #FFFFFF;
+      border: 1px solid #D1D5DB;
+      border-radius: 4px;
+      height: 44px;
+      width: 150px;
+      padding: 0 36px 0 12px;
+      outline: none;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+
+    .select-input:focus {
+      border-color: #4338CA;
+    }
+
+    .select-icon {
+      position: absolute;
+      right: 10px;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      color: #4B5563;
+    }
+
+    /* Material Checkbox */
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #1F2937;
+      min-height: 44px;
+      user-select: none;
+    }
+
+    .checkbox-input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .custom-checkbox {
+      width: 18px;
+      height: 18px;
+      border: 1.5px solid #D1D5DB;
+      border-radius: 2px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #FFFFFF;
+      transition: all 0.15s ease;
+    }
+
+    .checkbox-input:focus + .custom-checkbox {
+      outline: 2px solid #EEF2FF;
+    }
+
+    .checkbox-input:checked + .custom-checkbox {
+      background-color: #4338CA;
+      border-color: #4338CA;
+    }
+
+    /* Filled Primary Button */
+    .btn-search {
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      color: #FFFFFF;
+      background-color: #4338CA;
+      border: none;
+      border-radius: 9999px;
+      height: 44px;
+      padding: 0 24px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn-search:hover {
+      background-color: #3730A3;
+    }
+
+    /* Data Table (Material Table) */
+    .table-container {
+      width: 100%;
+      border: 1px solid #D1D5DB;
+      border-radius: 12px;
+      overflow: hidden;
+      background-color: #FFFFFF;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    thead tr {
+      background-color: #F3F4F6;
+      border-bottom: 1px solid #D1D5DB;
+      height: 52px;
+    }
+
+    th {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1F2937;
+      padding: 12px 16px;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      height: 56px;
+      border-bottom: 1px solid #D1D5DB;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background-color: #F9FAFB;
+    }
+
+    td {
+      font-size: 14px;
+      color: #1F2937;
+      padding: 14px 16px;
+      vertical-align: middle;
+    }
+
+    .col-id {
+      font-weight: 500;
+      color: #4B5563;
+      white-space: nowrap;
+      width: 110px;
+    }
+
+    .col-title {
+      font-weight: 500;
+      color: #1F2937;
+    }
+
+    .col-venue {
+      color: #4B5563;
+    }
+
+    .col-period {
+      color: #4B5563;
+      white-space: nowrap;
+    }
+
+    .col-dash {
+      color: #9CA3AF;
+    }
+
+    /* Badges / Labels */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .badge-ongoing {
+      background-color: #F0FDF4;
+      color: #166534;
+    }
+
+    .badge-upcoming {
+      background-color: #EEF2FF;
+      color: #4338CA;
+    }
+
+    .badge-hidden {
+      background-color: #F3F4F6;
+      color: #4B5563;
+    }
+
+    /* Paginator */
+    .paginator-container {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .paginator-text {
+      font-size: 14px;
+      color: #4B5563;
+      font-weight: 400;
+    }
+
+    .paginator-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 9999px;
+      border: none;
+      background: transparent;
+      color: #1F2937;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      background-color: #F3F4F6;
+    }
+
+    .icon-btn:disabled {
+      color: #D1D5DB;
+      cursor: not-allowed;
+      background: transparent;
+    }
+
+    /* Footer */
+    footer {
+      width: 100%;
+      background-color: #F9FAFB;
+      border-top: 1px solid #D1D5DB;
+      padding: 24px;
+      text-align: center;
+      margin-top: auto;
+    }
+
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .footer-line {
+      font-size: 12px;
+      color: #4B5563;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. Header bar (64px, white, bottom border #D1D5DB) -->
+  <header class="header-wrapper">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="#" class="brand-logo">CatTicket</a>
+        <nav class="nav-links">
+          <button type="button" class="nav-btn">지도</button>
+          <button type="button" class="nav-btn">인기·트렌드</button>
+          <button type="button" class="nav-btn active">관리</button>
+        </nav>
+      </div>
+      <div class="header-right">
+        <button type="button" class="logout-btn">로그아웃</button>
+        <div class="segmented-toggle">
+          <button type="button" class="segmented-item selected">한국어</button>
+          <button type="button" class="segmented-item">日本語</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Area (max width 1200px centered) -->
+  <main>
+    <!-- 2. Page title -->
+    <h1 class="page-title">공연 목록 (관리)</h1>
+
+    <!-- 3. One row of search conditions -->
+    <div class="search-row">
+      <!-- 키워드 text field -->
+      <div class="outlined-field">
+        <span class="field-label">키워드(공연명·공연 ID)</span>
+        <input type="text" class="text-input" placeholder="">
+      </div>
+
+      <!-- 표시 상태 select -->
+      <div class="select-wrapper">
+        <span class="field-label">표시 상태</span>
+        <select class="select-input">
+          <option value="all" selected>전체</option>
+          <option value="visible">표시 중</option>
+          <option value="hidden">숨김</option>
+        </select>
+        <div class="select-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 종료된 공연도 포함 checkbox -->
+      <label class="checkbox-label">
+        <input type="checkbox" class="checkbox-input">
+        <span class="custom-checkbox"></span>
+        <span>종료된 공연도 포함</span>
+      </label>
+
+      <!-- 검색 button -->
+      <button type="button" class="btn-search">검색</button>
+    </div>
+
+    <!-- 4. Data table (Material table, 12px corners, header row #F3F4F6) -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>공연 ID</th>
+            <th>공연명</th>
+            <th>공연장</th>
+            <th>공연 기간</th>
+            <th>상태</th>
+            <th>숨김</th>
+            <th>관리자 수정</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-id">PF250101</td>
+            <td class="col-title">뮤지컬 〈별빛 정거장〉</td>
+            <td class="col-venue">대학로 소나무극장</td>
+            <td class="col-period">2026-10-01 ~ 2026-12-31</td>
+            <td><span class="status-badge badge-ongoing">공연 중</span></td>
+            <td class="col-dash">—</td>
+            <td>있음</td>
+          </tr>
+          <tr>
+            <td class="col-id">PF250102</td>
+            <td class="col-title">연극 〈봄날의 편지〉</td>
+            <td class="col-venue">서울 한빛아트홀</td>
+            <td class="col-period">2026-11-20 ~ 2027-01-15</td>
+            <td><span class="status-badge badge-upcoming">공연 예정</span></td>
+            <td class="col-dash">—</td>
+            <td class="col-dash">—</td>
+          </tr>
+          <tr>
+            <td class="col-id">PF250103</td>
+            <td class="col-title">뮤지컬 〈고양이 극장〉</td>
+            <td class="col-venue">홍대 달빛소극장</td>
+            <td class="col-period">2026-09-15 ~ 2026-11-30</td>
+            <td><span class="status-badge badge-ongoing">공연 중</span></td>
+            <td><span class="status-badge badge-hidden">숨김</span></td>
+            <td>있음</td>
+          </tr>
+          <tr>
+            <td class="col-id">PF250104</td>
+            <td class="col-title">콘서트 〈가을 밤 재즈〉</td>
+            <td class="col-venue">서울 숲속홀</td>
+            <td class="col-period">2026-11-01 ~ 2026-11-09</td>
+            <td><span class="status-badge badge-ongoing">공연 중</span></td>
+            <td class="col-dash">—</td>
+            <td class="col-dash">—</td>
+          </tr>
+          <tr>
+            <td class="col-id">PF250105</td>
+            <td class="col-title">무용 〈푸른 새벽〉</td>
+            <td class="col-venue">서울 하늘무용센터</td>
+            <td class="col-period">2026-11-14 ~ 2026-11-16</td>
+            <td><span class="status-badge badge-upcoming">공연 예정</span></td>
+            <td class="col-dash">—</td>
+            <td class="col-dash">—</td>
+          </tr>
+          <tr>
+            <td class="col-id">PF250106</td>
+            <td class="col-title">클래식 〈겨울 소나타〉</td>
+            <td class="col-venue">서울 은하홀</td>
+            <td class="col-period">2026-12-05 ~ 2026-12-05</td>
+            <td><span class="status-badge badge-upcoming">공연 예정</span></td>
+            <td class="col-dash">—</td>
+            <td>있음</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 5. Paginator below the table, right-aligned -->
+    <div class="paginator-container">
+      <span class="paginator-text">1 – 20 / 342</span>
+      <div class="paginator-actions">
+        <button type="button" class="icon-btn" aria-label="이전 페이지" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" aria-label="다음 페이지">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 6. Footer full width -->
+  <footer>
+    <div class="footer-content">
+      <p class="footer-line">출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)</p>
+      <p class="footer-line">서울교통공사 공공데이터(역 좌표·주소, 물품보관함 위치, 역명 다국어 표기 – 공공누리 제1유형)</p>
+    </div>
+  </footer>
+
+</body>
+</html>
