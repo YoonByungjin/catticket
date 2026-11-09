@@ -523,17 +523,19 @@ flowchart LR
 - `OverridableField`（enum）: 03 の 8.8 の表の 11 個。`apiName`（`ticketPrice`）、`dbField`（`ticket_price`）、`Kind`（`SINGLE_LINE`, `MULTI_LINE`, `DATE`, `GENRE`, `BOOLEAN`, `BOOKING_SITES`）、最大文字数。
 - `AdminPatchParser`（Spring に依存しない）: `ParsedPatch parse(ObjectNode body)` → `ParsedPatch(Map<OverridableField, Object> values, List<BookingSiteInput> bookingSites, List<FieldErrorItem> errors)`。03 の 8.8 の決まり: 項目が0個 → `field = ""` に `REQUIRED`、値が `null` → `REQUIRED`、知らない項目 → `UNKNOWN_FIELD`、型が違う（文字列の項目に数値など）→ `MALFORMED_REQUEST`（`ApiException` をすぐ投げる。7.1）、文字列は strip してから長さ・制御文字、日付は `YYYY-MM-DD`（`FORMAT`）、ジャンル（`INVALID_VALUE`）、`bookingSites` は 0〜10 件（`LENGTH`）・各要素の `name`（1〜100、制御文字なし）・`url`（1〜2,000、`^https?://` で始まる絶対 URL。`java.net.URI` で読めること。`FORMAT`）。`errors` の `field` は `bookingSites[0].url` の形。
 - 型の違いを `MALFORMED_REQUEST` にするのは、03 の 7.1（項目の型が違うときは 400 `MALFORMED_REQUEST`）に合わせるため。
+- **API-51〜53 はビューを使わない**（04 の 11.3）: 自動収集の値は `performance`（+ 会場）から、修正は `performance_override` から別々に読み、修正を反映した値が要るところは Java で組み立てる（API-50 の一覧だけはビュー `performance_effective`）。
+- `AdminEffectiveValues`（record。Spring に依存しない）: `static AdminEffectiveValues of(AdminPerformanceRow collected, List<OverrideRow> overrides)`。項目ごとに「修正の行があれば `override_value` を 03 の 8.8 の形（日付は `YYYY-MM-DD`、真偽は `true` / `false`）から型に戻した値、なければ自動収集の値」（ビューの `CASE` と同じ規則）。主に使うのは `LocalDate startDate()`・`LocalDate endDate()`。`withPatch(Map<OverridableField, Object> values)`（API-52 の本文を当てた後の値）・`without(OverridableField field)`（API-53 で取り消した後の値）で新しい値を返す。単体テストで、ビューと同じ結果になる場合（修正なし・開始日だけ修正・両方修正）を確かめる。
 
 **`AdminPerformanceService`**
 
 | メソッド | Tx | 内容 |
 |---|---|---|
 | `PageResponse<AdminPerformanceItem> search(AdminSearchQuery, PageQuery)` | RO | `search`・`count`。`status` は `PerformanceStatus.of` |
-| `AdminPerformanceDetail getDetail(String performanceId)` | RO | `findPerformance`（ない → 404。非表示でも返す）→ `findOverrides` → `findBookingSites(COLLECTED / ADMIN)` → `fields` の 11 個を組み立てる |
-| `AdminPerformanceDetail applyPatch(String performanceId, ObjectNode body)` | RW | `AdminPatchParser.parse`（型の違いはここで 400）→ `findPerformanceIdForUpdate`（ない → 404）→ `findPerformance`・`findOverrides`（ロックしない読み。下の「ロックと読み」）→ `errors` があれば `RequestValidationException` → 修正の後の開始日 ≤ 終了日（違えば `startDate`・`endDate` のうち本文にある方に `DATE_ORDER`）→ 項目ごとに `upsertOverride` → `bookingSites` があれば `deleteBookingSites(id, ADMIN)` → `insertBookingSites` → `upsertOverride(booking_sites, NULL)` → `getDetail` と同じ形で返す |
-| `void clearOverride(String performanceId, OverridableField field)` | RW | `findPerformanceIdForUpdate`（404）→ `findPerformance`・`findOverrides`（ロックしない読み）→ 取り消した後の期間の確認（`DATE_ORDER` を `field` に）→ `deleteOverride` → `bookingSites` なら `deleteBookingSites(id, ADMIN)` |
+| `AdminPerformanceDetail getDetail(String performanceId)` | RO | `findPerformance`（自動収集の値。ない → 404。非表示でも返す）→ `findOverrides`（修正の値と日時）→ `findBookingSites(COLLECTED / ADMIN)` → `fields` の 11 個を組み立てる（`collected` = `AdminPerformanceRow`、`override`・`overriddenAt` = `OverrideRow`）。`status` は `AdminEffectiveValues.of(row, overrides)` の開始日・終了日で `PerformanceStatus.of` |
+| `AdminPerformanceDetail applyPatch(String performanceId, ObjectNode body)` | RW | `AdminPatchParser.parse`（型の違いはここで 400）→ `findPerformanceIdForUpdate`（ない → 404）→ `findPerformance`・`findOverrides`（ロックしない読み。下の「ロックと読み」）→ `errors` があれば `RequestValidationException` → 修正の後の開始日 ≤ 終了日（`AdminEffectiveValues.of(row, overrides).withPatch(values)` の開始日・終了日で比べる。違えば `startDate`・`endDate` のうち本文にある方に `DATE_ORDER`）→ 項目ごとに `upsertOverride` → `bookingSites` があれば `deleteBookingSites(id, ADMIN)` → `insertBookingSites` → `upsertOverride(booking_sites, NULL)` → `getDetail` と同じ形で返す |
+| `void clearOverride(String performanceId, OverridableField field)` | RW | `findPerformanceIdForUpdate`（404）→ `findPerformance`・`findOverrides`（ロックしない読み）→ 取り消した後の期間の確認（`AdminEffectiveValues.of(row, overrides).without(field)` の開始日 ≤ 終了日。違えば `DATE_ORDER` を `field` に）→ `deleteOverride` → `bookingSites` なら `deleteBookingSites(id, ADMIN)` |
 | `VisibilityResponse setVisibility(String performanceId, boolean hidden)` | RW | `updateHidden`（0 件 → 404） |
-| `PageResponse<ReviewItem> listReviews(String performanceId, PageQuery)` | RO | `findPerformance`（404）→ `ReviewService.listAll` |
+| `PageResponse<ReviewItem> listReviews(String performanceId, PageQuery)` | RO | `findPerformanceId`（ない → 404。非表示でも続ける。修正の値は要らない）→ `ReviewService.listAll(id, page)` |
 | `void deleteReview(long reviewId)` | — | `ReviewService.deleteAny`（RW はその中） |
 
 - 順番の理由: 03 の API-52 は「公演がある（404）→ チェック」。本文の解析（型）は Controller の外の部品で先に行うが、項目ごとの誤り（`VALIDATION_FAILED`）は存在の確認の後に投げる。
@@ -544,10 +546,11 @@ flowchart LR
 
 | メソッド | SQL の役割 |
 |---|---|
-| `List<AdminPerformanceRow> search(AdminSearchCondition)`・`long count(…)` | `performance_effective` + 会場（1.6 の公開の条件を使わない）。キーワードは `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`（A-03）。`hasOverride` は `EXISTS (SELECT 1 FROM performance_override …)`。`ORDER BY pe.start_date DESC, pe.kopis_performance_id` |
-| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | 自動収集の値（`performance`）と修正を反映した値（`performance_effective`）の両方。ロックしない |
+| `List<AdminPerformanceListRow> search(AdminSearchCondition)`・`long count(…)` | `performance_effective` + 会場（1.6 の公開の条件を使わない）。キーワードは `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`（A-03）。`hasOverride` は `EXISTS (SELECT 1 FROM performance_override …)`。`ORDER BY pe.start_date DESC, pe.kopis_performance_id` |
+| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | `performance p JOIN venue v`。**自動収集の値だけ**（ビューを使わない。04 の 11.3）。ロックしない。`AdminPerformanceRow`: `long id`, `kopisPerformanceId`, `isHidden`, 修正できる 10 項目の自動収集の値（`title`, `startDate`, `endDate`, `genreCode`, `castText`, `ticketPrice`, `scheduleText`, `runtime`, `ageLimit`, `isOpenRun`。予約サイトは `findBookingSites`）、会場（`kopisVenueId`, `name`, `address`）、`posterUrl`, `hasAward`, `totalShowCount` |
+| `Optional<Long> findPerformanceId(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = …`（API-55 の存在の確認。ロックしない） |
 | `Optional<Long> findPerformanceIdForUpdate(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = #{kopisPerformanceId} FOR UPDATE`（ほかの表を結ばない。4.8 の「ロックと読み」） |
-| `List<OverrideRow> findOverrides(long performanceId)` | `performance_override` |
+| `List<OverrideRow> findOverrides(long performanceId)` | `performance_override`（`OverrideRow(fieldName, overrideValue, updatedAt)`。`booking_sites` の行も含む） |
 | `List<BookingSiteRow> findBookingSites(long performanceId, String source)` | `booking_site` |
 | `void upsertOverride(long performanceId, String fieldName, String value, LocalDateTime now)` | `INSERT … VALUES (…) AS n ON DUPLICATE KEY UPDATE override_value = n.override_value, updated_at = n.updated_at` |
 | `int deleteOverride(long performanceId, String fieldName)` | |
@@ -847,7 +850,7 @@ verify(token):
 | Service | 単体 | Mapper・クライアント・`Clock`（`Clock.fixed`）・`Sleeper`（待たない実装）を Mockito で替える |
 | Mapper | `@MybatisTest`（実際の MySQL の `test_catticket`。`@AutoConfigureTestDatabase(replace = NONE)`） | Flyway が V1 を適用した DB。データは各テストで入れる |
 | Controller | `@WebMvcTest` + `@Import(SecurityConfig.class)` + spring-security-test（`with(csrf())`、`with(user(...))` の代わりに `SessionUser` の `Authentication` を入れる小さな部品 `TestAuth`）。JSON 以外の本文の 415・`Accept: application/xml` でも JSON（3.1 の「JSON だけにする」のテスト ①〜③）を含める | Service を `@MockitoBean` |
-| バッチの部品（`SubwayRowConverter`・`RisingCalculator`・`GenreTrendCalculator`・`CollectWindows`・`AdminPatchParser`・`NearbyFilter`・`PasswordPolicy`・`EmailRule`） | 単体（`PasswordPolicy`・`EmailRule` のテストは `common/validation/`） | なし（Spring に依存しない）。駅のファイルは `src/test/resources/data/subway-sample/` |
+| バッチの部品（`SubwayRowConverter`・`RisingCalculator`・`GenreTrendCalculator`・`CollectWindows`・`AdminPatchParser`・`NearbyFilter`・`AdminEffectiveValues`・`PasswordPolicy`・`EmailRule`） | 単体（`PasswordPolicy`・`EmailRule` のテストは `common/validation/`） | なし（Spring に依存しない）。駅のファイルは `src/test/resources/data/subway-sample/` |
 
 - 外部 API を実際に呼ぶテストは書かない。テストの設定（`src/test/resources/application.yml` など）で `catticket.scheduler.enabled=false` にし、`catticket.task` を設定しない。API キーなどは空の値（`""`）で起動できるようにする（`CatticketProperties` は起動時に必須を確かめない。使う時点で空なら失敗）。
 - 結合・E2E のテストは qa-engineer（`backend/src/test/java/com/catticket/it/`）。単体のテストの場所は `backend/src/test/java/com/catticket/{機能}/`。
@@ -1543,17 +1546,19 @@ Service
 - `OverridableField`(enum): 03의 8.8 표의 11개. `apiName`(`ticketPrice`), `dbField`(`ticket_price`), `Kind`(`SINGLE_LINE`, `MULTI_LINE`, `DATE`, `GENRE`, `BOOLEAN`, `BOOKING_SITES`), 최대 글자 수.
 - `AdminPatchParser`(Spring 비의존): `ParsedPatch parse(ObjectNode body)` → `ParsedPatch(Map<OverridableField, Object> values, List<BookingSiteInput> bookingSites, List<FieldErrorItem> errors)`. 03의 8.8 규칙: 항목 0개 → `field = ""`에 `REQUIRED`, 값이 `null` → `REQUIRED`, 모르는 항목 → `UNKNOWN_FIELD`, 타입이 다름(문자열 항목에 수치 등) → `MALFORMED_REQUEST`(`ApiException`을 바로 던짐. 7.1), 문자열은 strip 후 길이·제어 문자, 날짜는 `YYYY-MM-DD`(`FORMAT`), 장르(`INVALID_VALUE`), `bookingSites`는 0~10건(`LENGTH`)·각 요소 `name`(1~100, 제어 문자 없음)·`url`(1~2,000, `^https?://`로 시작하는 절대 URL. `java.net.URI`로 읽을 수 있을 것. `FORMAT`). `errors`의 `field`는 `bookingSites[0].url` 형태.
 - 타입 차이를 `MALFORMED_REQUEST`로 하는 것은 03의 7.1(항목 타입이 다르면 400 `MALFORMED_REQUEST`)에 맞추기 위해서다.
+- **API-51~53은 뷰를 쓰지 않는다**(04의 11.3): 자동 수집 값은 `performance`(+ 공연장)에서, 수정은 `performance_override`에서 따로 읽고, 수정을 반영한 값이 필요한 곳은 Java에서 조립한다(API-50 목록만 뷰 `performance_effective`).
+- `AdminEffectiveValues`(record. Spring 비의존): `static AdminEffectiveValues of(AdminPerformanceRow collected, List<OverrideRow> overrides)`. 항목별로 "수정 행이 있으면 `override_value`를 03의 8.8 형태(날짜는 `YYYY-MM-DD`, 참/거짓은 `true` / `false`)에서 타입으로 되돌린 값, 없으면 자동 수집 값"(뷰의 `CASE`와 같은 규칙). 주로 쓰는 것은 `LocalDate startDate()`·`LocalDate endDate()`. `withPatch(Map<OverridableField, Object> values)`(API-52 본문을 적용한 뒤의 값)·`without(OverridableField field)`(API-53에서 취소한 뒤의 값)로 새 값을 돌려준다. 단위 테스트로 뷰와 같은 결과가 되는 경우(수정 없음·시작일만 수정·둘 다 수정)를 확인한다.
 
 `AdminPerformanceService`
 
 | 메서드 | Tx | 내용 |
 |---|---|---|
 | `PageResponse<AdminPerformanceItem> search(AdminSearchQuery, PageQuery)` | RO | `search`·`count`. `status`는 `PerformanceStatus.of` |
-| `AdminPerformanceDetail getDetail(String performanceId)` | RO | `findPerformance`(없음 → 404. 숨김이어도 반환) → `findOverrides` → `findBookingSites(COLLECTED / ADMIN)` → `fields` 11개 조립 |
-| `AdminPerformanceDetail applyPatch(String performanceId, ObjectNode body)` | RW | `AdminPatchParser.parse`(타입 차이는 여기서 400) → `findPerformanceIdForUpdate`(없음 → 404) → `findPerformance`·`findOverrides`(잠그지 않는 읽기. 아래 "잠금과 읽기") → `errors`가 있으면 `RequestValidationException` → 수정 후 시작일 ≤ 종료일(아니면 `startDate`·`endDate` 중 본문에 있는 쪽에 `DATE_ORDER`) → 항목별 `upsertOverride` → `bookingSites`가 있으면 `deleteBookingSites(id, ADMIN)` → `insertBookingSites` → `upsertOverride(booking_sites, NULL)` → `getDetail`과 같은 형태로 반환 |
-| `void clearOverride(String performanceId, OverridableField field)` | RW | `findPerformanceIdForUpdate`(404) → `findPerformance`·`findOverrides`(잠그지 않는 읽기) → 취소 후 기간 확인(`DATE_ORDER`를 `field`에) → `deleteOverride` → `bookingSites`면 `deleteBookingSites(id, ADMIN)` |
+| `AdminPerformanceDetail getDetail(String performanceId)` | RO | `findPerformance`(자동 수집 값. 없음 → 404. 숨김이어도 반환) → `findOverrides`(수정 값과 일시) → `findBookingSites(COLLECTED / ADMIN)` → `fields` 11개 조립(`collected` = `AdminPerformanceRow`, `override`·`overriddenAt` = `OverrideRow`). `status`는 `AdminEffectiveValues.of(row, overrides)`의 시작일·종료일로 `PerformanceStatus.of` |
+| `AdminPerformanceDetail applyPatch(String performanceId, ObjectNode body)` | RW | `AdminPatchParser.parse`(타입 차이는 여기서 400) → `findPerformanceIdForUpdate`(없음 → 404) → `findPerformance`·`findOverrides`(잠그지 않는 읽기. 아래 "잠금과 읽기") → `errors`가 있으면 `RequestValidationException` → 수정 후 시작일 ≤ 종료일(`AdminEffectiveValues.of(row, overrides).withPatch(values)`의 시작일·종료일로 비교. 아니면 `startDate`·`endDate` 중 본문에 있는 쪽에 `DATE_ORDER`) → 항목별 `upsertOverride` → `bookingSites`가 있으면 `deleteBookingSites(id, ADMIN)` → `insertBookingSites` → `upsertOverride(booking_sites, NULL)` → `getDetail`과 같은 형태로 반환 |
+| `void clearOverride(String performanceId, OverridableField field)` | RW | `findPerformanceIdForUpdate`(404) → `findPerformance`·`findOverrides`(잠그지 않는 읽기) → 취소 후 기간 확인(`AdminEffectiveValues.of(row, overrides).without(field)`의 시작일 ≤ 종료일. 아니면 `DATE_ORDER`를 `field`에) → `deleteOverride` → `bookingSites`면 `deleteBookingSites(id, ADMIN)` |
 | `VisibilityResponse setVisibility(String performanceId, boolean hidden)` | RW | `updateHidden`(0건 → 404) |
-| `PageResponse<ReviewItem> listReviews(String performanceId, PageQuery)` | RO | `findPerformance`(404) → `ReviewService.listAll` |
+| `PageResponse<ReviewItem> listReviews(String performanceId, PageQuery)` | RO | `findPerformanceId`(없음 → 404. 숨김이어도 계속. 수정 값은 필요 없음) → `ReviewService.listAll(id, page)` |
 | `void deleteReview(long reviewId)` | — | `ReviewService.deleteAny`(RW는 그 안) |
 
 - 순서의 이유: 03의 API-52는 "공연이 있음(404) → 검사". 본문 해석(타입)은 먼저 하지만, 항목별 오류(`VALIDATION_FAILED`)는 존재 확인 뒤에 던진다.
@@ -1564,10 +1569,11 @@ Service
 
 | 메서드 | SQL 역할 |
 |---|---|
-| `List<AdminPerformanceRow> search(AdminSearchCondition)`·`long count(…)` | `performance_effective` + 공연장(1.6의 공개 조건을 쓰지 않음). 키워드는 `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`(A-03). `hasOverride`는 `EXISTS (SELECT 1 FROM performance_override …)`. `ORDER BY pe.start_date DESC, pe.kopis_performance_id` |
-| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | 자동 수집 값(`performance`)과 수정을 반영한 값(`performance_effective`) 둘 다. 잠그지 않는다 |
+| `List<AdminPerformanceListRow> search(AdminSearchCondition)`·`long count(…)` | `performance_effective` + 공연장(1.6의 공개 조건을 쓰지 않음). 키워드는 `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`(A-03). `hasOverride`는 `EXISTS (SELECT 1 FROM performance_override …)`. `ORDER BY pe.start_date DESC, pe.kopis_performance_id` |
+| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | `performance p JOIN venue v`. **자동 수집 값만**(뷰를 쓰지 않는다. 04의 11.3). 잠그지 않는다. `AdminPerformanceRow`: `long id`, `kopisPerformanceId`, `isHidden`, 수정할 수 있는 10개 항목의 자동 수집 값(`title`, `startDate`, `endDate`, `genreCode`, `castText`, `ticketPrice`, `scheduleText`, `runtime`, `ageLimit`, `isOpenRun`. 예매처는 `findBookingSites`), 공연장(`kopisVenueId`, `name`, `address`), `posterUrl`, `hasAward`, `totalShowCount` |
+| `Optional<Long> findPerformanceId(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = …`(API-55의 존재 확인. 잠그지 않는다) |
 | `Optional<Long> findPerformanceIdForUpdate(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = #{kopisPerformanceId} FOR UPDATE`(다른 표를 조인하지 않는다. 4.8의 "잠금과 읽기") |
-| `List<OverrideRow> findOverrides(long performanceId)` | `performance_override` |
+| `List<OverrideRow> findOverrides(long performanceId)` | `performance_override`(`OverrideRow(fieldName, overrideValue, updatedAt)`. `booking_sites` 행도 포함) |
 | `List<BookingSiteRow> findBookingSites(long performanceId, String source)` | `booking_site` |
 | `void upsertOverride(long performanceId, String fieldName, String value, LocalDateTime now)` | `INSERT … VALUES (…) AS n ON DUPLICATE KEY UPDATE override_value = n.override_value, updated_at = n.updated_at` |
 | `int deleteOverride(long performanceId, String fieldName)` | |
@@ -1794,7 +1800,7 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 | Service | 단위 | Mapper·클라이언트·`Clock`(`Clock.fixed`)·`Sleeper`(기다리지 않는 구현)를 Mockito로 바꾼다 |
 | Mapper | `@MybatisTest`(실제 MySQL의 `test_catticket`. `@AutoConfigureTestDatabase(replace = NONE)`) | Flyway가 V1을 적용한 DB. 데이터는 각 테스트에서 넣는다 |
 | Controller | `@WebMvcTest` + `@Import(SecurityConfig.class)` + spring-security-test(`with(csrf())`, `with(user(...))` 대신 `SessionUser`의 `Authentication`을 넣는 작은 부품 `TestAuth`). JSON이 아닌 본문의 415·`Accept: application/xml`이어도 JSON(3.1의 "JSON만으로 하기"의 테스트 ①~③)을 포함한다 | Service를 `@MockitoBean` |
-| 배치 부품(`SubwayRowConverter`·`RisingCalculator`·`GenreTrendCalculator`·`CollectWindows`·`AdminPatchParser`·`NearbyFilter`·`PasswordPolicy`·`EmailRule`) | 단위(`PasswordPolicy`·`EmailRule` 테스트는 `common/validation/`) | 없음(Spring 비의존). 역 파일은 `src/test/resources/data/subway-sample/` |
+| 배치 부품(`SubwayRowConverter`·`RisingCalculator`·`GenreTrendCalculator`·`CollectWindows`·`AdminPatchParser`·`NearbyFilter`·`AdminEffectiveValues`·`PasswordPolicy`·`EmailRule`) | 단위(`PasswordPolicy`·`EmailRule` 테스트는 `common/validation/`) | 없음(Spring 비의존). 역 파일은 `src/test/resources/data/subway-sample/` |
 
 - 외부 API를 실제로 부르는 테스트는 쓰지 않는다. 테스트 설정(`src/test/resources/application.yml` 등)에서 `catticket.scheduler.enabled=false`로 하고 `catticket.task`를 설정하지 않는다. API 키 등은 빈 값(`""`)으로 기동할 수 있게 한다(`CatticketProperties`는 기동 시 필수를 확인하지 않음. 쓰는 시점에 비어 있으면 실패).
 - 결합·E2E 테스트는 qa-engineer(`backend/src/test/java/com/catticket/it/`). 단위 테스트 위치는 `backend/src/test/java/com/catticket/{기능}/`.
