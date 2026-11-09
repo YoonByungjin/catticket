@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>CatTicket</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <script>
+      // 最初の描画の前に表示言語（F-10）とライト・ダーク表示（F-36）を決め、ちらつきを防ぐ（02 の 3.8）。
+      // キーは src/app/core/storage/storage-keys.ts と同じ。localStorage が使えないブラウザでも止まらないよう例外を握りつぶす。
+      (function () {
+        var root = document.documentElement;
+        var lang = null;
+        var scheme = null;
+        try {
+          lang = window.localStorage.getItem('catticket.lang');
+          scheme = window.localStorage.getItem('catticket.colorScheme');
+        } catch (e) {}
+        root.lang = lang === 'ja' ? 'ja' : 'ko';
+        if (scheme !== 'light' && scheme !== 'dark') {
+          scheme =
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        }
+        root.style.colorScheme = scheme;
+      })();
+    </script>
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

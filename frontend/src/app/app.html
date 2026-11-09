@@ -1,0 +1,53 @@
+<mat-sidenav-container class="ct-shell">
+  <mat-sidenav
+    class="ct-menu"
+    position="end"
+    mode="over"
+    [opened]="menuOpen()"
+    (openedChange)="menuOpen.set($event)"
+  >
+    <mat-nav-list>
+      @for (link of navLinks(); track link.path) {
+        <a
+          mat-list-item
+          [routerLink]="link.path"
+          routerLinkActive
+          #active="routerLinkActive"
+          [routerLinkActiveOptions]="{ exact: link.exact }"
+          [activated]="active.isActive"
+          ariaCurrentWhenActive="page"
+          >{{ link.labelKey | translate }}</a
+        >
+      }
+      @for (link of accountLinks(); track link.path) {
+        <a
+          mat-list-item
+          [routerLink]="link.path"
+          routerLinkActive
+          #active="routerLinkActive"
+          [activated]="active.isActive"
+          ariaCurrentWhenActive="page"
+          >{{ link.showNickname ? auth().nickname : (link.labelKey | translate) }}</a
+        >
+      }
+      @if (auth().authenticated) {
+        <button mat-list-item type="button" (click)="onLogout()">
+          {{ 'header.logout' | translate }}
+        </button>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="ct-shell-content">
+    <app-header
+      [auth]="auth()"
+      [menuOpen]="menuOpen()"
+      (menuToggle)="toggleMenu()"
+      (logout)="onLogout()"
+    />
+    <main class="ct-main">
+      <router-outlet />
+    </main>
+    <app-footer />
+  </mat-sidenav-content>
+</mat-sidenav-container>
