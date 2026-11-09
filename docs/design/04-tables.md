@@ -1,6 +1,6 @@
 # 04. テーブル設計書
 
-- 状態: 基本設計 承認（2026-11-06、Issue #15 コメント 6678921752）。詳細設計: **作成済み、reviewer の確認の前**（工程4、Issue #20。11. に書いた。確認2（2026-11-09 の人間の決定）を反映し、Flyway の `V1__create_schema.sql` を書いて `test_catticket` に適用できることを確かめた）
+- 状態: 基本設計 承認（2026-11-06、Issue #15 コメント 6678921752）。詳細設計: **レビュー済み（ゲート4 の reviewer: 条件付き承認。指摘（韓国語の 11.4）を反映済み）、人間の承認待ち**（工程4、Issue #20。11. に書いた。確認2（2026-11-09 の人間の決定）を反映し、Flyway の `V1__create_schema.sql` を書いて `test_catticket` に適用できることを確かめた）
 - 担当: db-designer
 - 工程4（Issue #20）: 1.〜10. は基本設計の内容のまま（参照のための番号を変えない。確認2 で変わった `booking_site.name` の NULL 可・会場の住所の翻訳・表示できない公演は、該当の行にも反映した）。型・長さ・照合順序・制約・インデックスの詳細と、Issue #20 の D-01〜D-05・D-09 のうち db-designer の分は 11. に書いた。**4.・6. と 11. が違うところは 11. が正**。**11. と `backend/src/main/resources/db/migration/V1__create_schema.sql` は一致させる**
 - 最終更新: 2026-11-09
@@ -640,7 +640,7 @@ erDiagram
 
 ## 11. 詳細設計（工程4、Issue #20）
 
-- **状態: 作成済み、reviewer の確認の前**。確認2（2026-11-09 の人間の決定。11.6）を反映した。この節の定義から Flyway の `backend/src/main/resources/db/migration/V1__create_schema.sql` を書き、`./gradlew test` で `test_catticket` に適用されることを確かめた（11.9）。
+- **状態: レビュー済み（ゲート4 の reviewer: 条件付き承認。指摘（韓国語の 11.4）を反映済み）、人間の承認待ち**。確認2（2026-11-09 の人間の決定。11.6）を反映した。この節の定義から Flyway の `backend/src/main/resources/db/migration/V1__create_schema.sql` を書き、`./gradlew test` で `test_catticket` に適用されることを確かめた（11.9）。
 - 前提: 03 の 5.1（H-01〜H-11）・7.・8.・9.（D-01 は決定・D-05・D-06・D-07・D-09）・9.6、01 の R-65・R-66、05 の 3.3 の 9.・3.7、Issue #20 コメント 6679098450（D-02 の人間の決定: ニックネームの大文字・小文字は同じとみなす）と確認2 の決定（D-01 は 03 の 9.1 の案 (a)、D-02 は案 A + NFKC、名前のない予約サイト、会場の住所の翻訳）。
 - 確認2 で決まったことは 11.6 に記録した。
 - 新しいテーブル・列は足していない（03 の 5.1 のとおり。確認2 の決定でも要らなかった）。足したのは、管理者が1行だけであることを守る生成列 `app_user.admin_singleton`（D-04。値は `role` から決まり、新しい事実を持たない）と、ビュー `performance_effective`（D-09。テーブルではない）だけ。
@@ -1215,7 +1215,7 @@ A-01・A-08 は解消した。A-02〜A-07 はテーブルの形（型・列・�
 
 ### 04. 테이블 설계서
 
-- 상태: 기본설계 승인(2026-11-06, Issue #15 코멘트 6678921752). 상세설계: **작성함, reviewer 확인 전**(공정 4, Issue #20. 11.에 썼다. 확인 2(2026-11-09 사람의 결정)를 반영하고, Flyway `V1__create_schema.sql`을 써서 `test_catticket`에 적용되는 것을 확인했다)
+- 상태: 기본설계 승인(2026-11-06, Issue #15 코멘트 6678921752). 상세설계: **리뷰 완료(게이트 4 reviewer: 조건부 승인. 지적(한국어 11.4)을 반영함), 사람의 승인 대기**(공정 4, Issue #20. 11.에 썼다. 확인 2(2026-11-09 사람의 결정)를 반영하고, Flyway `V1__create_schema.sql`을 써서 `test_catticket`에 적용되는 것을 확인했다)
 - 담당: db-designer
 - 공정 4(Issue #20): 1.~10.은 기본설계 내용 그대로(참조용 번호를 바꾸지 않음. 확인 2에서 바뀐 `booking_site.name`의 NULL 가능·공연장 주소 번역·표시할 수 없는 공연은 해당 행에도 반영했다). 타입·길이·콜레이션·제약·인덱스의 상세와, Issue #20의 D-01~D-05·D-09 중 db-designer 몫은 11.에 썼다. **4.·6.과 11.이 다른 곳은 11.이 기준**. **11.과 `backend/src/main/resources/db/migration/V1__create_schema.sql`은 일치시킨다**
 - 최종 갱신: 2026-11-09
@@ -1855,7 +1855,7 @@ erDiagram
 
 ### 11. 상세설계(공정 4, Issue #20)
 
-- **상태: 작성함, reviewer 확인 전**. 확인 2(2026-11-09 사람의 결정. 11.6)를 반영했다. 이 절의 정의로 Flyway `backend/src/main/resources/db/migration/V1__create_schema.sql`을 쓰고, `./gradlew test`로 `test_catticket`에 적용되는 것을 확인했다(11.9).
+- **상태: 리뷰 완료(게이트 4 reviewer: 조건부 승인. 지적(한국어 11.4)을 반영함), 사람의 승인 대기**. 확인 2(2026-11-09 사람의 결정. 11.6)를 반영했다. 이 절의 정의로 Flyway `backend/src/main/resources/db/migration/V1__create_schema.sql`을 쓰고, `./gradlew test`로 `test_catticket`에 적용되는 것을 확인했다(11.9).
 - 전제: 03의 5.1(H-01~H-11)·7.·8.·9.(D-01은 결정·D-05·D-06·D-07·D-09)·9.6, 01의 R-65·R-66, 05의 3.3의 9.·3.7, Issue #20 코멘트 6679098450(D-02 사람의 결정: 닉네임 대소문자는 같은 것으로 본다)과 확인 2의 결정(D-01은 03의 9.1의 안 (a), D-02는 안 A + NFKC, 이름 없는 예매처, 공연장 주소 번역).
 - 확인 2에서 정해진 것은 11.6에 기록했다.
 - 새 테이블·열은 더하지 않았다(03의 5.1대로. 확인 2의 결정으로도 필요 없었다). 더한 것은 관리자가 1행뿐임을 지키는 생성 열 `app_user.admin_singleton`(D-04. 값은 `role`로 정해지며 새 사실을 갖지 않음)과 뷰 `performance_effective`(D-09. 테이블이 아님)뿐이다.
@@ -2164,14 +2164,42 @@ SQL은 일본어 쪽 11.3과 같다(`CREATE ALGORITHM = MERGE SQL SECURITY INVOK
 
 #### 11.4 인덱스(최종)
 
-인덱스 목록(테이블·이름·열·종류·이유)은 일본어 쪽 11.4의 표와 같다. 기본 키(`PRIMARY`) 외에 두는 것: 각 표의 유일 제약(11.2), `idx_venue_district`, `idx_venue_location`, `idx_performance_venue_id`, `idx_station_location`, `idx_coin_locker_station_id`, `idx_ranking_entry_collection_rank`, `idx_app_user_status`, `idx_auth_token_user_purpose_expires`, `idx_favorite_user_created`, `idx_favorite_performance_id`, `idx_review_performance_created`, `idx_mail_send_log_created`, `idx_batch_job_run_name_started`, `idx_batch_step_run_step_result_started`. 외래 키 열은 맨 앞이 그 열인 인덱스가 있으면 그것을 쓰고(MySQL은 새로 만들지 않음), 없으면 `idx_{테이블}_{열}`을 명시해 만든다. 주요 이유:
+기본 키(`PRIMARY`) 외에 두는 것. 외래 키 열은 맨 앞이 그 열인 인덱스가 있으면 그것을 쓰고(MySQL은 새로 만들지 않음), 없으면 `idx_{테이블}_{열}`을 명시해 만든다.
 
-- `uk_ranking_collection_type_genre_start`: "기간 종류·장르별로 `period_end`가 오늘보다 앞이고 `period_start`가 가장 새로운 행"(03의 4.9)을 뒤에서부터 읽는다. 직전 기간을 첫날로 찾는다(API-21).
-- `idx_ranking_entry_collection_rank`: 조합의 순위를 "제공처 순위 → 공연 ID" 순서(03의 9.1)로 읽는다(API-03·20·21). 정렬이 필요 없다.
-- `uk_genre_trend_end_start_genre`: S6의 교체, API-22의 최신 기간.
-- `uk_app_user_active_nickname`·`uk_app_user_admin_singleton`: DB-06·DB-07(D-04).
-- `idx_auth_token_user_purpose_expires`: 외래 키를 겸한다. 오래된 토큰을 사용됨으로 한다(03의 7.6). B-04의 "유효 기한 안의 `SIGNUP`이 없음"(인덱스만으로 판정. D-05).
-- `idx_favorite_user_created`·`idx_review_performance_created`: 목록(새로운 순 → ID 큰 순. API-43·10·55). InnoDB 인덱스는 끝에 기본 키를 가지므로 ID 순서도 이것으로 된다. 리뷰는 평점 합계·건수(API-01·03·43)에도 쓴다.
+| 테이블 | 이름 | 열 | 종류 | 이유(어떤 쿼리를 위한 것인지) |
+|---|---|---|---|---|
+| `venue` | `uk_venue_kopis_venue_id` | `kopis_venue_id` | UNIQUE | 수집 시 중복 방지. API-01·04의 공연장 ID |
+| `venue` | `idx_venue_district` | `district` | INDEX | 구로 좁힌다(API-01·02) |
+| `venue` | `idx_venue_location` | `latitude`, `longitude` | INDEX | 지도 범위·주변 후보(API-01·02·05) |
+| `performance` | `uk_performance_kopis_performance_id` | `kopis_performance_id` | UNIQUE | 수집 시 중복 방지. API의 공연 ID. 순위 행과의 결합(D-01) |
+| `performance` | `idx_performance_venue_id` | `venue_id` | INDEX | 외래 키. 공연장의 공연(API-01의 `venueId`·API-05) |
+| `booking_site` | `uk_booking_site_performance_source_order` | `performance_id`, `source`, `sort_order` | UNIQUE | 외래 키를 겸한다. 공연의 예매처를 정렬 순서로 읽는다(API-03·51) |
+| `performance_override` | `uk_performance_override_performance_field` | `performance_id`, `field_name` | UNIQUE | 외래 키를 겸한다. 뷰의 결합(11.3). API-50의 `EXISTS` |
+| `station` | `uk_station_external_station_code` | `external_station_code` | UNIQUE | 수집 시 중복 방지 |
+| `station` | `uk_station_line_name_ko` | `line`, `name_ko` | UNIQUE | 물품보관함 연결에서 역이 하나로 정해진다(05의 4.3) |
+| `station` | `idx_station_location` | `latitude`, `longitude` | INDEX | 주변 역 후보(API-04·05) |
+| `coin_locker` | `idx_coin_locker_station_id` | `station_id` | INDEX | 외래 키. 역의 물품보관함(API-04·05) |
+| `translation` | `uk_translation_source_hash` | `source_hash` | UNIQUE | 원문의 번역을 찾는다(1.2의 모든 API, 11.3). 같은 원문을 두 번 번역하지 않는다(S7) |
+| `translation_usage` | `uk_translation_usage_usage_month` | `usage_month` | UNIQUE | 월 글자 수(S7) |
+| `ranking_collection` | `uk_ranking_collection_type_genre_start` | `period_type`, `genre_code`, `period_start` | UNIQUE | 조합 중복 방지. "기간 종류·장르별로 `period_end`가 오늘보다 앞이고 `period_start`가 가장 새로운 행"(03의 4.9)을 뒤에서부터 읽는다. 직전 기간을 첫날로 찾는다(API-21) |
+| `ranking_entry` | `uk_ranking_entry_collection_performance` | `ranking_collection_id`, `kopis_performance_id` | UNIQUE | 외래 키를 겸한다. 같은 조합에 같은 공연을 이중으로 넣지 않는다 |
+| `ranking_entry` | `idx_ranking_entry_collection_rank` | `ranking_collection_id`, `provider_rank`, `kopis_performance_id` | INDEX | 조합의 순위를 "제공처 순위 → 공연 ID" 순서(03의 9.1)로 읽는다(API-03·20·21). 정렬이 필요 없다 |
+| `genre_trend` | `uk_genre_trend_end_start_genre` | `period_end`, `period_start`, `genre_code` | UNIQUE | S6의 교체. API-22의 최신 기간(`MAX(period_end)`와 그 기간의 행) |
+| `app_user` | `uk_app_user_email` | `email` | UNIQUE | 이메일 주소 중복 방지(인증 전 행도). 로그인·신청·재설정의 검색(API-31·33·35·37) |
+| `app_user` | `uk_app_user_active_nickname` | `active_nickname` | UNIQUE | 유효한 행 사이의 닉네임 중복 방지와 확인(API-33·34·40. DB-06) |
+| `app_user` | `uk_app_user_admin_singleton` | `admin_singleton` | UNIQUE | 관리자는 1행뿐(DB-07, D-04) |
+| `app_user` | `idx_app_user_status` | `status` | INDEX | B-04의 후보(인증 전 행)를 읽는다(03의 9.2, D-05) |
+| `auth_token` | `uk_auth_token_token_hash` | `token_hash` | UNIQUE | 토큰으로 찾는다(API-34·36·38). `FOR UPDATE`로 그 1행만 잠근다(D-05) |
+| `auth_token` | `idx_auth_token_user_purpose_expires` | `user_id`, `purpose`, `expires_at` | INDEX | 외래 키를 겸한다. 오래된 토큰을 사용됨으로 한다(03의 7.6). B-04의 "유효 기한 안의 `SIGNUP`이 없음"(인덱스만으로 판정할 수 있다. D-05) |
+| `favorite` | `uk_favorite_user_performance` | `user_id`, `performance_id` | UNIQUE | 외래 키(`user_id`)를 겸한다. 중복 방지(API-44). API-03의 `isFavorite` |
+| `favorite` | `idx_favorite_user_created` | `user_id`, `created_at` | INDEX | 즐겨찾기 목록(등록이 새로운 순 → ID가 큰 순. API-43. InnoDB 인덱스는 끝에 기본 키를 가지므로 ID 순서도 이것으로 된다) |
+| `favorite` | `idx_favorite_performance_id` | `performance_id` | INDEX | 외래 키 |
+| `review` | `uk_review_user_performance` | `user_id`, `performance_id` | UNIQUE | 외래 키(`user_id`)를 겸한다. 1인 1공연 1건(API-11). API-03의 내 리뷰 |
+| `review` | `idx_review_performance_created` | `performance_id`, `created_at` | INDEX | 외래 키(`performance_id`)를 겸한다. 리뷰 목록(새로운 순 → ID가 큰 순. API-10·55), 평점 합계와 건수(API-01·03·43) |
+| `mail_send_log` | `idx_mail_send_log_created` | `created_at` | INDEX | 최근 24시간의 수(03의 4.8) |
+| `batch_job_run` | `idx_batch_job_run_name_started` | `job_name`, `started_at` | INDEX | 처리별 최신 실행(운영) |
+| `batch_step_run` | `uk_batch_step_run_job_step` | `job_run_id`, `step_name` | UNIQUE | 외래 키를 겸한다 |
+| `batch_step_run` | `idx_batch_step_run_step_result_started` | `step_name`, `result`, `started_at` | INDEX | 지난번 S1이 성공한 날과 창의 마지막 날(05의 3.3) |
 
 **기본설계(6.)에서 뺀 것·바꾼 것**
 
