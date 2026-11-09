@@ -1,6 +1,6 @@
 # 06. クラス設計書
 
-- 状態: 作成中（工程4、Issue #20。reviewer の確認の前）
+- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、指摘（軽微1〜7・提案8〜10）を反映済み。人間の承認待ち）
 - 担当: architect
 - 入力: `01-requirements.md`、`02-screens.md`、`03-api.md`（API 仕様の詳細）、`04-tables.md` と `backend/src/main/resources/db/migration/V1__create_schema.sql`、`05-batch.md`、ADR 0001〜0016。
 - 対象: バックエンド（`backend/`、Spring Boot）だけ。Angular のクラス設計は対象外（工程5で frontend-dev が `02`・`03`・`07` から作る）。
@@ -32,8 +32,8 @@
 |---|---|---|---|
 | `spring-boot-starter-security` | 標準スターター | ADR 0013 | セッション認証、CSRF、パスワードのハッシュ（bcrypt） |
 | `spring-boot-starter-mail` | 標準スターター | ADR 0012 | Gmail SMTP の送信（`JavaMailSender`） |
-| `spring-boot-starter-restclient` | 標準スターター | ADR 0007・0008・0011（RestClient を使うと決めた） | KOPIS・Azure Translator・reCAPTCHA の呼び出し |
-| `tools.jackson.dataformat:jackson-dataformat-xml`（バージョンは Spring Boot の管理に従い書かない） | Jackson のモジュール（Boot が管理） | ADR 0008（KOPIS の XML を Jackson で読む） | KOPIS の XML レスポンスの読み取り |
+| `spring-boot-starter-restclient` | 標準スターター | ADR 0007・0011（Spring の HTTP クライアントで呼ぶと決めた）、ADR 0008（`RestClient` と明記） | KOPIS・Azure Translator・reCAPTCHA の呼び出し |
+| `tools.jackson.dataformat:jackson-dataformat-xml`（バージョンは Spring Boot の管理に従い書かない） | Jackson のモジュール（Boot が管理） | ADR 0008（KOPIS の XML を Jackson で読む） | KOPIS の XML レスポンスの読み取り（`collect.client` の `XmlMapper` だけで使う。Spring MVC の XML のメッセージコンバーターは 3.1 の `WebMvcConfig` で外す） |
 | `spring-boot-starter-security-test`（testImplementation） | 標準スターター | ADR 0013 | `@WebMvcTest` での認証・CSRF のテスト |
 
 既にある依存（`spring-boot-starter-webmvc`、`spring-boot-starter-validation`、`mybatis-spring-boot-starter`、Flyway、MySQL ドライバ、テスト用スターター）はそのまま使う。
@@ -95,7 +95,7 @@ flowchart LR
 
 - `summary` は 03 の 2 の機能名ではなく、内部の部品のパッケージ（`collect`・`translation`・`mail` と同じ扱い）。公演のカードを返す API が 4 つの機能（`performance`・`surrounding`・`ranking`・`favorite`）にまたがり、`performance` に置くと `performance → ranking → performance` の循環になるため分けた。
 
-- 矢印は「Service が相手の Service を呼ぶ」。逆向きは作らない（例: `review` は `performance` を呼ばず、公演が公開かどうかは自分の Mapper の SQL で `SharedSql.publicCondition` を使って確かめる）。
+- 矢印は「Service が相手の Service を呼ぶ」。逆向きは作らない（例: `review` は `performance` を呼ばず、公演が表示できるか（非表示でないか。03 の 1.6 の「表示できる公演」）は自分の Mapper の SQL（`ReviewMapper.findVisiblePerformanceId`。4.3）で確かめる。レビューは終わった公演にも書けるので `SharedSql.publicCondition` は使わない）。
 - `account` は `auth` の Service を呼ばず、自分の Mapper で `app_user` を更新する（ニックネーム・パスワード・退会は `account` の責務。03 の 2）。セッションの終了は `common.security.LoginSessionManager` を使う。
 - すべての機能は `common` を使ってよい。`common` は機能パッケージに依存しない（例外: `common.security.SessionUserFilter` → `auth.AuthSessionService`。認証の読み込みだけ）。
 
@@ -109,11 +109,18 @@ flowchart LR
 | `ClockConfig` | `common.config` | `Clock` の Bean（`Clock.system(ZoneId.of("Asia/Seoul"))`） |
 | `HttpClientConfig` | `common.config` | 外部 API ごとの `RestClient`（`@Qualifier("kopisRestClient")` など。7） |
 | `JacksonConfig` | `common.config` | `JsonMapperBuilderCustomizer`（3.3 の型の厳しさ） |
+| `WebMvcConfig` | `common.config` | `WebMvcConfigurer`。API のリクエスト・レスポンスを JSON だけにする（下の「JSON だけにする」） |
 | `DateTimes` | `common.time` | `OffsetDateTime toApi(LocalDateTime)`（+09:00、秒で切り捨て）、`LocalDate today(Clock)`、`LocalDateTime now(Clock)`（秒で切り捨て。DB の `DATETIME` は秒まで） |
 
 - **「今日」・今の時刻（03 の 7.1）**: Service の公開メソッドの最初に `LocalDateTime now = DateTimes.now(clock)`（と `today`）を1回だけ求め、その中の判定と保存（`created_at` など）すべてに渡す。Mapper の SQL で `NOW()`・`CURRENT_DATE` を使わない（テストで `Clock.fixed` に差し替えられるようにし、1回のリクエストの中で値をそろえるため）。DB の既定値（`DEFAULT CURRENT_TIMESTAMP`）にも頼らず、INSERT・UPDATE で値を渡す。
 - 時刻の型: DB の `DATETIME` ↔ Java の `LocalDateTime`（Asia/Seoul の壁時計の時刻）。`DATE` ↔ `LocalDate`。API に出すときだけ `DateTimes.toApi` で `OffsetDateTime` にする。
 - JDBC の接続は `connectionTimeZone=Asia/Seoul&forceConnectionTimeZoneToSession=true`（A-05。9）。
+- **JSON だけにする（03 の 1.1・7.1・7.3。`WebMvcConfig`）**: KOPIS のために `jackson-dataformat-xml` がクラスパスにあると、Spring MVC はクラスパスの検出で Jackson の XML のメッセージコンバーター（`JacksonXmlHttpMessageConverter`）を既定で登録し、XML の本文を受け付け、`Accept: application/xml` に XML で返してしまう。これを次の2つで防ぐ。
+  1. `configureMessageConverters(HttpMessageConverters.ServerBuilder builder)` で `builder.configureMessageConvertersList(list -> list.removeIf(c -> c instanceof JacksonXmlHttpMessageConverter))` とし、MVC の一覧から XML のコンバーターを除く。これで `Content-Type: application/xml` などの本文は `HttpMediaTypeNotSupportedException` → 415 `UNSUPPORTED_MEDIA_TYPE`（3.2）になる。List を受け取る旧い `configureMessageConverters(List)`・`extendMessageConverters(List)` は Spring Framework 7.0 で非推奨（削除予定）なので使わない。
+  2. `configureContentNegotiation(c -> c.ignoreAcceptHeader(true).defaultContentType(MediaType.APPLICATION_JSON))` とし、`Accept` の値にかかわらず JSON（UTF-8）で返す（`Accept: application/xml` でも JSON。406 にしない。03 の 7.3 に 406 のコードはない）。
+  - `RestClient`（KOPIS など）のコンバーターには影響しない（KOPIS の XML は `KopisClient` が `XmlMapper` で読む。4.9）。
+  - 確認先: Spring Framework 7.0 Javadoc の `WebMvcConfigurer`（`configureMessageConverters(HttpMessageConverters.ServerBuilder)`、List 版の非推奨）、`HttpMessageConverters.Builder`（`configureMessageConvertersList` は 7.0.3 から）、`ContentNegotiationConfigurer`（`ignoreAcceptHeader`・`defaultContentType`）、Spring Framework リファレンス「Message Converters」（確認日 2026-11-09）。
+  - テスト（`@WebMvcTest`。7.2）: ① 本文のある API（例: API-11・API-31）に `Content-Type: application/xml` で XML の本文を送ると 415・`code = UNSUPPORTED_MEDIA_TYPE`、② GET の API（例: API-01）に `Accept: application/xml` を付けても 200 で `Content-Type: application/json` の本文、③ `Content-Type: text/plain` の本文も 415。
 
 ### 3.2 例外とエラーの応答（03 の 7.3）
 
@@ -153,6 +160,7 @@ flowchart LR
 | そのほかすべて（`DataAccessException`・`RestClientException` などで Service が変えなかったもの） | 500 | `INTERNAL_ERROR` | `[]`（例外はログに ERROR で残す。応答に例外の内容を入れない） |
 
 - `errors` は同じ（`field`, `reason`）の組を1つにまとめる（同じ項目に2つの制約が同じ理由で当たったとき）。
+- 415 は、MVC のメッセージコンバーターが JSON だけになっていることが前提（3.1 の「JSON だけにする」。XML のコンバーターが残っていると XML の本文が 415 にならない）。`WebMvcConfig` は `@WebMvcTest` でも読み込まれるので、415 のテストは Controller のテストで書く（3.1 のテスト ①〜③）。
 - Service で外部 API・DB の例外を業務のコードに変えるもの: `DuplicateKeyException` → 409 系（4.3・4.5・4.6）、`MailException` → 503 `MAIL_SEND_FAILED`（4.11）、reCAPTCHA の呼び出しの失敗 → 503 `RECAPTCHA_UNAVAILABLE`（4.5）。ほかの DB の例外は変えず 500。
 - MyBatis（Spring の例外の変換）での MySQL のエラー: 1062 → `DuplicateKeyException`、1213・1205 → `PessimisticLockingFailureException` の子（`CannotAcquireLockException` など）。どの一意制約に当たったかは `common.db.DbErrors.isDuplicateKey(ex, "uk_…")`（例外のメッセージに制約名が入る）で見分ける。
 - ログ: 4xx は INFO（入力の誤りの詳細は出さない）、5xx は ERROR（スタックトレース付き）。パスワード・トークン・メールアドレスはログに出さない。
@@ -166,13 +174,16 @@ flowchart LR
 | `@NotNull`・`@NotBlank` | 標準 | `REQUIRED` | 必須 |
 | `@CodePointLength(min, max)` | 独自（`CodePointLengthValidator`） | `LENGTH` | コードポイントで数える（標準の `@Size` は UTF-16 の単位で数えるので文字列には使わない。リストの要素の数は `@Size(message = "LENGTH")`） |
 | `@NoControlChars(allowNewlines = false)` | 独自 | `FORMAT` | 一般カテゴリ Cc を含まない（`allowNewlines` なら LF・CR だけ許す。03 の 7.1） |
-| `@PasswordRule` | 独自（`PasswordRuleValidator`） | `PASSWORD_RULE` | 03 の 4.6 のルール。`null`・空は通す（必須は `@NotNull(message = "REQUIRED")` と組む）。判定の本体は `PasswordPolicy.matches(String)`（`AuthLoginService` も使う） |
+| `@PasswordRule` | 独自（`PasswordRuleValidator`） | `PASSWORD_RULE` | 03 の 4.6 のルール。`null`・空は通す（必須は `@NotNull(message = "REQUIRED")` と組む）。判定の本体は `common.validation.PasswordPolicy.matches(String)`（`AuthLoginService`・`AccountService`・`AuthAdminService` も使う。下の「判定の部品」） |
 | `@OneOf(values)` / `@OneOfEnum(Genre.class)` | 独自 | `INVALID_VALUE` | 決まった値の一覧（ジャンル・区・`status`・`period`・`lang`・`visibility`） |
 | `@Email` + `@Pattern("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")` + `@CodePointLength(max = 254)` | 標準 + 独自 | `FORMAT` / `LENGTH` | メールアドレス（03 の API-33） |
 | `@Min`・`@Max`・`@DecimalMin`・`@DecimalMax` | 標準 | `RANGE` | 数値・座標の範囲 |
 | `@Pattern(regexp = "true\|false")` | 標準 | `TYPE` | 真偽のクエリ（`includeEnded`）。文字列で受けて Service に渡す前に `Boolean` にする |
 | `@ValidPerformanceFilter` | 独自（クラスに付ける） | `DATE_ORDER`・`CONFLICT`・`INCOMPLETE`・`RANGE` | API-01・02 の組み合わせ（03 の 4.1・8.1）。`from` > `to` は `to` に `DATE_ORDER`。区・地図の範囲・会場の同時の指定は指定した項目ごとに `CONFLICT`。地図の範囲の4つの一部だけは `INCOMPLETE`。南西 > 北東は `RANGE` |
 
+- **判定の部品**（`common.validation`、Spring に依存しない。2.2 の「`common` は機能パッケージに依存しない」と「`account` は `auth` を呼ばない」を守るため `common` に置く）:
+  - `PasswordPolicy`: `boolean matches(String password)`（03 の 4.6 のルール）。`@PasswordRule` の `PasswordRuleValidator`、`AuthLoginService`（4.5）、`AccountService`（4.6）、`AuthAdminService`（5.5）が使う。
+  - `EmailRule`: `boolean isValid(String email)`（03 の API-33 の規則: 上の `@Email` + `@Pattern` + 254 文字以内と同じ判定）。Bean Validation のない場所（B-03 の `AuthAdminService`）で使う。
 - **前後の空白・NFKC**: record のコンパクトコンストラクターで行う（Bean Validation より前に値が決まる）。例: `SignupRequest` は `email = Texts.stripToNull(email)`、`nickname = Nicknames.normalize(nickname)`（NFKC → strip → 空なら `null`）。パスワード・トークン・レビュー本文は変えない（03 の 7.1）。
 - **クエリの record**（`common.validation`）: `PageQuery(Integer page, Integer size)`（`@Min(0) @Max(10000)`、`@Min(1) @Max(100)`、`message = "RANGE"`。`null` は既定値 0・20 にするメソッド `page()`・`size()`）、`LangQuery(String lang)`（`@OneOf({"ko","ja"})`、`null` は `ko`。`Lang lang()` を返す）。繰り返しのクエリは `List<String>` で受け、コンパクトコンストラクターで重複を除く（`LinkedHashSet`）。
 - **座標**: `BigDecimal` で受ける（`NaN`・`Infinity` は型の変換で失敗し `TYPE`）。
@@ -237,14 +248,14 @@ flowchart LR
 | `PerformanceStatus`（enum） | `ONGOING`, `UPCOMING`, `ENDED`。`of(LocalDate start, LocalDate end, LocalDate today)`（03 の 1.6） |
 | `VenueRef`（record） | `venueId`, `LocalizedText name` |
 | `PerformanceSummary`（record） | 03 の 7.2 の項目 |
-| `PerformanceSummaryRow`（record） | SQL の結果（公演 ID、修正を反映した公演名・期間・ジャンル、会場 ID・名前、ポスター、受賞歴） |
+| `PerformanceSummaryRow`（record） | SQL の結果（`long id`（`performance.id`。内部の ID で API には出さない）、`performanceId`（KOPIS の公演 ID）、修正を反映した公演名・期間・ジャンル、会場 ID・名前、ポスター、受賞歴） |
 | `ReviewItem`（record） | 03 の 7.2 |
 | `LocalizedTextFactory` | `LocalizedText of(String original, Lang lang, Map<String, String> translations)`（`lang = ko` か翻訳がなければ `value = original`, `translated = false`）。駅名は `ofStation(String nameKo, String nameJa, Lang, Map)`（`name_ja` → 翻訳 → 原文。03 の 7.2） |
 
 **`com.catticket.summary.PerformanceSummaryAssembler`**（`@Component`）
 
 - `List<PerformanceSummary> assemble(List<PerformanceSummaryRow> rows, Lang lang, LocalDate today, boolean withRating)`。
-- 処理: ① `lang = ja` なら、行の公演名・会場名を集めて `TranslationLookupService.lookup(Collection<String> originals)` を1回呼ぶ（`Map<原文, 翻訳>`）→ ② `withRating` なら `ReviewService.findRatingStats(Collection<String> performanceIds)` を1回呼ぶ（`Map<公演ID, RatingStat(sum, count)>`。ない公演は 0 件）→ ③ 行の順番のまま `PerformanceSummary` にする（`status` は `PerformanceStatus.of`、`rating` は `withRating = false` なら `null`。03 の 7.2）。
+- 処理: ① `lang = ja` なら、行の公演名・会場名を集めて `TranslationLookupService.lookup(Collection<String> originals)` を1回呼ぶ（`Map<原文, 翻訳>`）→ ② `withRating` なら、行の内部の ID（`PerformanceSummaryRow.id`）を集めて `ReviewService.findRatingStats(Collection<Long> performanceIds)` を1回呼ぶ（`Map<内部の公演 ID, RatingStat(sum, count)>`。ない公演は 0 件）→ ③ 行の順番のまま `PerformanceSummary` にする（`status` は `PerformanceStatus.of`、`rating` は `withRating = false` なら `null`。03 の 7.2）。
 - 翻訳を引くのは `lang = ja` のときだけ（4.10）。1行ずつ引かない（N+1 にしない）。
 
 ### 3.6 そのほかの共通部品
@@ -256,7 +267,7 @@ flowchart LR
 | `Hashes` | `common.text` | `sha256Hex(String)`: UTF-8 のバイトの SHA-256 を小文字の16進 64 文字（翻訳の `source_hash`、トークンの `token_hash`。04） |
 | `Likes` | `common.db` | `contains(String)`: `\`・`%`・`_` を `\` でエスケープして `%…%` にする（SQL は `LIKE #{kw} ESCAPE '\\'`） |
 | `DbErrors` | `common.db` | `isDuplicateKey(DataAccessException, String keyName)`、`isLockFailure(DataAccessException)`（1213・1205） |
-| `SharedSql.xml` | `mapper/common/` | `publicCondition`（03 の 1.6 の「公開中の公演」: 非表示でない・ソウル・…。04 の `performance_effective` の列で書く）、`summaryColumns`（`PerformanceSummaryRow` の列） |
+| `SharedSql.xml` | `mapper/common/` | `publicCondition`（03 の 1.6 の「公開中の公演」: 非表示でない・ソウル・…。04 の `performance_effective` の列で書く）、`summaryColumns`（`PerformanceSummaryRow` の列。内部の ID `pe.id` を含む） |
 | `GeoDistance` | `common.geo` | `double meters(lat1, lng1, lat2, lng2)`（ハバーサイン、半径 6,371,000 m。03 の 7.2） |
 | `GeoBounds`（record） | `common.geo` | `around(BigDecimal lat, BigDecimal lng, int meters)`: SQL の前の絞り込み用の緯度経度の四角（600 m で取り、Java で 500 m を正確に判定する） |
 | `Genre`（enum） | `common.code` | ジャンル（値は 05 の 7 の確認で確定する。分かっているのは 05 の 3.4 の 9 個）。`code`（`AAAA` など）と KOPIS の名前（`genrenm`）。`fromKopisName(String)` は `Optional` |
@@ -348,13 +359,13 @@ flowchart LR
 | `ReviewItem update(long reviewId, ReviewRequest, SessionUser)` | RW | `findForUpdate`（なし・公演が非表示 → 404 `REVIEW_NOT_FOUND`）→ 自分のでなければ 403 `FORBIDDEN` → UPDATE（`updated_at = now`） |
 | `void delete(long reviewId, SessionUser)` | RW | update と同じ確認 → DELETE |
 | `Optional<ReviewItem> findMine(long performanceId, long userId)` | RO | API-03 の `viewer.myReview` |
-| `Map<String, RatingStat> findRatingStats(Collection<String> performanceIds)` | RO | `SUM(rating)`・`COUNT(*)`（03 の 7.2 の `Rating`） |
+| `Map<Long, RatingStat> findRatingStats(Collection<Long> performanceIds)` | RO | `SUM(rating)`・`COUNT(*)`（03 の 7.2 の `Rating`）。引数・キーは内部の ID（`performance.id`。`review.performance_id` と同じ）。KOPIS の ID からの変換はしない（呼ぶ側の行が内部の ID を持つ: `PerformanceSummaryRow.id`、API-03 は `PerformanceDetailRow.id`）。空の引数なら SQL を呼ばずに空の `Map` |
 | `PageResponse<ReviewItem> listAll(long performanceId, PageQuery)` | RO | API-55（`admin` から呼ぶ。全部の項目、非表示の公演でも返す。公演の存在は `admin` が先に確かめる） |
 | `void deleteAny(long reviewId)` | RW | API-56（なければ 404 `REVIEW_NOT_FOUND`） |
 
 - `created_at`・`updated_at` は Service の `now`（3.1）。
 
-**`ReviewMapper`**（`mapper/review/ReviewMapper.xml`）: `Optional<Long> findVisiblePerformanceId(String kopisPerformanceId)`（`publicCondition` ではなく「非表示でない」だけ。03 の 8.3）、`Optional<LocalDate> findEffectiveStartDate(long performanceId)`、`List<ReviewRow> findPage(long performanceId, int limit, int offset)`（並び順は 03 の 3.）、`long countByPerformance(long performanceId)`、`boolean existsByUserAndPerformance(long userId, long performanceId)`、`void insert(ReviewInsert)`（`useGeneratedKeys`）、`Optional<ReviewOwnerRow> findForUpdate(long reviewId)`（`FOR UPDATE`、公演の非表示を JOIN で読む）、`void update(ReviewUpdate)`、`int delete(long reviewId)`、`List<RatingStatRow> sumAndCount(Collection<Long> performanceIds)`、`Optional<ReviewRow> findByUserAndPerformance(long userId, long performanceId)`。
+**`ReviewMapper`**（`mapper/review/ReviewMapper.xml`）: `Optional<Long> findVisiblePerformanceId(String kopisPerformanceId)`（`publicCondition` ではなく「非表示でない」だけ。03 の 8.3）、`Optional<LocalDate> findEffectiveStartDate(long performanceId)`、`List<ReviewRow> findPage(long performanceId, int limit, int offset)`（並び順は 03 の 3.）、`long countByPerformance(long performanceId)`、`boolean existsByUserAndPerformance(long userId, long performanceId)`、`void insert(ReviewInsert)`（`useGeneratedKeys`）、`Optional<ReviewOwnerRow> findForUpdate(long reviewId)`（`FOR UPDATE`、公演の非表示を JOIN で読む）、`void update(ReviewUpdate)`、`int delete(long reviewId)`、`List<RatingStatRow> sumAndCount(Collection<Long> performanceIds)`（`RatingStatRow(long performanceId, long sum, long count)`。`performanceId` は内部の ID。`WHERE performance_id IN (<foreach>) GROUP BY performance_id`）、`Optional<ReviewRow> findByUserAndPerformance(long userId, long performanceId)`。
 
 ### 4.4 ランキング（`ranking`）
 
@@ -428,7 +439,7 @@ flowchart LR
 | `AuthPurgeService.purgeExpiredSignups(LocalDateTime t)` → `int` | RW | B-04（5.6、03 の 9.2） |
 
 - `TokenPurpose`（enum）: `SIGNUP`, `PASSWORD_RESET`, `UNLOCK`（04 の `auth_token.purpose`）。`UserStatus`: `PENDING`, `ACTIVE`。
-- `PasswordPolicy`（`auth` パッケージ、Spring に依存しない）: 03 の 4.6 のルールの判定。`@PasswordRule` と `AuthLoginService` が使う。
+- パスワードのルールの判定は `common.validation.PasswordPolicy`（3.3。`auth` には置かない）。
 - `auth.client.RecaptchaClient`: `RecaptchaResult verify(String token)`。`tokenProperties.valid` が真なら `PASSED`、偽なら `FAILED`（→ 400 `RECAPTCHA_FAILED`）。429・5xx・タイムアウト・通信の失敗は `RecaptchaUnavailableException`（→ 503 `RECAPTCHA_UNAVAILABLE`）。再試行しない（03 の 7.5）。
 
 **`AuthMapper`**（`mapper/auth/AuthMapper.xml`）
@@ -465,7 +476,7 @@ flowchart LR
 - `String changeNickname(long userId, String nickname)`: `existsActiveNicknameOfOthers(userId, nickname)` → 409 `NICKNAME_ALREADY_USED` → `updateNickname`。`DuplicateKeyException`（`uk_app_user_active_nickname`）も 409（03 の API-40）。
 - `void changePassword(long userId, String current, String next)`: `passwordEncoder.matches(current, hash)` が偽 → 400 `CURRENT_PASSWORD_INCORRECT`（ログインの失敗回数は変えない）→ `updatePassword`。
 - `void withdraw(long userId, String current)`: 同じ確認 → `deleteUser`（レビュー・お気に入り・トークンは外部キーの CASCADE。04 の 5.）。
-- 現在のパスワードがルールに合わない（72 バイトを超えるなど）ときは、ハッシュと比べずに「合わない」とする（`PasswordPolicy`。API-31 と同じ）。
+- 現在のパスワードがルールに合わない（72 バイトを超えるなど）ときは、ハッシュと比べずに「合わない」とする（`common.validation.PasswordPolicy`。API-31 と同じ）。
 
 **`AccountMapper`**（`mapper/account/AccountMapper.xml`）: `Optional<AccountRow> findForUpdate(long userId)`、`boolean existsActiveNicknameOfOthers(long userId, String nickname)`、`void updateNickname(long userId, String nickname, LocalDateTime now)`、`void updatePassword(long userId, String hash, LocalDateTime now)`、`int deleteUser(long userId)`。
 
@@ -483,12 +494,12 @@ flowchart LR
 
 | メソッド | Tx | 内容 |
 |---|---|---|
-| `PageResponse<FavoriteItem> list(long userId, Lang, PageQuery)` | RO | `findPage`（非表示を除く。終わった公演は出す）→ `PerformanceSummaryAssembler.assemble(…, true)` → `FavoriteItem(favoritedAt, performance)` |
+| `PageResponse<FavoriteItem> list(long userId, Lang, PageQuery)` | RO | `count`（`findPage` と同じ条件）→ `findPage`（非表示を除く。終わった公演は出す）→ `PerformanceSummaryAssembler.assemble(…, true)` → `FavoriteItem(favoritedAt, performance)` |
 | `void add(long userId, String performanceId)` | RW | 公演が非表示でない（404）→ 登録済みなら何もしない → INSERT。`DuplicateKeyException`（`uk_favorite_user_performance`）は成功とみなす |
 | `void remove(long userId, String performanceId)` | RW | DELETE（0 件でも成功） |
 | `boolean isFavorite(long userId, long performanceId)` | RO | API-03 の `viewer.isFavorite` |
 
-**`FavoriteMapper`**（`mapper/favorite/FavoriteMapper.xml`）: `List<FavoriteRow> findPage(long userId, int limit, int offset)`（`ORDER BY f.created_at DESC, f.id DESC`。03 の API-43）、`long count(long userId)`、`Optional<Long> findVisiblePerformanceId(String kopisPerformanceId)`、`boolean exists(long userId, long performanceId)`、`void insert(long userId, long performanceId, LocalDateTime now)`、`int delete(long userId, String kopisPerformanceId)`。
+**`FavoriteMapper`**（`mapper/favorite/FavoriteMapper.xml`）: `List<FavoriteRow> findPage(long userId, int limit, int offset)`（`favorite f JOIN performance_effective pe ON pe.id = f.performance_id JOIN venue v`、`WHERE f.user_id = #{userId} AND pe.is_hidden = FALSE`（終わった公演は除かない）。`ORDER BY f.created_at DESC, f.id DESC`。03 の API-43）、`long count(long userId)`（**`findPage` と同じ FROM・WHERE**（非表示の公演を除く）で `COUNT(*)`。03 の API-43 の `totalElements`・`totalPages` が一覧に出る行の数と一致するようにする。条件は XML の `<sql id="visibleFavoriteFrom">` を2つで `<include>` して食い違わないようにする）、`Optional<Long> findVisiblePerformanceId(String kopisPerformanceId)`、`boolean exists(long userId, long performanceId)`、`void insert(long userId, long performanceId, LocalDateTime now)`、`int delete(long userId, String kopisPerformanceId)`。
 
 ### 4.8 管理（`admin`）
 
@@ -519,21 +530,23 @@ flowchart LR
 |---|---|---|
 | `PageResponse<AdminPerformanceItem> search(AdminSearchQuery, PageQuery)` | RO | `search`・`count`。`status` は `PerformanceStatus.of` |
 | `AdminPerformanceDetail getDetail(String performanceId)` | RO | `findPerformance`（ない → 404。非表示でも返す）→ `findOverrides` → `findBookingSites(COLLECTED / ADMIN)` → `fields` の 11 個を組み立てる |
-| `AdminPerformanceDetail applyPatch(String performanceId, ObjectNode body)` | RW | `AdminPatchParser.parse`（型の違いはここで 400）→ `findPerformanceForUpdate`（ない → 404）→ `errors` があれば `RequestValidationException` → 修正の後の開始日 ≤ 終了日（違えば `startDate`・`endDate` のうち本文にある方に `DATE_ORDER`）→ 項目ごとに `upsertOverride` → `bookingSites` があれば `deleteBookingSites(id, ADMIN)` → `insertBookingSites` → `upsertOverride(booking_sites, NULL)` → `getDetail` と同じ形で返す |
-| `void clearOverride(String performanceId, OverridableField field)` | RW | `findPerformanceForUpdate`（404）→ 取り消した後の期間の確認（`DATE_ORDER` を `field` に）→ `deleteOverride` → `bookingSites` なら `deleteBookingSites(id, ADMIN)` |
+| `AdminPerformanceDetail applyPatch(String performanceId, ObjectNode body)` | RW | `AdminPatchParser.parse`（型の違いはここで 400）→ `findPerformanceIdForUpdate`（ない → 404）→ `findPerformance`・`findOverrides`（ロックしない読み。下の「ロックと読み」）→ `errors` があれば `RequestValidationException` → 修正の後の開始日 ≤ 終了日（違えば `startDate`・`endDate` のうち本文にある方に `DATE_ORDER`）→ 項目ごとに `upsertOverride` → `bookingSites` があれば `deleteBookingSites(id, ADMIN)` → `insertBookingSites` → `upsertOverride(booking_sites, NULL)` → `getDetail` と同じ形で返す |
+| `void clearOverride(String performanceId, OverridableField field)` | RW | `findPerformanceIdForUpdate`（404）→ `findPerformance`・`findOverrides`（ロックしない読み）→ 取り消した後の期間の確認（`DATE_ORDER` を `field` に）→ `deleteOverride` → `bookingSites` なら `deleteBookingSites(id, ADMIN)` |
 | `VisibilityResponse setVisibility(String performanceId, boolean hidden)` | RW | `updateHidden`（0 件 → 404） |
 | `PageResponse<ReviewItem> listReviews(String performanceId, PageQuery)` | RO | `findPerformance`（404）→ `ReviewService.listAll` |
 | `void deleteReview(long reviewId)` | — | `ReviewService.deleteAny`（RW はその中） |
 
 - 順番の理由: 03 の API-52 は「公演がある（404）→ チェック」。本文の解析（型）は Controller の外の部品で先に行うが、項目ごとの誤り（`VALIDATION_FAILED`）は存在の確認の後に投げる。
 - `upsertOverride` は `updated_at = #{now}` を明示する（`overriddenAt` が値の同じ修正でも変わる。03 の API-52）。
+- **ロックと読み（API-52・53）**: ロックは `performance` の1行だけに取る（`findPerformanceIdForUpdate` = `SELECT id FROM performance WHERE kopis_performance_id = #{…} FOR UPDATE`。一意制約 `uk_performance_kopis_performance_id` の1行のロック）。値（自動収集の値・修正）は、ロックの後にロックしない読み（`findPerformance`・`findOverrides`）で読む。多くの表を結んだ SQL に `FOR UPDATE` を付けると、結んだ表（`performance_override` の11の行・`venue`）の行とギャップまでロックされるため、そうしない。同じ公演を書き換える処理（API-52・53）はどれも先にこの行をロックするので、ロックを取った後の読みは前の処理のコミットの後の値になる（REPEATABLE READ の読みの時点は、トランザクションの中の最初のロックしない読みで決まる。最初の文がこのロックなので、読みの時点はロックの後）。順番は 6.1 の `performance` → `performance_override` → `booking_site`。
 
 **`AdminMapper`**（`mapper/admin/AdminMapper.xml`）
 
 | メソッド | SQL の役割 |
 |---|---|
 | `List<AdminPerformanceRow> search(AdminSearchCondition)`・`long count(…)` | `performance_effective` + 会場（1.6 の公開の条件を使わない）。キーワードは `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`（A-03）。`hasOverride` は `EXISTS (SELECT 1 FROM performance_override …)`。`ORDER BY pe.start_date DESC, pe.kopis_performance_id` |
-| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)`・`findPerformanceForUpdate(…)` | 自動収集の値（`performance`）と修正を反映した値（`performance_effective`）の両方 |
+| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | 自動収集の値（`performance`）と修正を反映した値（`performance_effective`）の両方。ロックしない |
+| `Optional<Long> findPerformanceIdForUpdate(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = #{kopisPerformanceId} FOR UPDATE`（ほかの表を結ばない。4.8 の「ロックと読み」） |
 | `List<OverrideRow> findOverrides(long performanceId)` | `performance_override` |
 | `List<BookingSiteRow> findBookingSites(long performanceId, String source)` | `booking_site` |
 | `void upsertOverride(long performanceId, String fieldName, String value, LocalDateTime now)` | `INSERT … VALUES (…) AS n ON DUPLICATE KEY UPDATE override_value = n.override_value, updated_at = n.updated_at` |
@@ -690,7 +703,7 @@ CatTicket の会員登録を完了するには、下のリンクを開いてく�
 
 - `run()`: `BatchJobRunner.execute(CREATE_ADMIN, …)` → `AuthAdminService.createAdmin(props.admin().email(), props.admin().password(), now)`。
 - `AuthAdminService.createAdmin`（RW）: 05 の 5 の 2.〜5.。① メールアドレスの形（API-33 と同じ規則。`EmailRule`）・`PasswordPolicy` → 満たさなければ `FAILURE`（ログにパスワードを出さない）② `existsAdmin()` → いれば何もせず `SUCCESS`（ログに「既にいる」）③ `existsUserByEmail` → あれば `FAILURE` ④ `insertAdmin`（`role = 'ADMIN'`, `status = 'ACTIVE'`, ニックネーム `catticket-admin`（04 の H-08。API には出さない）, `password_hash = passwordEncoder.encode(password)`）。`uk_app_user_admin_singleton` の違反（同時の実行）は `FAILURE`。
-- メールアドレスの形の規則は、API-33 の制約（3.3）と同じものを `auth.EmailRule.isValid(String)` にまとめ、Bean Validation のない場所（B-03）でも使う。
+- メールアドレスの形の規則は、API-33 の制約（3.3）と同じものを `common.validation.EmailRule.isValid(String)` にまとめ、Bean Validation のない場所（B-03）でも使う（`PasswordPolicy` と同じく `common.validation`。3.3）。
 
 ### 5.6 B-04 期限の切れた認証前の申込の削除（`auth.batch.PurgeExpiredSignupsJob`）
 
@@ -726,7 +739,7 @@ CatTicket の会員登録を完了するには、下のリンクを開いてく�
 | API-38 | `AuthUnlockService.confirm` | RW | `app_user` → `auth_token` |
 | API-40〜42 | `AccountService.*` | RW | `app_user` の行（API-42 の DELETE は CASCADE で `auth_token`・`review`・`favorite`） |
 | API-44, 45 | `FavoriteService.add`・`remove` | RW | なし（一意制約） |
-| API-52, 53 | `AdminPerformanceService.applyPatch`・`clearOverride` | RW | `performance` の行 `FOR UPDATE`（同じ公演の修正を順番に） |
+| API-52, 53 | `AdminPerformanceService.applyPatch`・`clearOverride` | RW | `performance` の行だけ `FOR UPDATE`（`findPerformanceIdForUpdate`。同じ公演の修正を順番に。値はロックしない読み。4.8 の「ロックと読み」） |
 | API-54 | `AdminPerformanceService.setVisibility` | RW | UPDATE の行ロック |
 | API-56 | `ReviewService.deleteAny` | RW | DELETE の行ロック |
 
@@ -833,8 +846,8 @@ verify(token):
 | `MailService` | 単体 | `JavaMailSender` を Mockito のモックにする（送った `SimpleMailMessage` を確かめる。`MailSendException` を投げさせて 503 を確かめる） |
 | Service | 単体 | Mapper・クライアント・`Clock`（`Clock.fixed`）・`Sleeper`（待たない実装）を Mockito で替える |
 | Mapper | `@MybatisTest`（実際の MySQL の `test_catticket`。`@AutoConfigureTestDatabase(replace = NONE)`） | Flyway が V1 を適用した DB。データは各テストで入れる |
-| Controller | `@WebMvcTest` + `@Import(SecurityConfig.class)` + spring-security-test（`with(csrf())`、`with(user(...))` の代わりに `SessionUser` の `Authentication` を入れる小さな部品 `TestAuth`） | Service を `@MockitoBean` |
-| バッチの部品（`SubwayRowConverter`・`RisingCalculator`・`GenreTrendCalculator`・`CollectWindows`・`AdminPatchParser`・`NearbyFilter`・`PasswordPolicy`） | 単体 | なし（Spring に依存しない）。駅のファイルは `src/test/resources/data/subway-sample/` |
+| Controller | `@WebMvcTest` + `@Import(SecurityConfig.class)` + spring-security-test（`with(csrf())`、`with(user(...))` の代わりに `SessionUser` の `Authentication` を入れる小さな部品 `TestAuth`）。JSON 以外の本文の 415・`Accept: application/xml` でも JSON（3.1 の「JSON だけにする」のテスト ①〜③）を含める | Service を `@MockitoBean` |
+| バッチの部品（`SubwayRowConverter`・`RisingCalculator`・`GenreTrendCalculator`・`CollectWindows`・`AdminPatchParser`・`NearbyFilter`・`PasswordPolicy`・`EmailRule`） | 単体（`PasswordPolicy`・`EmailRule` のテストは `common/validation/`） | なし（Spring に依存しない）。駅のファイルは `src/test/resources/data/subway-sample/` |
 
 - 外部 API を実際に呼ぶテストは書かない。テストの設定（`src/test/resources/application.yml` など）で `catticket.scheduler.enabled=false` にし、`catticket.task` を設定しない。API キーなどは空の値（`""`）で起動できるようにする（`CatticketProperties` は起動時に必須を確かめない。使う時点で空なら失敗）。
 - 結合・E2E のテストは qa-engineer（`backend/src/test/java/com/catticket/it/`）。単体のテストの場所は `backend/src/test/java/com/catticket/{機能}/`。
@@ -1025,7 +1038,7 @@ catticket:
 
 ### 06. 클래스 설계서
 
-- 상태: 작성 중(공정 4, Issue #20. reviewer 확인 전)
+- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 지적(경미 1~7·제안 8~10)을 반영함. 사람의 승인 대기)
 - 담당: architect
 - 입력: `01-requirements.md`, `02-screens.md`, `03-api.md`(API 사양 상세), `04-tables.md`와 `backend/src/main/resources/db/migration/V1__create_schema.sql`, `05-batch.md`, ADR 0001~0016.
 - 대상: 백엔드(`backend/`, Spring Boot)만. Angular 클래스 설계는 대상 외(공정 5에서 frontend-dev가 `02`·`03`·`07`로 만든다).
@@ -1058,8 +1071,8 @@ catticket:
 |---|---|---|---|
 | `spring-boot-starter-security` | 표준 스타터 | ADR 0013 | 세션 인증, CSRF, 비밀번호 해시(bcrypt) |
 | `spring-boot-starter-mail` | 표준 스타터 | ADR 0012 | Gmail SMTP 발송(`JavaMailSender`) |
-| `spring-boot-starter-restclient` | 표준 스타터 | ADR 0007·0008·0011(RestClient 사용을 정함) | KOPIS·Azure Translator·reCAPTCHA 호출 |
-| `tools.jackson.dataformat:jackson-dataformat-xml`(버전은 Spring Boot 관리를 따르며 쓰지 않음) | Jackson 모듈(Boot가 관리) | ADR 0008(KOPIS XML을 Jackson으로 읽음) | KOPIS XML 응답 읽기 |
+| `spring-boot-starter-restclient` | 표준 스타터 | ADR 0007·0011(Spring HTTP 클라이언트로 호출하기로 정함), ADR 0008(`RestClient`라고 명시) | KOPIS·Azure Translator·reCAPTCHA 호출 |
+| `tools.jackson.dataformat:jackson-dataformat-xml`(버전은 Spring Boot 관리를 따르며 쓰지 않음) | Jackson 모듈(Boot가 관리) | ADR 0008(KOPIS XML을 Jackson으로 읽음) | KOPIS XML 응답 읽기(`collect.client`의 `XmlMapper`에서만 씀. Spring MVC의 XML 메시지 컨버터는 3.1의 `WebMvcConfig`에서 뺀다) |
 | `spring-boot-starter-security-test`(testImplementation) | 표준 스타터 | ADR 0013 | `@WebMvcTest`에서 인증·CSRF 테스트 |
 
 기존 의존성(`spring-boot-starter-webmvc`, `spring-boot-starter-validation`, `mybatis-spring-boot-starter`, Flyway, MySQL 드라이버, 테스트 스타터)은 그대로 쓴다.
@@ -1102,7 +1115,7 @@ catticket:
 의존 그림(Mermaid)은 일본어 부분 2.2와 같다. 화살표는 "Service가 상대 Service를 부른다": performance → ranking·review·favorite·summary·translation, surrounding → performance·summary·translation, ranking → summary, favorite → summary, summary → review·translation, admin → review, auth → mail, collect → translation, common.security → auth.
 
 - `summary`는 03의 2의 기능명이 아니라 내부 부품 패키지(`collect`·`translation`·`mail`과 같은 취급). 공연 카드를 반환하는 API가 4개 기능(`performance`·`surrounding`·`ranking`·`favorite`)에 걸쳐 있고, `performance`에 두면 `performance → ranking → performance` 순환이 되므로 분리했다.
-- 역방향은 만들지 않는다(예: `review`는 `performance`를 부르지 않고, 공연이 공개인지는 자기 Mapper의 SQL에서 `SharedSql.publicCondition`으로 확인한다).
+- 역방향은 만들지 않는다(예: `review`는 `performance`를 부르지 않고, 공연을 표시할 수 있는지(숨김이 아닌지. 03의 1.6의 "표시할 수 있는 공연")는 자기 Mapper의 SQL(`ReviewMapper.findVisiblePerformanceId`. 4.3)로 확인한다. 리뷰는 끝난 공연에도 쓸 수 있으므로 `SharedSql.publicCondition`은 쓰지 않는다).
 - `account`는 `auth`의 Service를 부르지 않고 자기 Mapper로 `app_user`를 갱신한다(닉네임·비밀번호·탈퇴는 `account`의 책임. 03의 2). 세션 종료는 `common.security.LoginSessionManager`를 쓴다.
 - 모든 기능은 `common`을 써도 된다. `common`은 기능 패키지에 의존하지 않는다(예외: `common.security.SessionUserFilter` → `auth.AuthSessionService`. 인증 로딩만).
 
@@ -1116,11 +1129,18 @@ catticket:
 | `ClockConfig` | `common.config` | `Clock` Bean(`Clock.system(ZoneId.of("Asia/Seoul"))`) |
 | `HttpClientConfig` | `common.config` | 외부 API별 `RestClient`(`@Qualifier("kopisRestClient")` 등. 7) |
 | `JacksonConfig` | `common.config` | `JsonMapperBuilderCustomizer`(3.3의 타입 엄격함) |
+| `WebMvcConfig` | `common.config` | `WebMvcConfigurer`. API 요청·응답을 JSON만으로 한다(아래 "JSON만으로 하기") |
 | `DateTimes` | `common.time` | `OffsetDateTime toApi(LocalDateTime)`(+09:00, 초 단위 절사), `LocalDate today(Clock)`, `LocalDateTime now(Clock)`(초 단위 절사. DB `DATETIME`은 초까지) |
 
 - **"오늘"·현재 시각(03의 7.1)**: Service 공개 메서드 시작에서 `LocalDateTime now = DateTimes.now(clock)`(과 `today`)를 한 번만 구하고, 그 안의 판정과 저장(`created_at` 등) 모두에 넘긴다. Mapper SQL에서 `NOW()`·`CURRENT_DATE`를 쓰지 않는다(테스트에서 `Clock.fixed`로 바꿀 수 있게 하고, 한 요청 안에서 값을 맞추기 위해). DB 기본값(`DEFAULT CURRENT_TIMESTAMP`)에도 기대지 않고 INSERT·UPDATE에서 값을 넘긴다.
 - 시각 타입: DB `DATETIME` ↔ Java `LocalDateTime`(Asia/Seoul 벽시계 시각). `DATE` ↔ `LocalDate`. API로 낼 때만 `DateTimes.toApi`로 `OffsetDateTime`으로 바꾼다.
 - JDBC 접속은 `connectionTimeZone=Asia/Seoul&forceConnectionTimeZoneToSession=true`(A-05. 9).
+- **JSON만으로 하기(03의 1.1·7.1·7.3. `WebMvcConfig`)**: KOPIS 때문에 `jackson-dataformat-xml`이 클래스패스에 있으면, Spring MVC는 클래스패스 감지로 Jackson XML 메시지 컨버터(`JacksonXmlHttpMessageConverter`)를 기본 등록하여, XML 본문을 받아들이고 `Accept: application/xml`에 XML로 응답해 버린다. 이를 다음 두 가지로 막는다.
+  1. `configureMessageConverters(HttpMessageConverters.ServerBuilder builder)`에서 `builder.configureMessageConvertersList(list -> list.removeIf(c -> c instanceof JacksonXmlHttpMessageConverter))`로 MVC 목록에서 XML 컨버터를 뺀다. 이로써 `Content-Type: application/xml` 등의 본문은 `HttpMediaTypeNotSupportedException` → 415 `UNSUPPORTED_MEDIA_TYPE`(3.2)이 된다. List를 받는 옛 `configureMessageConverters(List)`·`extendMessageConverters(List)`는 Spring Framework 7.0에서 비권장(삭제 예정)이므로 쓰지 않는다.
+  2. `configureContentNegotiation(c -> c.ignoreAcceptHeader(true).defaultContentType(MediaType.APPLICATION_JSON))`으로 `Accept` 값과 관계없이 JSON(UTF-8)으로 응답한다(`Accept: application/xml`이어도 JSON. 406으로 하지 않는다. 03의 7.3에 406 코드는 없다).
+  - `RestClient`(KOPIS 등)의 컨버터에는 영향이 없다(KOPIS XML은 `KopisClient`가 `XmlMapper`로 읽는다. 4.9).
+  - 확인처: Spring Framework 7.0 Javadoc의 `WebMvcConfigurer`(`configureMessageConverters(HttpMessageConverters.ServerBuilder)`, List 판의 비권장), `HttpMessageConverters.Builder`(`configureMessageConvertersList`는 7.0.3부터), `ContentNegotiationConfigurer`(`ignoreAcceptHeader`·`defaultContentType`), Spring Framework 레퍼런스 "Message Converters"(확인일 2026-11-09).
+  - 테스트(`@WebMvcTest`. 7.2): ① 본문이 있는 API(예: API-11·API-31)에 `Content-Type: application/xml`로 XML 본문을 보내면 415·`code = UNSUPPORTED_MEDIA_TYPE`, ② GET API(예: API-01)에 `Accept: application/xml`을 붙여도 200이고 `Content-Type: application/json` 본문, ③ `Content-Type: text/plain` 본문도 415.
 
 **3.2 예외와 오류 응답(03의 7.3)**
 
@@ -1160,6 +1180,7 @@ catticket:
 | 그 밖의 전부(`DataAccessException`·`RestClientException` 등 Service가 바꾸지 않은 것) | 500 | `INTERNAL_ERROR` | `[]`(예외는 ERROR로 로그. 응답에 예외 내용을 넣지 않음) |
 
 - `errors`는 같은 (`field`, `reason`) 쌍을 하나로 합친다.
+- 415는 MVC 메시지 컨버터가 JSON만으로 되어 있는 것이 전제(3.1의 "JSON만으로 하기". XML 컨버터가 남아 있으면 XML 본문이 415가 되지 않는다). `WebMvcConfig`는 `@WebMvcTest`에서도 읽히므로 415 테스트는 Controller 테스트로 쓴다(3.1의 테스트 ①~③).
 - Service에서 외부 API·DB 예외를 업무 코드로 바꾸는 것: `DuplicateKeyException` → 409 계열(4.3·4.5·4.6), `MailException` → 503 `MAIL_SEND_FAILED`(4.11), reCAPTCHA 호출 실패 → 503 `RECAPTCHA_UNAVAILABLE`(4.5). 그 밖의 DB 예외는 바꾸지 않고 500.
 - MyBatis(Spring 예외 변환)에서 MySQL 오류: 1062 → `DuplicateKeyException`, 1213·1205 → `PessimisticLockingFailureException`의 자식(`CannotAcquireLockException` 등). 어느 유일 제약인지는 `common.db.DbErrors.isDuplicateKey(ex, "uk_…")`(예외 메시지에 제약명이 들어 있음)로 구분한다.
 - 로그: 4xx는 INFO(입력 오류 상세는 내지 않음), 5xx는 ERROR(스택 트레이스 포함). 비밀번호·토큰·이메일 주소는 로그에 내지 않는다.
@@ -1173,13 +1194,16 @@ catticket:
 | `@NotNull`·`@NotBlank` | 표준 | `REQUIRED` | 필수 |
 | `@CodePointLength(min, max)` | 자체(`CodePointLengthValidator`) | `LENGTH` | 코드 포인트로 센다(표준 `@Size`는 UTF-16 단위로 세므로 문자열에 쓰지 않음. 리스트 요소 수는 `@Size(message = "LENGTH")`) |
 | `@NoControlChars(allowNewlines = false)` | 자체 | `FORMAT` | 일반 범주 Cc를 포함하지 않음(`allowNewlines`면 LF·CR만 허용. 03의 7.1) |
-| `@PasswordRule` | 자체(`PasswordRuleValidator`) | `PASSWORD_RULE` | 03의 4.6 규칙. `null`·빈 값은 통과(필수는 `@NotNull(message = "REQUIRED")`와 조합). 판정 본체는 `PasswordPolicy.matches(String)`(`AuthLoginService`도 사용) |
+| `@PasswordRule` | 자체(`PasswordRuleValidator`) | `PASSWORD_RULE` | 03의 4.6 규칙. `null`·빈 값은 통과(필수는 `@NotNull(message = "REQUIRED")`와 조합). 판정 본체는 `common.validation.PasswordPolicy.matches(String)`(`AuthLoginService`·`AccountService`·`AuthAdminService`도 사용. 아래 "판정 부품") |
 | `@OneOf(values)` / `@OneOfEnum(Genre.class)` | 자체 | `INVALID_VALUE` | 정해진 값 목록(장르·구·`status`·`period`·`lang`·`visibility`) |
 | `@Email` + `@Pattern("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")` + `@CodePointLength(max = 254)` | 표준 + 자체 | `FORMAT` / `LENGTH` | 이메일 주소(03의 API-33) |
 | `@Min`·`@Max`·`@DecimalMin`·`@DecimalMax` | 표준 | `RANGE` | 수치·좌표 범위 |
 | `@Pattern(regexp = "true\|false")` | 표준 | `TYPE` | 진위 쿼리(`includeEnded`). 문자열로 받아 Service에 넘기기 전에 `Boolean`으로 바꾼다 |
 | `@ValidPerformanceFilter` | 자체(클래스에 붙임) | `DATE_ORDER`·`CONFLICT`·`INCOMPLETE`·`RANGE` | API-01·02 조합(03의 4.1·8.1). `from` > `to`는 `to`에 `DATE_ORDER`. 구·지도 범위·공연장 동시 지정은 지정한 항목마다 `CONFLICT`. 지도 범위 4개 중 일부만은 `INCOMPLETE`. 남서 > 북동은 `RANGE` |
 
+- **판정 부품**(`common.validation`, Spring 비의존. 2.2의 "`common`은 기능 패키지에 의존하지 않는다"와 "`account`는 `auth`를 부르지 않는다"를 지키기 위해 `common`에 둔다):
+  - `PasswordPolicy`: `boolean matches(String password)`(03의 4.6 규칙). `@PasswordRule`의 `PasswordRuleValidator`, `AuthLoginService`(4.5), `AccountService`(4.6), `AuthAdminService`(5.5)가 쓴다.
+  - `EmailRule`: `boolean isValid(String email)`(03의 API-33 규칙: 위의 `@Email` + `@Pattern` + 254자 이내와 같은 판정). Bean Validation이 없는 곳(B-03의 `AuthAdminService`)에서 쓴다.
 - **앞뒤 공백·NFKC**: record의 compact 생성자에서 한다(Bean Validation보다 먼저 값이 정해진다). 예: `SignupRequest`는 `email = Texts.stripToNull(email)`, `nickname = Nicknames.normalize(nickname)`(NFKC → strip → 비면 `null`). 비밀번호·토큰·리뷰 본문은 바꾸지 않는다(03의 7.1).
 - **쿼리 record**(`common.validation`): `PageQuery(Integer page, Integer size)`(`@Min(0) @Max(10000)`, `@Min(1) @Max(100)`, `message = "RANGE"`. `null`은 기본값 0·20으로 하는 메서드 `page()`·`size()`), `LangQuery(String lang)`(`@OneOf({"ko","ja"})`, `null`은 `ko`. `Lang lang()` 반환). 반복 쿼리는 `List<String>`으로 받아 compact 생성자에서 중복 제거(`LinkedHashSet`).
 - **좌표**: `BigDecimal`로 받는다(`NaN`·`Infinity`는 타입 변환에서 실패해 `TYPE`).
@@ -1244,14 +1268,14 @@ Cookie(8의 `application.yml`): 세션 유효 시간 30분, `http-only: true`, `
 | `PerformanceStatus`(enum) | `ONGOING`, `UPCOMING`, `ENDED`. `of(LocalDate start, LocalDate end, LocalDate today)`(03의 1.6) |
 | `VenueRef`(record) | `venueId`, `LocalizedText name` |
 | `PerformanceSummary`(record) | 03의 7.2 항목 |
-| `PerformanceSummaryRow`(record) | SQL 결과(공연 ID, 수정을 반영한 공연명·기간·장르, 공연장 ID·이름, 포스터, 수상 이력) |
+| `PerformanceSummaryRow`(record) | SQL 결과(`long id`(`performance.id`. 내부 ID로 API에는 내지 않음), `performanceId`(KOPIS 공연 ID), 수정을 반영한 공연명·기간·장르, 공연장 ID·이름, 포스터, 수상 이력) |
 | `ReviewItem`(record) | 03의 7.2 |
 | `LocalizedTextFactory` | `LocalizedText of(String original, Lang lang, Map<String, String> translations)`(`lang = ko`이거나 번역이 없으면 `value = original`, `translated = false`). 역명은 `ofStation(String nameKo, String nameJa, Lang, Map)`(`name_ja` → 번역 → 원문. 03의 7.2) |
 
 `com.catticket.summary.PerformanceSummaryAssembler`(`@Component`)
 
 - `List<PerformanceSummary> assemble(List<PerformanceSummaryRow> rows, Lang lang, LocalDate today, boolean withRating)`.
-- 처리: ① `lang = ja`면 행의 공연명·공연장명을 모아 `TranslationLookupService.lookup(Collection<String> originals)`를 한 번 부른다(`Map<원문, 번역>`) → ② `withRating`이면 `ReviewService.findRatingStats(Collection<String> performanceIds)`를 한 번 부른다(`Map<공연ID, RatingStat(sum, count)>`. 없는 공연은 0건) → ③ 행 순서대로 `PerformanceSummary`로 한다(`status`는 `PerformanceStatus.of`, `rating`은 `withRating = false`면 `null`. 03의 7.2).
+- 처리: ① `lang = ja`면 행의 공연명·공연장명을 모아 `TranslationLookupService.lookup(Collection<String> originals)`를 한 번 부른다(`Map<원문, 번역>`) → ② `withRating`이면 행의 내부 ID(`PerformanceSummaryRow.id`)를 모아 `ReviewService.findRatingStats(Collection<Long> performanceIds)`를 한 번 부른다(`Map<내부 공연 ID, RatingStat(sum, count)>`. 없는 공연은 0건) → ③ 행 순서대로 `PerformanceSummary`로 한다(`status`는 `PerformanceStatus.of`, `rating`은 `withRating = false`면 `null`. 03의 7.2).
 - 번역 조회는 `lang = ja`일 때만(4.10). 한 행씩 조회하지 않는다(N+1 금지).
 
 **3.6 그 밖의 공통 부품**
@@ -1263,7 +1287,7 @@ Cookie(8의 `application.yml`): 세션 유효 시간 30분, `http-only: true`, `
 | `Hashes` | `common.text` | `sha256Hex(String)`: UTF-8 바이트의 SHA-256을 소문자 16진 64자(번역 `source_hash`, 토큰 `token_hash`. 04) |
 | `Likes` | `common.db` | `contains(String)`: `\`·`%`·`_`를 `\`로 이스케이프해 `%…%`로(SQL은 `LIKE #{kw} ESCAPE '\\'`) |
 | `DbErrors` | `common.db` | `isDuplicateKey(DataAccessException, String keyName)`, `isLockFailure(DataAccessException)`(1213·1205) |
-| `SharedSql.xml` | `mapper/common/` | `publicCondition`(03의 1.6 "공개 중인 공연": 숨김 아님·서울·…. 04의 `performance_effective` 열로 씀), `summaryColumns`(`PerformanceSummaryRow` 열) |
+| `SharedSql.xml` | `mapper/common/` | `publicCondition`(03의 1.6 "공개 중인 공연": 숨김 아님·서울·…. 04의 `performance_effective` 열로 씀), `summaryColumns`(`PerformanceSummaryRow` 열. 내부 ID `pe.id`를 포함) |
 | `GeoDistance` | `common.geo` | `double meters(lat1, lng1, lat2, lng2)`(하버사인, 반지름 6,371,000 m. 03의 7.2) |
 | `GeoBounds`(record) | `common.geo` | `around(BigDecimal lat, BigDecimal lng, int meters)`: SQL 사전 필터용 위경도 사각형(600 m로 잡고 Java에서 500 m를 정확히 판정) |
 | `Genre`(enum) | `common.code` | 장르(값은 05의 7 확인으로 확정. 알려진 것은 05의 3.4의 9개). `code`(`AAAA` 등)와 KOPIS 이름(`genrenm`). `fromKopisName(String)`은 `Optional` |
@@ -1355,13 +1379,13 @@ DTO(`surrounding.dto`): `VenueSurroundingsResponse(VenueInfo venue, boolean hasL
 | `ReviewItem update(long reviewId, ReviewRequest, SessionUser)` | RW | `findForUpdate`(없음·공연이 숨김 → 404 `REVIEW_NOT_FOUND`) → 자기 것이 아니면 403 `FORBIDDEN` → UPDATE(`updated_at = now`) |
 | `void delete(long reviewId, SessionUser)` | RW | update와 같은 확인 → DELETE |
 | `Optional<ReviewItem> findMine(long performanceId, long userId)` | RO | API-03의 `viewer.myReview` |
-| `Map<String, RatingStat> findRatingStats(Collection<String> performanceIds)` | RO | `SUM(rating)`·`COUNT(*)`(03의 7.2의 `Rating`) |
+| `Map<Long, RatingStat> findRatingStats(Collection<Long> performanceIds)` | RO | `SUM(rating)`·`COUNT(*)`(03의 7.2의 `Rating`). 인수·키는 내부 ID(`performance.id`. `review.performance_id`와 같음). KOPIS ID에서 변환하지 않는다(부르는 쪽 행이 내부 ID를 가짐: `PerformanceSummaryRow.id`, API-03은 `PerformanceDetailRow.id`). 인수가 비었으면 SQL을 부르지 않고 빈 `Map` |
 | `PageResponse<ReviewItem> listAll(long performanceId, PageQuery)` | RO | API-55(`admin`에서 호출. 전 항목, 숨김 공연도 반환. 공연 존재는 `admin`이 먼저 확인) |
 | `void deleteAny(long reviewId)` | RW | API-56(없으면 404 `REVIEW_NOT_FOUND`) |
 
 - `created_at`·`updated_at`은 Service의 `now`(3.1).
 
-`ReviewMapper`(`mapper/review/ReviewMapper.xml`): `Optional<Long> findVisiblePerformanceId(String kopisPerformanceId)`(`publicCondition`이 아니라 "숨김 아님"만. 03의 8.3), `Optional<LocalDate> findEffectiveStartDate(long performanceId)`, `List<ReviewRow> findPage(long performanceId, int limit, int offset)`(정렬은 03의 3.), `long countByPerformance(long performanceId)`, `boolean existsByUserAndPerformance(long userId, long performanceId)`, `void insert(ReviewInsert)`(`useGeneratedKeys`), `Optional<ReviewOwnerRow> findForUpdate(long reviewId)`(`FOR UPDATE`, 공연 숨김 여부를 JOIN으로 읽음), `void update(ReviewUpdate)`, `int delete(long reviewId)`, `List<RatingStatRow> sumAndCount(Collection<Long> performanceIds)`, `Optional<ReviewRow> findByUserAndPerformance(long userId, long performanceId)`.
+`ReviewMapper`(`mapper/review/ReviewMapper.xml`): `Optional<Long> findVisiblePerformanceId(String kopisPerformanceId)`(`publicCondition`이 아니라 "숨김 아님"만. 03의 8.3), `Optional<LocalDate> findEffectiveStartDate(long performanceId)`, `List<ReviewRow> findPage(long performanceId, int limit, int offset)`(정렬은 03의 3.), `long countByPerformance(long performanceId)`, `boolean existsByUserAndPerformance(long userId, long performanceId)`, `void insert(ReviewInsert)`(`useGeneratedKeys`), `Optional<ReviewOwnerRow> findForUpdate(long reviewId)`(`FOR UPDATE`, 공연 숨김 여부를 JOIN으로 읽음), `void update(ReviewUpdate)`, `int delete(long reviewId)`, `List<RatingStatRow> sumAndCount(Collection<Long> performanceIds)`(`RatingStatRow(long performanceId, long sum, long count)`. `performanceId`는 내부 ID. `WHERE performance_id IN (<foreach>) GROUP BY performance_id`), `Optional<ReviewRow> findByUserAndPerformance(long userId, long performanceId)`.
 
 **4.4 순위(`ranking`)**
 
@@ -1435,7 +1459,7 @@ Service
 | `AuthPurgeService.purgeExpiredSignups(LocalDateTime t)` → `int` | RW | B-04(5.6, 03의 9.2) |
 
 - `TokenPurpose`(enum): `SIGNUP`, `PASSWORD_RESET`, `UNLOCK`(04의 `auth_token.purpose`). `UserStatus`: `PENDING`, `ACTIVE`.
-- `PasswordPolicy`(`auth` 패키지, Spring 비의존): 03의 4.6 규칙 판정. `@PasswordRule`과 `AuthLoginService`가 쓴다.
+- 비밀번호 규칙 판정은 `common.validation.PasswordPolicy`(3.3. `auth`에는 두지 않는다).
 - `auth.client.RecaptchaClient`: `RecaptchaResult verify(String token)`. `tokenProperties.valid`가 참이면 `PASSED`, 거짓이면 `FAILED`(→ 400 `RECAPTCHA_FAILED`). 429·5xx·타임아웃·통신 실패는 `RecaptchaUnavailableException`(→ 503 `RECAPTCHA_UNAVAILABLE`). 재시도하지 않는다(03의 7.5).
 
 `AuthMapper`(`mapper/auth/AuthMapper.xml`)
@@ -1472,7 +1496,7 @@ Service
 - `String changeNickname(long userId, String nickname)`: `existsActiveNicknameOfOthers(userId, nickname)` → 409 `NICKNAME_ALREADY_USED` → `updateNickname`. `DuplicateKeyException`(`uk_app_user_active_nickname`)도 409(03의 API-40).
 - `void changePassword(long userId, String current, String next)`: `passwordEncoder.matches(current, hash)`가 거짓 → 400 `CURRENT_PASSWORD_INCORRECT`(로그인 실패 횟수는 바꾸지 않음) → `updatePassword`.
 - `void withdraw(long userId, String current)`: 같은 확인 → `deleteUser`(리뷰·즐겨찾기·토큰은 외래 키 CASCADE. 04의 5.).
-- 현재 비밀번호가 규칙에 맞지 않으면(72바이트 초과 등) 해시와 비교하지 않고 "맞지 않음"으로 한다(`PasswordPolicy`. API-31과 같음).
+- 현재 비밀번호가 규칙에 맞지 않으면(72바이트 초과 등) 해시와 비교하지 않고 "맞지 않음"으로 한다(`common.validation.PasswordPolicy`. API-31과 같음).
 
 `AccountMapper`(`mapper/account/AccountMapper.xml`): `Optional<AccountRow> findForUpdate(long userId)`, `boolean existsActiveNicknameOfOthers(long userId, String nickname)`, `void updateNickname(long userId, String nickname, LocalDateTime now)`, `void updatePassword(long userId, String hash, LocalDateTime now)`, `int deleteUser(long userId)`.
 
@@ -1490,12 +1514,12 @@ Service
 
 | 메서드 | Tx | 내용 |
 |---|---|---|
-| `PageResponse<FavoriteItem> list(long userId, Lang, PageQuery)` | RO | `findPage`(숨김 제외. 끝난 공연은 포함) → `PerformanceSummaryAssembler.assemble(…, true)` → `FavoriteItem(favoritedAt, performance)` |
+| `PageResponse<FavoriteItem> list(long userId, Lang, PageQuery)` | RO | `count`(`findPage`와 같은 조건) → `findPage`(숨김 제외. 끝난 공연은 포함) → `PerformanceSummaryAssembler.assemble(…, true)` → `FavoriteItem(favoritedAt, performance)` |
 | `void add(long userId, String performanceId)` | RW | 공연이 숨김이 아님(404) → 이미 등록이면 아무것도 안 함 → INSERT. `DuplicateKeyException`(`uk_favorite_user_performance`)은 성공으로 본다 |
 | `void remove(long userId, String performanceId)` | RW | DELETE(0건도 성공) |
 | `boolean isFavorite(long userId, long performanceId)` | RO | API-03의 `viewer.isFavorite` |
 
-`FavoriteMapper`(`mapper/favorite/FavoriteMapper.xml`): `List<FavoriteRow> findPage(long userId, int limit, int offset)`(`ORDER BY f.created_at DESC, f.id DESC`. 03의 API-43), `long count(long userId)`, `Optional<Long> findVisiblePerformanceId(String kopisPerformanceId)`, `boolean exists(long userId, long performanceId)`, `void insert(long userId, long performanceId, LocalDateTime now)`, `int delete(long userId, String kopisPerformanceId)`.
+`FavoriteMapper`(`mapper/favorite/FavoriteMapper.xml`): `List<FavoriteRow> findPage(long userId, int limit, int offset)`(`favorite f JOIN performance_effective pe ON pe.id = f.performance_id JOIN venue v`, `WHERE f.user_id = #{userId} AND pe.is_hidden = FALSE`(끝난 공연은 빼지 않음). `ORDER BY f.created_at DESC, f.id DESC`. 03의 API-43), `long count(long userId)`(**`findPage`와 같은 FROM·WHERE**(숨긴 공연 제외)로 `COUNT(*)`. 03의 API-43의 `totalElements`·`totalPages`가 목록에 나오는 행 수와 일치하게 한다. 조건은 XML의 `<sql id="visibleFavoriteFrom">`을 두 곳에서 `<include>`해 어긋나지 않게 한다), `Optional<Long> findVisiblePerformanceId(String kopisPerformanceId)`, `boolean exists(long userId, long performanceId)`, `void insert(long userId, long performanceId, LocalDateTime now)`, `int delete(long userId, String kopisPerformanceId)`.
 
 **4.8 관리(`admin`)**
 
@@ -1526,21 +1550,23 @@ Service
 |---|---|---|
 | `PageResponse<AdminPerformanceItem> search(AdminSearchQuery, PageQuery)` | RO | `search`·`count`. `status`는 `PerformanceStatus.of` |
 | `AdminPerformanceDetail getDetail(String performanceId)` | RO | `findPerformance`(없음 → 404. 숨김이어도 반환) → `findOverrides` → `findBookingSites(COLLECTED / ADMIN)` → `fields` 11개 조립 |
-| `AdminPerformanceDetail applyPatch(String performanceId, ObjectNode body)` | RW | `AdminPatchParser.parse`(타입 차이는 여기서 400) → `findPerformanceForUpdate`(없음 → 404) → `errors`가 있으면 `RequestValidationException` → 수정 후 시작일 ≤ 종료일(아니면 `startDate`·`endDate` 중 본문에 있는 쪽에 `DATE_ORDER`) → 항목별 `upsertOverride` → `bookingSites`가 있으면 `deleteBookingSites(id, ADMIN)` → `insertBookingSites` → `upsertOverride(booking_sites, NULL)` → `getDetail`과 같은 형태로 반환 |
-| `void clearOverride(String performanceId, OverridableField field)` | RW | `findPerformanceForUpdate`(404) → 취소 후 기간 확인(`DATE_ORDER`를 `field`에) → `deleteOverride` → `bookingSites`면 `deleteBookingSites(id, ADMIN)` |
+| `AdminPerformanceDetail applyPatch(String performanceId, ObjectNode body)` | RW | `AdminPatchParser.parse`(타입 차이는 여기서 400) → `findPerformanceIdForUpdate`(없음 → 404) → `findPerformance`·`findOverrides`(잠그지 않는 읽기. 아래 "잠금과 읽기") → `errors`가 있으면 `RequestValidationException` → 수정 후 시작일 ≤ 종료일(아니면 `startDate`·`endDate` 중 본문에 있는 쪽에 `DATE_ORDER`) → 항목별 `upsertOverride` → `bookingSites`가 있으면 `deleteBookingSites(id, ADMIN)` → `insertBookingSites` → `upsertOverride(booking_sites, NULL)` → `getDetail`과 같은 형태로 반환 |
+| `void clearOverride(String performanceId, OverridableField field)` | RW | `findPerformanceIdForUpdate`(404) → `findPerformance`·`findOverrides`(잠그지 않는 읽기) → 취소 후 기간 확인(`DATE_ORDER`를 `field`에) → `deleteOverride` → `bookingSites`면 `deleteBookingSites(id, ADMIN)` |
 | `VisibilityResponse setVisibility(String performanceId, boolean hidden)` | RW | `updateHidden`(0건 → 404) |
 | `PageResponse<ReviewItem> listReviews(String performanceId, PageQuery)` | RO | `findPerformance`(404) → `ReviewService.listAll` |
 | `void deleteReview(long reviewId)` | — | `ReviewService.deleteAny`(RW는 그 안) |
 
 - 순서의 이유: 03의 API-52는 "공연이 있음(404) → 검사". 본문 해석(타입)은 먼저 하지만, 항목별 오류(`VALIDATION_FAILED`)는 존재 확인 뒤에 던진다.
 - `upsertOverride`는 `updated_at = #{now}`를 명시한다(값이 같은 수정이라도 `overriddenAt`이 바뀐다. 03의 API-52).
+- **잠금과 읽기(API-52·53)**: 잠금은 `performance`의 1행에만 건다(`findPerformanceIdForUpdate` = `SELECT id FROM performance WHERE kopis_performance_id = #{…} FOR UPDATE`. 유일 제약 `uk_performance_kopis_performance_id`의 1행 잠금). 값(자동 수집 값·수정)은 잠근 뒤 잠그지 않는 읽기(`findPerformance`·`findOverrides`)로 읽는다. 여러 표를 조인한 SQL에 `FOR UPDATE`를 붙이면 조인한 표(`performance_override`의 11개 행·`venue`)의 행과 갭까지 잠기므로 그렇게 하지 않는다. 같은 공연을 고치는 처리(API-52·53)는 모두 먼저 이 행을 잠그므로, 잠금을 얻은 뒤의 읽기는 앞 처리의 커밋 후 값이 된다(REPEATABLE READ의 읽기 시점은 트랜잭션 안의 첫 잠그지 않는 읽기에서 정해진다. 첫 문장이 이 잠금이므로 읽기 시점은 잠금 뒤). 순서는 6.1의 `performance` → `performance_override` → `booking_site`.
 
 `AdminMapper`(`mapper/admin/AdminMapper.xml`)
 
 | 메서드 | SQL 역할 |
 |---|---|
 | `List<AdminPerformanceRow> search(AdminSearchCondition)`·`long count(…)` | `performance_effective` + 공연장(1.6의 공개 조건을 쓰지 않음). 키워드는 `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`(A-03). `hasOverride`는 `EXISTS (SELECT 1 FROM performance_override …)`. `ORDER BY pe.start_date DESC, pe.kopis_performance_id` |
-| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)`·`findPerformanceForUpdate(…)` | 자동 수집 값(`performance`)과 수정을 반영한 값(`performance_effective`) 둘 다 |
+| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | 자동 수집 값(`performance`)과 수정을 반영한 값(`performance_effective`) 둘 다. 잠그지 않는다 |
+| `Optional<Long> findPerformanceIdForUpdate(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = #{kopisPerformanceId} FOR UPDATE`(다른 표를 조인하지 않는다. 4.8의 "잠금과 읽기") |
 | `List<OverrideRow> findOverrides(long performanceId)` | `performance_override` |
 | `List<BookingSiteRow> findBookingSites(long performanceId, String source)` | `booking_site` |
 | `void upsertOverride(long performanceId, String fieldName, String value, LocalDateTime now)` | `INSERT … VALUES (…) AS n ON DUPLICATE KEY UPDATE override_value = n.override_value, updated_at = n.updated_at` |
@@ -1674,7 +1700,7 @@ Service
 
 - `run()`: `BatchJobRunner.execute(CREATE_ADMIN, …)` → `AuthAdminService.createAdmin(props.admin().email(), props.admin().password(), now)`.
 - `AuthAdminService.createAdmin`(RW): 05의 5의 2.~5.. ① 이메일 형식(API-33과 같은 규칙. `EmailRule`)·`PasswordPolicy` → 충족하지 않으면 `FAILURE`(로그에 비밀번호를 내지 않음) ② `existsAdmin()` → 있으면 아무것도 안 하고 `SUCCESS`(로그에 "이미 있음") ③ `existsUserByEmail` → 있으면 `FAILURE` ④ `insertAdmin`(`role = 'ADMIN'`, `status = 'ACTIVE'`, 닉네임 `catticket-admin`(04의 H-08. API에는 내지 않음), `password_hash = passwordEncoder.encode(password)`). `uk_app_user_admin_singleton` 위반(동시 실행)은 `FAILURE`.
-- 이메일 형식 규칙은 API-33 제약(3.3)과 같은 것을 `auth.EmailRule.isValid(String)`로 모아, Bean Validation이 없는 곳(B-03)에서도 쓴다.
+- 이메일 형식 규칙은 API-33 제약(3.3)과 같은 것을 `common.validation.EmailRule.isValid(String)`로 모아, Bean Validation이 없는 곳(B-03)에서도 쓴다(`PasswordPolicy`와 같이 `common.validation`. 3.3).
 
 **5.6 B-04 기한 지난 인증 전 신청 삭제(`auth.batch.PurgeExpiredSignupsJob`)**
 
@@ -1710,7 +1736,7 @@ Service
 | API-38 | `AuthUnlockService.confirm` | RW | `app_user` → `auth_token` |
 | API-40~42 | `AccountService.*` | RW | `app_user` 행(API-42의 DELETE는 CASCADE로 `auth_token`·`review`·`favorite`) |
 | API-44, 45 | `FavoriteService.add`·`remove` | RW | 없음(유일 제약) |
-| API-52, 53 | `AdminPerformanceService.applyPatch`·`clearOverride` | RW | `performance` 행 `FOR UPDATE`(같은 공연의 수정을 차례로) |
+| API-52, 53 | `AdminPerformanceService.applyPatch`·`clearOverride` | RW | `performance` 행만 `FOR UPDATE`(`findPerformanceIdForUpdate`. 같은 공연의 수정을 차례로. 값은 잠그지 않는 읽기. 4.8의 "잠금과 읽기") |
 | API-54 | `AdminPerformanceService.setVisibility` | RW | UPDATE의 행 잠금 |
 | API-56 | `ReviewService.deleteAny` | RW | DELETE의 행 잠금 |
 
@@ -1767,8 +1793,8 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 | `MailService` | 단위 | `JavaMailSender`를 Mockito 목으로(보낸 `SimpleMailMessage` 확인. `MailSendException`을 던지게 해 503 확인) |
 | Service | 단위 | Mapper·클라이언트·`Clock`(`Clock.fixed`)·`Sleeper`(기다리지 않는 구현)를 Mockito로 바꾼다 |
 | Mapper | `@MybatisTest`(실제 MySQL의 `test_catticket`. `@AutoConfigureTestDatabase(replace = NONE)`) | Flyway가 V1을 적용한 DB. 데이터는 각 테스트에서 넣는다 |
-| Controller | `@WebMvcTest` + `@Import(SecurityConfig.class)` + spring-security-test(`with(csrf())`, `with(user(...))` 대신 `SessionUser`의 `Authentication`을 넣는 작은 부품 `TestAuth`) | Service를 `@MockitoBean` |
-| 배치 부품(`SubwayRowConverter`·`RisingCalculator`·`GenreTrendCalculator`·`CollectWindows`·`AdminPatchParser`·`NearbyFilter`·`PasswordPolicy`) | 단위 | 없음(Spring 비의존). 역 파일은 `src/test/resources/data/subway-sample/` |
+| Controller | `@WebMvcTest` + `@Import(SecurityConfig.class)` + spring-security-test(`with(csrf())`, `with(user(...))` 대신 `SessionUser`의 `Authentication`을 넣는 작은 부품 `TestAuth`). JSON이 아닌 본문의 415·`Accept: application/xml`이어도 JSON(3.1의 "JSON만으로 하기"의 테스트 ①~③)을 포함한다 | Service를 `@MockitoBean` |
+| 배치 부품(`SubwayRowConverter`·`RisingCalculator`·`GenreTrendCalculator`·`CollectWindows`·`AdminPatchParser`·`NearbyFilter`·`PasswordPolicy`·`EmailRule`) | 단위(`PasswordPolicy`·`EmailRule` 테스트는 `common/validation/`) | 없음(Spring 비의존). 역 파일은 `src/test/resources/data/subway-sample/` |
 
 - 외부 API를 실제로 부르는 테스트는 쓰지 않는다. 테스트 설정(`src/test/resources/application.yml` 등)에서 `catticket.scheduler.enabled=false`로 하고 `catticket.task`를 설정하지 않는다. API 키 등은 빈 값(`""`)으로 기동할 수 있게 한다(`CatticketProperties`는 기동 시 필수를 확인하지 않음. 쓰는 시점에 비어 있으면 실패).
 - 결합·E2E 테스트는 qa-engineer(`backend/src/test/java/com/catticket/it/`). 단위 테스트 위치는 `backend/src/test/java/com/catticket/{기능}/`.
