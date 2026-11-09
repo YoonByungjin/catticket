@@ -5,11 +5,13 @@ import {
   effect,
   inject,
   signal,
+  untracked,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthMeResponse } from './core/api/api.types';
@@ -48,7 +50,13 @@ export class App {
   protected readonly navLinks = computed(() => navLinksFor(this.auth()));
   protected readonly accountLinks = computed(() => accountLinksFor(this.auth()));
 
-  protected readonly menuOpen = signal(false);
+  private readonly menu = viewChild(MatSidenav);
+  /**
+   * 開閉の状態は mat-sidenav だけが持つ（opened は signal なので computed で追える）。
+   * [opened] と (openedChange) で別の signal と双方向に結ぶと、アニメーションの後に遅れて届く
+   * openedChange が、閉じた直後の状態を「開いている」に上書きすることがあるため。
+   */
+  protected readonly menuOpen = computed(() => this.menu()?.opened ?? false);
 
   constructor() {
     // 画面を移ったらメニューを閉じる
@@ -57,18 +65,22 @@ export class App {
         filter((e) => e instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.menuOpen.set(false));
+      .subscribe(() => this.closeMenu());
 
     // PC 表示に変わったらメニューは不要（ヘッダーに項目が出る）
     effect(() => {
       if (!this.handset()) {
-        this.menuOpen.set(false);
+        untracked(() => this.closeMenu());
       }
     });
   }
 
   protected toggleMenu(): void {
-    this.menuOpen.update((open) => !open);
+    void this.menu()?.toggle();
+  }
+
+  private closeMenu(): void {
+    void this.menu()?.close();
   }
 
   protected onLogout(): void {

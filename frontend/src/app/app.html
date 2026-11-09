@@ -1,11 +1,5 @@
 <mat-sidenav-container class="ct-shell">
-  <mat-sidenav
-    class="ct-menu"
-    position="end"
-    mode="over"
-    [opened]="menuOpen()"
-    (openedChange)="menuOpen.set($event)"
-  >
+  <mat-sidenav class="ct-menu" position="end" mode="over">
     <mat-nav-list>
       @for (link of navLinks(); track link.path) {
         <a

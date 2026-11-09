@@ -81,4 +81,29 @@ describe('App shell and routes', () => {
     await fixture.whenStable();
     expect(el.querySelector('.ct-menu-button')?.getAttribute('aria-expanded')).toBe('false');
   });
+
+  // CI で起きた競合の再現: mat-sidenav は開いたことを setTimeout で遅れて通知する（openedChange）。
+  // その通知が「画面を移る → メニューを閉じる」の後に届いても、閉じたままでなければならない。
+  // whenStable の後に少し待ってから移ると、遅れた通知がちょうど閉じる処理の後に届く
+  it.each([1, 2, 5])(
+    'keeps the menu closed when the open notification arrives late (%i ms)',
+    async (gapMs) => {
+      handset.set(true);
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const el = fixture.nativeElement as HTMLElement;
+
+      (el.querySelector('.ct-menu-button') as HTMLButtonElement).click();
+      await fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve, gapMs));
+      await TestBed.inject(Router).navigateByUrl('/rankings');
+      await fixture.whenStable();
+      // 遅れて届く通知をすべて流してから確かめる
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await fixture.whenStable();
+
+      expect(el.querySelector('.ct-menu-button')?.getAttribute('aria-expanded')).toBe('false');
+      expect(el.querySelector('mat-sidenav')?.classList.contains('mat-drawer-opened')).toBe(false);
+    },
+  );
 });
