@@ -44,4 +44,5 @@ if ! docker compose ps --status running --services | grep -qx db; then
   exit 1
 fi
 
-docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot test_catticket -e "$1"' sh "$sql"
+# 日本語・韓国語の COMMENT が ??? にならないよう、クライアントの文字コードを utf8mb4 にする
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot --default-character-set=utf8mb4 test_catticket -e "$1"' sh "$sql"
