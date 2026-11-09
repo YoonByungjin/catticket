@@ -1,6 +1,6 @@
 # 06. クラス設計書
 
-- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、指摘（軽微1〜7・提案8〜10）を反映済み。人間の承認待ち）
+- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）
 - 担当: architect
 - 入力: `01-requirements.md`、`02-screens.md`、`03-api.md`（API 仕様の詳細）、`04-tables.md` と `backend/src/main/resources/db/migration/V1__create_schema.sql`、`05-batch.md`、ADR 0001〜0016。
 - 対象: バックエンド（`backend/`、Spring Boot）だけ。Angular のクラス設計は対象外（工程5で frontend-dev が `02`・`03`・`07` から作る）。
@@ -546,7 +546,7 @@ flowchart LR
 
 | メソッド | SQL の役割 |
 |---|---|
-| `List<AdminPerformanceListRow> search(AdminSearchCondition)`・`long count(…)` | `performance_effective` + 会場（1.6 の公開の条件を使わない）。キーワードは `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`（A-03）。`hasOverride` は `EXISTS (SELECT 1 FROM performance_override …)`。`ORDER BY pe.start_date DESC, pe.kopis_performance_id` |
+| `List<AdminPerformanceListRow> search(AdminSearchCondition)`・`long count(…)` | `performance_effective` + 会場（1.6 の公開の条件を使わない）。キーワードは `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`（A-03）。`hasOverride` は `EXISTS (SELECT 1 FROM performance_override …)`。`ORDER BY pe.start_date DESC, pe.kopis_performance_id`。`AdminPerformanceListRow`（record）: `String kopisPerformanceId`, `String title`, `String venueName`, `LocalDate startDate`, `LocalDate endDate`, `boolean isHidden`, `boolean hasOverride`（`title`・期間は修正を反映した値。Service が `AdminPerformanceItem`（03 の API-50 のレスポンス）に変える: `kopisPerformanceId` → `performanceId`、ほかは同じ名前、`status` は `PerformanceStatus.of(startDate, endDate, today)` で足す） |
 | `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | `performance p JOIN venue v`。**自動収集の値だけ**（ビューを使わない。04 の 11.3）。ロックしない。`AdminPerformanceRow`: `long id`, `kopisPerformanceId`, `isHidden`, 修正できる 10 項目の自動収集の値（`title`, `startDate`, `endDate`, `genreCode`, `castText`, `ticketPrice`, `scheduleText`, `runtime`, `ageLimit`, `isOpenRun`。予約サイトは `findBookingSites`）、会場（`kopisVenueId`, `name`, `address`）、`posterUrl`, `hasAward`, `totalShowCount` |
 | `Optional<Long> findPerformanceId(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = …`（API-55 の存在の確認。ロックしない） |
 | `Optional<Long> findPerformanceIdForUpdate(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = #{kopisPerformanceId} FOR UPDATE`（ほかの表を結ばない。4.8 の「ロックと読み」） |
@@ -1043,7 +1043,7 @@ catticket:
 
 ### 06. 클래스 설계서
 
-- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 지적(경미 1~7·제안 8~10)을 반영함. 사람의 승인 대기)
+- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기)
 - 담당: architect
 - 입력: `01-requirements.md`, `02-screens.md`, `03-api.md`(API 사양 상세), `04-tables.md`와 `backend/src/main/resources/db/migration/V1__create_schema.sql`, `05-batch.md`, ADR 0001~0016.
 - 대상: 백엔드(`backend/`, Spring Boot)만. Angular 클래스 설계는 대상 외(공정 5에서 frontend-dev가 `02`·`03`·`07`로 만든다).
@@ -1571,7 +1571,7 @@ Service
 
 | 메서드 | SQL 역할 |
 |---|---|
-| `List<AdminPerformanceListRow> search(AdminSearchCondition)`·`long count(…)` | `performance_effective` + 공연장(1.6의 공개 조건을 쓰지 않음). 키워드는 `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`(A-03). `hasOverride`는 `EXISTS (SELECT 1 FROM performance_override …)`. `ORDER BY pe.start_date DESC, pe.kopis_performance_id` |
+| `List<AdminPerformanceListRow> search(AdminSearchCondition)`·`long count(…)` | `performance_effective` + 공연장(1.6의 공개 조건을 쓰지 않음). 키워드는 `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`(A-03). `hasOverride`는 `EXISTS (SELECT 1 FROM performance_override …)`. `ORDER BY pe.start_date DESC, pe.kopis_performance_id`. `AdminPerformanceListRow`(record): `String kopisPerformanceId`, `String title`, `String venueName`, `LocalDate startDate`, `LocalDate endDate`, `boolean isHidden`, `boolean hasOverride`(`title`·기간은 수정을 반영한 값. Service가 `AdminPerformanceItem`(03의 API-50 응답)으로 바꾼다: `kopisPerformanceId` → `performanceId`, 나머지는 같은 이름, `status`는 `PerformanceStatus.of(startDate, endDate, today)`로 추가) |
 | `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | `performance p JOIN venue v`. **자동 수집 값만**(뷰를 쓰지 않는다. 04의 11.3). 잠그지 않는다. `AdminPerformanceRow`: `long id`, `kopisPerformanceId`, `isHidden`, 수정할 수 있는 10개 항목의 자동 수집 값(`title`, `startDate`, `endDate`, `genreCode`, `castText`, `ticketPrice`, `scheduleText`, `runtime`, `ageLimit`, `isOpenRun`. 예매처는 `findBookingSites`), 공연장(`kopisVenueId`, `name`, `address`), `posterUrl`, `hasAward`, `totalShowCount` |
 | `Optional<Long> findPerformanceId(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = …`(API-55의 존재 확인. 잠그지 않는다) |
 | `Optional<Long> findPerformanceIdForUpdate(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = #{kopisPerformanceId} FOR UPDATE`(다른 표를 조인하지 않는다. 4.8의 "잠금과 읽기") |
