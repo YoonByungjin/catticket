@@ -34,10 +34,48 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+// テスト用 DB 名。worktree ごとに別の DB を使えるよう、環境変数 → リポジトリ直下の .env → 既定値の順で決める
+// （CI には .env がないので、ファイルがなくてもエラーにしない）
+def resolveTestDbName = {
+	def fromEnv = System.getenv('TEST_DB_NAME')?.trim()
+	if (fromEnv) {
+		return fromEnv
+	}
+	def envFile = file('../.env')
+	if (envFile.isFile()) {
+		def value = null
+		envFile.readLines('UTF-8').each { line ->
+			def trimmed = line.trim()
+			if (trimmed.isEmpty() || trimmed.startsWith('#')) {
+				return
+			}
+			def idx = trimmed.indexOf('=')
+			if (idx > 0 && trimmed.substring(0, idx).trim() == 'TEST_DB_NAME') {
+				value = trimmed.substring(idx + 1).trim()
+			}
+		}
+		if (value) {
+			return value
+		}
+	}
+	return 'test_catticket'
+}
+def testDbName = resolveTestDbName()
+
 tasks.named('test') {
 	useJUnitPlatform()
 	// テストは開発用 DB を汚さないよう専用 DB を使う（環境変数は .env より優先される）
-	environment 'DB_NAME', 'test_catticket'
+	environment 'DB_NAME', testDbName
+	doFirst {
+		// 開発用 DB（catticket）を誤って指定してテストに消させないため、また MySQL の権限 test\_catticket% に合わせるため、形を制限する。
+		// test 実行時だけ確認し、bootRun など他のタスクは止めない
+		if (!(testDbName ==~ /^test_catticket(_[a-z0-9]+)*$/) || testDbName.length() > 64) {
+			throw new GradleException(
+				"TEST_DB_NAME '${testDbName}' is not allowed. Use test_catticket or test_catticket_{a-z0-9}... (pattern ^test_catticket(_[a-z0-9]+)*\$, max 64 chars).")
+		}
+		// 共有 MySQL のどの DB を使ったかをログで確認できるようにする
+		logger.lifecycle("Test DB: ${testDbName}")
+	}
 }
 
 // Only build the executable boot jar (skip the extra "-plain" jar)
