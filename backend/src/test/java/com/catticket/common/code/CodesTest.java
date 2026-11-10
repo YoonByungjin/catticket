@@ -25,6 +25,11 @@ class CodesTest {
 			.allSatisfy(name -> assertThat(name).endsWith("구"));
 		assertThat(SeoulDistrict.fromKoreanName("종로구")).contains(SeoulDistrict.JONGNO);
 		assertThat(SeoulDistrict.fromKoreanName("수원시")).isEmpty();
+		assertThat(SeoulDistrict.fromKoreanName("JONGNO")).isEmpty();
+		assertThat(SeoulDistrict.fromKoreanName(null)).isEmpty();
+		// API の値は韓国語の名前（06 の 3.6）
+		assertThat(SeoulDistrict.JONGNO.apiValue()).isEqualTo("종로구");
+		assertThat(SeoulDistrict.JONGNO).isInstanceOf(ApiCode.class);
 	}
 
 }

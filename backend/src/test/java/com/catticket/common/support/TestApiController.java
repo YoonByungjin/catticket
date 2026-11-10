@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.catticket.common.code.Genre;
 import com.catticket.common.code.Lang;
+import com.catticket.common.code.SeoulDistrict;
 import com.catticket.common.error.ApiException;
 import com.catticket.common.error.ErrorCode;
 import com.catticket.common.error.FieldErrorItem;
@@ -58,16 +59,23 @@ public class TestApiController {
 			Integer count, Boolean flag, BigDecimal ratio, List<@CodePointLength(max = 3) String> tags) {
 	}
 
-	public record TestFilter(List<@OneOfEnum(Genre.class) String> genre) {
+	public record TestFilter(List<@OneOfEnum(Genre.class) String> genre,
+			List<@OneOfEnum(SeoulDistrict.class) String> district) {
 
 		public TestFilter {
 			// 繰り返しのクエリの同じ値は1つにする（03 の 7.1）
 			genre = genre == null ? List.of() : List.copyOf(new LinkedHashSet<>(genre));
+			district = district == null ? List.of() : List.copyOf(new LinkedHashSet<>(district));
 		}
 
 	}
 
-	public record QueryEcho(int page, int size, Lang lang, List<String> genre) {
+	public record QueryEcho(int page, int size, Lang lang, List<String> genre, List<String> district) {
+
+		QueryEcho(PageQuery page, LangQuery lang, TestFilter filter) {
+			this(page.page(), page.size(), lang.toLang(), filter.genre(), filter.district());
+		}
+
 	}
 
 	public record TimeEcho(OffsetDateTime at, LocalDate date) {
@@ -90,14 +98,21 @@ public class TestApiController {
 
 	@GetMapping("/api/test/query")
 	public QueryEcho query(@Valid PageQuery page, @Valid LangQuery lang, @Valid TestFilter filter) {
-		return new QueryEcho(page.page(), page.size(), lang.toLang(), filter.genre());
+		return new QueryEcho(page, lang, filter);
+	}
+
+	/** 06 の 3.3（D-4）の形: 直接の制約のある引数がないので、PageQuery に @NotNull を付けてメソッドの検証にする */
+	@GetMapping("/api/test/query-d4")
+	public QueryEcho queryD4(@Valid TestFilter filter, @Valid LangQuery lang,
+			@Valid @NotNull(message = "REQUIRED") PageQuery page) {
+		return new QueryEcho(page, lang, filter);
 	}
 
 	/** 引数に直接の制約があるとメソッドの検証になり、複数の record の誤りがまとめて返る */
 	@GetMapping("/api/test/query-all")
 	public QueryEcho queryAll(@Valid PageQuery page, @Valid LangQuery lang, @Valid TestFilter filter,
 			@RequestParam(required = false) @Min(value = 1, message = "RANGE") Integer limit) {
-		return new QueryEcho(page.page(), page.size(), lang.toLang(), filter.genre());
+		return new QueryEcho(page, lang, filter);
 	}
 
 	@GetMapping("/api/test/param")

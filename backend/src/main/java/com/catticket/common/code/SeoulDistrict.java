@@ -4,9 +4,9 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * ソウルの 25 区（03 の 4.2）。API・DB では韓国語の名前（{@code venue.district}）を使う。
+ * ソウルの 25 区（03 の 4.2）。定数の名前はローマ字で、API・DB（{@code venue.district}）では韓国語の名前を使う。
  */
-public enum SeoulDistrict {
+public enum SeoulDistrict implements ApiCode {
 
 	JONGNO("종로구"),
 	JUNG("중구"),
@@ -40,15 +40,21 @@ public enum SeoulDistrict {
 		this.koreanName = koreanName;
 	}
 
-	public String code() {
-		return name();
-	}
-
 	public String koreanName() {
 		return koreanName;
 	}
 
+	/** API で受け取る値は韓国語の名前（03 の API-01 の district） */
+	@Override
+	public String apiValue() {
+		return koreanName;
+	}
+
+	/** 見つからない・null なら空（Genre.fromKopisName と同じ扱い） */
 	public static Optional<SeoulDistrict> fromKoreanName(String name) {
+		if (name == null) {
+			return Optional.empty();
+		}
 		return Arrays.stream(values()).filter(d -> d.koreanName.equals(name)).findFirst();
 	}
 

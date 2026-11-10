@@ -200,6 +200,34 @@ class ErrorResponseWebMvcTest {
 		}
 
 		@Test
+		void queryRecordsAreAggregatedWithNotNullPageQuery() throws Exception {
+			// 06 の 3.3（D-4）: @Valid @NotNull PageQuery でメソッドの検証になり、2つの record の誤りが1つの応答にまとまる
+			ResultActions actions = mvc.perform(get("/api/test/query-d4").param("size", "101")
+				.param("lang", "en")
+				.param("district", "종로구", "JONGNO"));
+			assertError(actions, 400, "VALIDATION_FAILED");
+			actions.andExpect(jsonPath("$.errors", hasSize(3)))
+				.andExpect(jsonPath("$.errors[*].field", containsInAnyOrder("size", "lang", "district")))
+				.andExpect(jsonPath("$.errors[*].reason", containsInAnyOrder("RANGE", "INVALID_VALUE", "INVALID_VALUE")));
+
+			mvc.perform(get("/api/test/query-d4").param("district", "종로구", "중구"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.district", hasSize(2)))
+				.andExpect(jsonPath("$.page").value(0));
+		}
+
+		@Test
+		void districtIsComparedByKoreanName() throws Exception {
+			mvc.perform(get("/api/test/query").param("district", "종로구")).andExpect(status().isOk());
+			for (String value : new String[] { "JONGNO", "jongno", "종로", "수원시" }) {
+				mvc.perform(get("/api/test/query").param("district", value))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errors[0].field").value("district"))
+					.andExpect(jsonPath("$.errors[0].reason").value("INVALID_VALUE"));
+			}
+		}
+
+		@Test
 		void queryTypeMismatchIsType() throws Exception {
 			ResultActions actions = mvc.perform(get("/api/test/query").param("page", "abc"));
 			assertError(actions, 400, "VALIDATION_FAILED");

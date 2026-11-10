@@ -10,8 +10,10 @@ import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
 
 /**
- * enum の定数名のどれか（例: {@code @OneOfEnum(Genre.class)} でジャンルのコード）。null は通す。
- * 繰り返しのクエリは {@code List<@OneOfEnum(Genre.class) String>} のように要素に付ける。
+ * enum の値のどれか。null は通す。比べる値は、enum が {@link com.catticket.common.code.ApiCode} を実装していれば
+ * {@code apiValue()}（例: {@code SeoulDistrict} は韓国語の名前 {@code 종로구}）、していなければ定数の名前
+ * （例: {@code Genre} はコード {@code AAAA}）。
+ * 繰り返しのクエリは {@code List<@OneOfEnum(SeoulDistrict.class) String>} のように要素に付ける。
  */
 @Documented
 @Constraint(validatedBy = OneOfEnumValidator.class)

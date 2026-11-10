@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import com.catticket.common.code.Genre;
 import com.catticket.common.code.Lang;
+import com.catticket.common.code.SeoulDistrict;
 import com.catticket.common.error.ApiException;
 import com.catticket.common.error.ErrorCode;
 
@@ -27,6 +28,19 @@ class ValidationRulesTest {
 	record Sample(@CodePointLength(min = 1, max = 3) String name, @NoControlChars String line,
 			@NoControlChars(allowNewlines = true) String text, @NotNull(message = "REQUIRED") @PasswordRule String password,
 			@OneOf({ "ko", "ja" }) String lang, List<@OneOfEnum(Genre.class) String> genre) {
+	}
+
+	record Districts(List<@OneOfEnum(SeoulDistrict.class) String> district) {
+	}
+
+	@Test
+	void oneOfEnumUsesApiValueForApiCode() {
+		// SeoulDistrict は ApiCode なので韓国語の名前、Genre は定数の名前で比べる（06 の 3.3）
+		assertThat(VALIDATOR.validate(new Districts(List.of("종로구", "강남구")))).isEmpty();
+		assertThat(VALIDATOR.validate(new Districts(List.of("JONGNO")))).hasSize(1)
+			.allSatisfy(v -> assertThat(v.getMessage()).isEqualTo("INVALID_VALUE"));
+		assertThat(VALIDATOR.validate(new Districts(List.of("종로구", "없는구")))).hasSize(1)
+			.allSatisfy(v -> assertThat(v.getPropertyPath().toString()).startsWith("district[1]"));
 	}
 
 	private static Set<String> reasons(Sample sample) {
