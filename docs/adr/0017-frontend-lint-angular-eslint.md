@@ -1,7 +1,7 @@
 # 0017. フロントエンドの静的解析（lint）は angular-eslint（Angular の公式の方法）で行い、CI で実行する
 
 - 日付: 2026-11-10
-- 状態: 提案
+- 状態: 採用（2026-11-10、Issue #28 コメント 6759899229 の No.1。導入は Issue #29）
 - 関係する要件: なし（開発の品質の仕組み。特定の機能要件には対応しない）。Issue #24 の人間の決定6（2026-11-10、Issue #24 コメント 6758551367: 「ESLint を Wave 2 の前に導入する。Angular の公式の方法（angular-eslint）を使う。architect が ADR を書き、人間が承認した後に frontend-dev が入れる」）。PR #25 の reviewer の指摘4（lint が CI にない。Angular CLI の標準の構成に ESLint がなく、入れるには ADR が要る）。Issue #28 の No.6
 
 ## 背景
@@ -75,6 +75,11 @@
 - この ADR を採用するか（状態を「採用」にするか）。
 - 導入の Issue の作成（PM）。
 
+**決まったこと（2026-11-10、Issue #28 コメント 6759899229）**:
+
+- No.1: この ADR を**採用**した（決定1〜9 のとおり。変更なし）。導入は **Issue #29**（決定9 の「別の Issue」）で frontend-dev が行う。
+- No.2: `.github/workflows/ci.yml` の frontend のジョブの `Lint` の手順（`npm ci` の後に `npm run lint`）は、Issue #29 の PR の中で実行 Claude が加える（決定8・決定9 のとおり）。`CLAUDE.md` は変えない。
+
 ### 確認した公式ドキュメント（確認日: 2026-11-10）
 
 - angular-eslint の README（`ng add angular-eslint`、`add-eslint-to-project`、メジャーを Angular にそろえる方針、ESLint v9 以降・flat config だけ、書式のルールを持たない）: https://github.com/angular-eslint/angular-eslint
@@ -95,7 +100,7 @@
 ### 0017. 프론트엔드 정적 분석(lint)은 angular-eslint(Angular 공식 방법)로 하고 CI에서 실행한다
 
 - 날짜: 2026-11-10
-- 상태: 제안
+- 상태: 채택(2026-11-10, Issue #28 코멘트 6759899229의 No.1. 도입은 Issue #29)
 - 관련 요건: 없음(개발 품질의 장치. 특정 기능 요건에는 대응하지 않는다). Issue #24의 사람의 결정 6(2026-11-10, Issue #24 코멘트 6758551367: "ESLint를 Wave 2 전에 도입한다. Angular 공식 방법(angular-eslint)을 쓴다. architect가 ADR을 쓰고 사람이 승인한 뒤 frontend-dev가 넣는다"). PR #25 reviewer 지적 4(lint가 CI에 없다. Angular CLI 표준 구성에 ESLint가 없고, 넣으려면 ADR이 필요). Issue #28의 No.6
 
 ### 배경
@@ -168,6 +173,11 @@
 
 - 이 ADR을 채택할지(상태를 "채택"으로 할지).
 - 도입 Issue 작성(PM).
+
+**정해진 것(2026-11-10, Issue #28 코멘트 6759899229)**:
+
+- No.1: 이 ADR을 **채택**했다(결정 1~9대로. 변경 없음). 도입은 **Issue #29**(결정 9의 "별도 Issue")에서 frontend-dev가 한다.
+- No.2: `.github/workflows/ci.yml` frontend 잡의 `Lint` 단계(`npm ci` 뒤에 `npm run lint`)는 Issue #29의 PR 안에서 실행 Claude가 더한다(결정 8·결정 9대로). `CLAUDE.md`는 바꾸지 않는다.
 
 #### 확인한 공식 문서 (확인일: 2026-11-10)
 
