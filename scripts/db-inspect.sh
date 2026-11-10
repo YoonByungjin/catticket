@@ -46,27 +46,34 @@ esac
 auto_db_name() {
   [[ -f .git ]] || { echo test_catticket; return; }
   local dir s hash
-  dir=$(basename "$PWD")
+  # Gradle（canonicalFile）と同じく、シンボリックリンクを解決した実際のフォルダ名を使う
+  dir=$(basename "$(pwd -P)")
   s=$(printf '%s' "$dir" | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C sed -E 's/[^a-z0-9]+/_/g; s/^_+//; s/_+$//')
+  # 長い名前・英数字のない名前は、元の名前の SHA-1 の先頭 8 文字で区別する
+  hash=$(printf '%s' "$dir" | sha1sum | cut -c1-8)
   if [[ -z "$s" ]]; then
-    echo test_catticket
+    # worktree なのにメインと同じ test_catticket を黙って使わないため
+    echo "test_catticket_$hash"
   elif (( ${#s} <= 49 )); then
     echo "test_catticket_$s"
   else
-    # 64 文字の上限に収めるため、切り詰めて元の名前の SHA-1 の先頭 8 文字で区別する
-    hash=$(printf '%s' "$dir" | sha1sum | cut -c1-8)
+    # 64 文字の上限に収めるため切り詰める
     s=$(printf '%s' "${s:0:40}" | sed -E 's/_+$//')
     echo "test_catticket_${s}_$hash"
   fi
 }
 
-db="${TEST_DB_NAME:-}"
+# 前後の空白は Gradle と同じく除く
+trim() { printf '%s' "$1" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'; }
+
+db=$(trim "${TEST_DB_NAME:-}")
 if [[ -z "$db" && -f .env ]]; then
-  db=$(sed -n 's/^[[:space:]]*TEST_DB_NAME[[:space:]]*=[[:space:]]*//p' .env | tail -n 1 | tr -d '\r' | sed 's/[[:space:]]*$//')
+  db=$(trim "$(sed -n 's/^[[:space:]]*TEST_DB_NAME[[:space:]]*=//p' .env | tail -n 1)")
 fi
 db="${db:-$(auto_db_name)}"
-if ! [[ "$db" =~ ^test_catticket(_[a-z0-9]+)*$ ]] || (( ${#db} > 64 )); then
-  echo "TEST_DB_NAME は test_catticket または test_catticket_{英小文字・数字}（64 文字以下）にしてください: $db" >&2
+# [a-z] が大文字に一致するロケールがあるので C ロケールで確かめる
+if ! printf '%s' "$db" | LC_ALL=C grep -Eqx 'test_catticket(_[a-z0-9]+)*' || (( ${#db} > 64 )); then
+  echo "TEST_DB_NAME は test_catticket または test_catticket_{英小文字・数字}（_ 区切り可。64 文字以下）にしてください: $db" >&2
   exit 2
 fi
 
