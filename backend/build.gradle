@@ -35,18 +35,19 @@ dependencies {
 }
 
 // worktree のフォルダ名からテスト用 DB 名を作る。scripts/db-inspect.sh と同じ規則（変えるときは両方そろえる）。
-// MySQL の DB 名は 64 文字までなので、長い名前は先頭 40 文字 + SHA-1 の先頭 8 文字で一意性を保つ
+// MySQL の DB 名は 64 文字までなので、長い名前は先頭 40 文字 + SHA-1 の先頭 8 文字で一意性を保つ。
+// 英数字が残らない名前（例: 한글）も、メインの test_catticket を黙って共有しないようハッシュで分ける
 def testDbNameFromFolder = { String folderName ->
 	def s = folderName.toLowerCase(Locale.ROOT).replaceAll(/[^a-z0-9]+/, '_').replaceAll(/^_+|_+$/, '')
+	def sha1 = java.security.MessageDigest.getInstance('SHA-1').digest(folderName.getBytes('UTF-8'))
+	def hash = sha1.encodeHex().toString().substring(0, 8)
 	if (s.isEmpty()) {
-		return 'test_catticket'
+		return "test_catticket_${hash}".toString()
 	}
 	if (s.length() <= 49) {
 		return "test_catticket_${s}".toString()
 	}
 	def head = s.substring(0, 40).replaceAll(/_+$/, '')
-	def sha1 = java.security.MessageDigest.getInstance('SHA-1').digest(folderName.getBytes('UTF-8'))
-	def hash = sha1.encodeHex().toString().substring(0, 8)
 	return "test_catticket_${head}_${hash}".toString()
 }
 
