@@ -1,0 +1,6 @@
+# テストだけの設定（06 の 7.2）。classpath:/config/application.yml は src/main の application.yml に重ねて読まれ、こちらが優先される。
+# （src/test/resources/application.yml にすると main の設定が丸ごと隠れるので、この場所に置く）
+catticket:
+  # テストでバッチを自動で動かさない。catticket.task も設定しない
+  scheduler:
+    enabled: false
