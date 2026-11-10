@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.catticket.auth.AuthMapper">
+
+  <!-- record なのでコンストラクターで渡す（引数の名前は -parameters でコンパイルした名前） -->
+  <resultMap id="sessionUserRow" type="com.catticket.auth.row.SessionUserRow">
+    <constructor>
+      <idArg column="id" name="id" javaType="_long"/>
+      <arg column="role" name="role" javaType="com.catticket.common.security.Role"/>
+      <arg column="status" name="status" javaType="string"/>
+      <arg column="nickname" name="nickname" javaType="string"/>
+      <arg column="password_hash" name="passwordHash" javaType="string"/>
+    </constructor>
+  </resultMap>
+
+  <!-- SessionUserFilter がリクエストごとに呼ぶので、主キーだけで読む -->
+  <select id="findUserById" resultMap="sessionUserRow">
+    SELECT id, role, status, nickname, password_hash
+    FROM app_user
+    WHERE id = #{id}
+  </select>
+
+</mapper>
