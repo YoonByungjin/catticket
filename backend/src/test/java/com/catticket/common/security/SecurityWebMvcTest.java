@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import com.catticket.auth.AuthSessionService;
+import com.catticket.auth.UserStatus;
 import com.catticket.auth.row.SessionUserRow;
 import com.catticket.common.config.JacksonConfig;
 import com.catticket.common.support.TestApiController;
@@ -174,7 +175,7 @@ class SecurityWebMvcTest {
 			MockHttpSession session = login(1, Role.USER, HASH);
 			// ニックネームはセッションに持たず、毎回 DB の値を使う（03 の 7.4）
 			given(authSessionService.findSessionUser(1))
-				.willReturn(Optional.of(new SessionUserRow(1, Role.USER, "ACTIVE", "NewName", HASH)));
+				.willReturn(Optional.of(new SessionUserRow(1, Role.USER, UserStatus.ACTIVE, "NewName", HASH)));
 
 			mvc.perform(get("/api/me/test").session(session))
 				.andExpect(status().isOk())
@@ -188,7 +189,7 @@ class SecurityWebMvcTest {
 		void adminNicknameIsNull() throws Exception {
 			MockHttpSession session = login(9, Role.ADMIN, HASH);
 			given(authSessionService.findSessionUser(9))
-				.willReturn(Optional.of(new SessionUserRow(9, Role.ADMIN, "ACTIVE", "catticket-admin", HASH)));
+				.willReturn(Optional.of(new SessionUserRow(9, Role.ADMIN, UserStatus.ACTIVE, "catticket-admin", HASH)));
 
 			mvc.perform(get("/api/admin/test").session(session))
 				.andExpect(status().isOk())
@@ -213,7 +214,7 @@ class SecurityWebMvcTest {
 			// 2. 状態が有効でない
 			MockHttpSession session = login(1, Role.USER, HASH);
 			given(authSessionService.findSessionUser(1))
-				.willReturn(Optional.of(new SessionUserRow(1, Role.USER, "PENDING", "Cat", HASH)));
+				.willReturn(Optional.of(new SessionUserRow(1, Role.USER, UserStatus.PENDING, "Cat", HASH)));
 
 			mvc.perform(get("/api/me/test").session(session)).andExpect(status().isUnauthorized());
 			assertThat(session.isInvalid()).isTrue();
@@ -224,7 +225,7 @@ class SecurityWebMvcTest {
 			// 3. ほかの端末でパスワードを変えた
 			MockHttpSession session = login(1, Role.USER, HASH);
 			given(authSessionService.findSessionUser(1))
-				.willReturn(Optional.of(new SessionUserRow(1, Role.USER, "ACTIVE", "Cat", HASH + "x")));
+				.willReturn(Optional.of(new SessionUserRow(1, Role.USER, UserStatus.ACTIVE, "Cat", HASH + "x")));
 
 			mvc.perform(get("/api/me/test").session(session)).andExpect(status().isUnauthorized());
 			assertThat(session.isInvalid()).isTrue();
@@ -252,7 +253,7 @@ class SecurityWebMvcTest {
 		void terminateEndsSessionAndClearsCookies() throws Exception {
 			MockHttpSession session = login(1, Role.USER, HASH);
 			given(authSessionService.findSessionUser(1))
-				.willReturn(Optional.of(new SessionUserRow(1, Role.USER, "ACTIVE", "Cat", HASH)));
+				.willReturn(Optional.of(new SessionUserRow(1, Role.USER, UserStatus.ACTIVE, "Cat", HASH)));
 
 			MockHttpServletResponse response = mvc
 				.perform(post("/api/me/test/terminate").session(session).with(csrf()))
@@ -283,7 +284,7 @@ class SecurityWebMvcTest {
 		void logoutInvalidatesSession() throws Exception {
 			MockHttpSession session = login(1, Role.USER, HASH);
 			given(authSessionService.findSessionUser(1))
-				.willReturn(Optional.of(new SessionUserRow(1, Role.USER, "ACTIVE", "Cat", HASH)));
+				.willReturn(Optional.of(new SessionUserRow(1, Role.USER, UserStatus.ACTIVE, "Cat", HASH)));
 
 			MockHttpServletResponse response = mvc.perform(post("/api/auth/logout").session(session).with(csrf()))
 				.andExpect(status().isNoContent())

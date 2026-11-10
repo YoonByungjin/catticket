@@ -19,7 +19,7 @@ class AuthSessionServiceTest {
 
 	@Test
 	void returnsRowFromMapper() {
-		SessionUserRow row = new SessionUserRow(1, Role.USER, "ACTIVE", "Cat", "{bcrypt}x");
+		SessionUserRow row = new SessionUserRow(1, Role.USER, UserStatus.ACTIVE, "Cat", "{bcrypt}x");
 		given(authMapper.findUserById(1)).willReturn(Optional.of(row));
 
 		assertThat(service.findSessionUser(1)).contains(row);

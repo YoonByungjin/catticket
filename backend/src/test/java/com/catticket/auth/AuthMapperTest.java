@@ -54,7 +54,8 @@ class AuthMapperTest {
 		assertThat(row).isPresent();
 		assertThat(row.get().id()).isEqualTo(id);
 		assertThat(row.get().role()).isEqualTo(Role.USER);
-		assertThat(row.get().status()).isEqualTo("ACTIVE");
+		// DB の ENUM の文字列が UserStatus の名前で対応する
+		assertThat(row.get().status()).isEqualTo(UserStatus.ACTIVE);
 		assertThat(row.get().isActive()).isTrue();
 		assertThat(row.get().nickname()).isEqualTo("Cat");
 		assertThat(row.get().passwordHash()).isEqualTo("{bcrypt}hash-1");
@@ -65,6 +66,9 @@ class AuthMapperTest {
 		long pending = insertUser("new@example.com", "New", "USER", "PENDING", "{bcrypt}hash-2");
 		long admin = insertUser("admin@example.com", "catticket-admin", "ADMIN", "ACTIVE", "{bcrypt}hash-3");
 
+		assertThat(authMapper.findUserById(pending)).get()
+			.extracting(SessionUserRow::status)
+			.isEqualTo(UserStatus.PENDING);
 		assertThat(authMapper.findUserById(pending)).get().extracting(SessionUserRow::isActive).isEqualTo(false);
 		assertThat(authMapper.findUserById(admin)).get().extracting(SessionUserRow::role).isEqualTo(Role.ADMIN);
 	}
