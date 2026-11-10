@@ -1,10 +1,10 @@
 # 07. UI デザインガイド
 
-- 状態: レビュー済み（2026-11-06 承認、Issue #15 コメント 6678921752。ゲート4（Issue #20）: reviewer の指摘（2026-11-09）を反映済み、人間の承認待ち）
+- 状態: レビュー済み（2026-11-06 承認、Issue #15 コメント 6678921752。ゲート4（Issue #20）: reviewer の指摘（2026-11-09）を反映済み、人間の承認待ち）。Issue #28（設計書の修正）の内容を反映（2026-11-10）、reviewer の確認待ち
 - 担当: ui-designer
-- 最終更新: 2026-11-09
+- 最終更新: 2026-11-10
 - 前提: [02. 画面設計書](02-screens.md)（P-01〜P-18 は決定済み。Issue #15 コメント 6651238358・6676943465）、[01. 要件定義書](01-requirements.md)（N-01, N-02, F-36）、ADR 0014（Angular Material + CDK）、ADR 0015（Google Stitch）、ADR 0016（Material Symbols を npm で同梱）、ADR 0006（地図）
-- 人間の決定の反映: Issue #15 コメント 6676583842（試作・07 の確認）、6676943465（ADR 0016・P-16〜P-18）、6678516145（ゲート3 の reviewer の指摘 6678542365 への対応。4.6 の期間の区切りの記号）。2026-11-09 ゲート4（Issue #20）の reviewer の指摘により SC-03 の「-」の見た目を追加
+- 人間の決定の反映: Issue #15 コメント 6676583842（試作・07 の確認）、6676943465（ADR 0016・P-16〜P-18）、6678516145（ゲート3 の reviewer の指摘 6678542365 への対応。4.6 の期間の区切りの記号）。2026-11-09 ゲート4（Issue #20）の reviewer の指摘により SC-03 の「-」の見た目を追加。2026-11-10 Issue #28 で、Issue #24 コメント 6758551367 の決定1・2・4・5（色を「seed と参考の値」に（2.1）、仮の文言・値（3.・4.1〜4.3・5.）、アカウントのリンクの表示（4.1）、状態の表示の文言（4.3））と、Issue #28 のやること No.7・コメント 6759899229 の決定 No.4〜8（長いニックネーム（4.1・6.）、スマホ表示・PC 表示の境目（2.4））を反映
 - 試作: [mockups/](mockups/README.md)
 
 ## 1. 位置づけ
@@ -20,76 +20,97 @@
 
 ### 2.1 色
 
-色の値は Material 3 のテーマの**元になる色**（seed）と、自作の部分（地図の印・横棒・スケルトンなど）で使う値。Angular Material のパレットは、実装のときに公式の `ng generate @angular/material:theme-color` で下の primary・tertiary・error・neutral から作る。作った後、2.1.2・2.1.4 のコントラストを満たすことを実装で確かめる。
+色は2種類に分けて決める（Issue #24 コメント 6758551367 の決定1）。
+
+- **M3 の役割の色**（`primary`・`surface` など）: **正は seed（元になる色）**。Angular Material のパレットは、公式の `ng generate @angular/material:theme-color` で 2.1.0 の seed から作り、**生成した値をそのまま使う**（手で値を変えない・`mat.theme-overrides` などで上書きしない）。2.1.1・2.1.3 の HEX は、その生成の結果を書き写した**参考の値**で、生成の結果と食い違うときは生成の結果が正しい。
+- **自作の色**（`success`・`success-container`・`placeholder`。M3 に役割がない）: **この文書の値が正**（2.1.5 の 5.）。
+
+#### 2.1.0 seed（M3 の役割の色の元になる色）
+
+| seed | HEX | 作られるパレット |
+|---|---|---|
+| primary | `#4338CA` | primary（secondary も primary から作られる） |
+| tertiary | `#B45309` | tertiary |
+| neutral | `#1F2937` | neutral（画面の背景・`surface-container-*`・`on-surface` など） |
+| error | `#B91C1C` | error |
+
+- neutral の seed `#1F2937` は、試作のデザインシステムの neutral（[mockups/README.md](mockups/README.md)）と同じ。
+- neutral-variant（`on-surface-variant`・`outline-variant`）の seed は置かない（theme-color が primary から作る）。
+- 参考の値は、Angular Material 22.2.6 の theme-color で上の4つの seed から生成したパレット（実装の `frontend/src/theme/_theme-colors.scss`。PR #25）と、`mat.theme` が役割に当てるトーン（Angular Material の `md-sys-color-values-light` / `-dark`）から書き写した（2026-11-10 に照合）。表の「トーン」は、パレットのどの段階の色かを示す（例: `primary 40` は primary のパレットの 40）。
+- seed を変えるときは、theme-color で作り直し、2.1.1・2.1.3 の参考の値と 2.1.2・2.1.4 のコントラストを計算し直す（2.1.5 の 4.）。
 
 #### 2.1.1 色の一覧（ライト表示）
 
-| トークン | HEX | Material 3 の役割 | 用途 |
+| トークン | Material 3 の役割（トーン） | 参考の値 | 用途 |
 |---|---|---|---|
-| `primary` | `#4338CA` | primary | 主なボタン（検索・ログイン・保存）、リンク、選択中のタブ・チップ、地図の会場の印、「公演予定」のラベルの文字、選択中の切り替え（`mat-button-toggle`）の文字 |
-| `on-primary` | `#FFFFFF` | on-primary | primary の上の文字・アイコン |
-| `primary-container` | `#EEF2FF` | primary-container | 「公演予定」のラベルの背景、選択中の行・項目の背景、選択中の切り替え（`mat-button-toggle`）の背景 |
-| `tertiary` | `#B45309` | tertiary | 評価の星、受賞作バッジの文字・枠、人気順位の表示 |
-| `tertiary-container` | `#FFFBEB` | tertiary-container | 受賞作バッジの背景、「NEW」の背景 |
-| `success` | `#166534` | （自作。M3 に役割がない） | 「公演中」のラベルの文字、「▲3」の文字 |
-| `success-container` | `#F0FDF4` | （自作） | 「公演中」のラベルの背景 |
-| `error` | `#B91C1C` | error | 入力の誤り、エラーの文言、削除のボタン |
-| `on-error` | `#FFFFFF` | on-error | 削除のボタン（塗り）の文字 |
-| `background` / `surface` | `#FFFFFF` | surface | 画面の背景、カード |
-| `surface-container-low` | `#F9FAFB` | surface-container-low | SC-01 の左パネル・下のシート、フッターの背景 |
-| `surface-container` | `#F3F4F6` | surface-container | 「終了」のラベルの背景、表の見出し行 |
-| `placeholder` | `#E5E7EB` | （自作） | 画像（ポスター）がないときの枠、読み込み中のスケルトン、地図の読み込み前の枠 |
-| `on-surface` | `#1F2937` | on-surface | 本文・見出しの文字 |
-| `on-surface-variant` | `#4B5563` | on-surface-variant | 補足の文字（会場名・期間・件数・原文の併記・出典・集計期間）、「終了」のラベルの文字 |
-| `outline` | `#D1D5DB` | outline-variant | カード・入力欄・表の境界線（文字には使わない） |
+| `primary` | primary（primary 40） | `#5148D7` | 主なボタン（検索・ログイン・保存）、リンク、選択中のタブ・チップ、地図の会場の印、「公演予定」のラベルの文字、選択中の切り替え（`mat-button-toggle`）の文字 |
+| `on-primary` | on-primary（primary 100） | `#FFFFFF` | primary の上の文字・アイコン |
+| `primary-container` | primary-container（primary 90） | `#E3DFFF` | 「公演予定」のラベルの背景、選択中の行・項目の背景、選択中の切り替え（`mat-button-toggle`）の背景 |
+| `tertiary` | tertiary（tertiary 40） | `#9B4500` | 評価の星、受賞作バッジの文字・枠、人気順位の表示 |
+| `tertiary-container` | tertiary-container（tertiary 90） | `#FFDBCA` | 受賞作バッジの背景、「NEW」の背景 |
+| `success` | （自作。M3 に役割がない） | `#166534`（正） | 「公演中」のラベルの文字、「▲3」の文字 |
+| `success-container` | （自作） | `#F0FDF4`（正） | 「公演中」のラベルの背景 |
+| `error` | error（error 40） | `#B91C1C` | 入力の誤り、エラーの文言、削除のボタン |
+| `on-error` | on-error（error 100） | `#FFFFFF` | 削除のボタン（塗り）の文字 |
+| `background` / `surface` | surface（neutral 98） | `#F8F9FF` | 画面の背景、カード |
+| `surface-container-low` | surface-container-low（neutral 96） | `#EFF4FF` | SC-01 の左パネル・下のシート、フッターの背景 |
+| `surface-container` | surface-container（neutral 94） | `#E6EEFF` | 「終了」のラベルの背景、表の見出し行 |
+| `placeholder` | （自作） | `#E5E7EB`（正） | 画像（ポスター）がないときの枠、読み込み中のスケルトン、地図の読み込み前の枠 |
+| `on-surface` | on-surface（neutral 10） | `#121C2A` | 本文・見出しの文字 |
+| `on-surface-variant` | on-surface-variant（neutral-variant 30） | `#464554` | 補足の文字（会場名・期間・件数・原文の併記・出典・集計期間）、「終了」のラベルの文字 |
+| `outline` | outline-variant（neutral-variant 80） | `#C7C4D7` | カード・入力欄・表の境界線（文字には使わない） |
 
 - 色だけで意味を伝えない。公演の状態は必ず文字（「公演中」「公演予定」「終了」）で示し、色は補助にする。
 - ダーク表示（F-36）の色は 2.1.3。どの画面も、ライト表示・ダーク表示の両方で同じトークンの名前を使う（値だけが変わる）。
+- 画面の背景（`surface`）は白ではなく、わずかに青みのある `#F8F9FF` になる（neutral の seed から生成した値。上書きしない）。カードも同じ `surface` なので、カードは境界線 `outline` で区切る（2.5）。
 
 #### 2.1.2 コントラスト（ライト表示。文字と背景）
 
-WCAG 2.x の計算式で求めた値（小数第2位を切り捨て）。すべて 4.5:1 以上。
+2.1.1 の値（M3 の役割の色は参考の値）から WCAG 2.x の計算式で求めた値（小数第2位を切り捨て）。すべて 4.5:1 以上。
 
 | 文字 | 背景 | 比 |
 |---|---|---|
-| `on-surface` `#1F2937` | `#FFFFFF` | 14.6:1 |
-| `on-surface-variant` `#4B5563` | `#FFFFFF` | 7.5:1 |
-| `on-surface-variant` `#4B5563` | `surface-container` `#F3F4F6` | 6.8:1 |
-| `on-surface-variant` `#4B5563` | `placeholder` `#E5E7EB` | 6.1:1 |
-| `on-primary` `#FFFFFF` | `primary` `#4338CA` | 7.9:1 |
-| `primary` `#4338CA` | `primary-container` `#EEF2FF` | 7.0:1 |
-| `primary` `#4338CA`（リンク） | `#FFFFFF` | 7.9:1 |
-| `tertiary` `#B45309` | `#FFFFFF` | 5.0:1 |
-| `tertiary` `#B45309` | `tertiary-container` `#FFFBEB` | 4.8:1 |
+| `on-surface` `#121C2A` | `surface` `#F8F9FF` | 16.3:1 |
+| `on-surface` `#121C2A` | `surface-container` `#E6EEFF` | 14.7:1 |
+| `on-surface-variant` `#464554` | `surface` `#F8F9FF` | 8.9:1 |
+| `on-surface-variant` `#464554` | `surface-container-low` `#EFF4FF` | 8.5:1 |
+| `on-surface-variant` `#464554` | `surface-container` `#E6EEFF` | 8.0:1 |
+| `on-surface-variant` `#464554` | `placeholder` `#E5E7EB` | 7.5:1 |
+| `on-primary` `#FFFFFF` | `primary` `#5148D7` | 6.4:1 |
+| `primary` `#5148D7`（「公演予定」・選択中の切り替え） | `primary-container` `#E3DFFF` | 4.9:1 |
+| `primary` `#5148D7`（リンク） | `surface` `#F8F9FF` | 6.1:1 |
+| `primary` `#5148D7` | `surface-container-low` `#EFF4FF` | 5.8:1 |
+| `tertiary` `#9B4500` | `surface` `#F8F9FF` | 6.1:1 |
+| `tertiary` `#9B4500` | `tertiary-container` `#FFDBCA` | 5.0:1 |
 | `success` `#166534` | `success-container` `#F0FDF4` | 6.8:1 |
-| `success` `#166534`（「▲3」） | `#FFFFFF` | 7.1:1 |
-| `error` `#B91C1C` | `#FFFFFF` | 6.4:1 |
+| `success` `#166534`（「▲3」） | `surface` `#F8F9FF` | 6.7:1 |
+| `error` `#B91C1C` | `surface` `#F8F9FF` | 6.1:1 |
 | `on-error` `#FFFFFF` | `error` `#B91C1C` | 6.4:1 |
 
 #### 2.1.3 色の一覧（ダーク表示。F-36・P-16）
 
 **対象はすべての画面**: SC-01〜SC-14・SC-99（管理者の画面 SC-13・SC-14 を含む。P-16）、ダイアログ DL-01〜DL-04、共通部品 CM-01〜CM-03、地図の上の自作の部分（4.5）。地図（Google Maps）そのものの暗い表示は 02 の 3.8 に従う（`colorScheme`）。
 
-トークンの名前・用途は 2.1.1 と同じ。値だけをダーク表示の値にする。
+トークンの名前・用途は 2.1.1 と同じ。値だけをダーク表示の値にする。M3 の役割の色のダークの値は、2.1.1 と同じパレット（同じ seed）から `mat.theme` が別のトーンを当てたもので、**参考の値**（2.1 の冒頭）。自作の色（`success`・`success-container`・`placeholder`）はこの表の値が正。
 
-| トークン | ライト | ダーク | ダークでの注意 |
-|---|---|---|---|
-| `primary` | `#4338CA` | `#A5B4FC` | ダークでは明るい色になる。塗りのボタンの文字は `on-primary` |
-| `on-primary` | `#FFFFFF` | `#1E1B4B` | 塗りのボタン・会場の印の数字 |
-| `primary-container` | `#EEF2FF` | `#312E81` | 選択中の切り替え・「公演予定」・「修正済み」のラベルの背景 |
-| `tertiary` | `#B45309` | `#FCD34D` | 評価の星・受賞作バッジ |
-| `tertiary-container` | `#FFFBEB` | `#451A03` | 受賞作バッジ・「NEW」の背景 |
-| `success` | `#166534` | `#86EFAC` | 「公演中」・「▲3」の文字 |
-| `success-container` | `#F0FDF4` | `#052E16` | 「公演中」のラベルの背景 |
-| `error` | `#B91C1C` | `#FCA5A5` | 入力の誤り・削除のボタン |
-| `on-error` | `#FFFFFF` | `#450A0A` | 削除のボタン（塗り）の文字 |
-| `background` / `surface` | `#FFFFFF` | `#111827` | 画面の背景・カード |
-| `surface-container-low` | `#F9FAFB` | `#1F2937` | SC-01 の左パネル・下のシート、フッター |
-| `surface-container` | `#F3F4F6` | `#374151` | 「終了」のラベル、表の見出し行、画面の上の案内の枠 |
-| `placeholder` | `#E5E7EB` | `#4B5563` | ポスターがないとき・スケルトン・地図の読み込み前 |
-| `on-surface` | `#1F2937` | `#F3F4F6` | 本文・見出し |
-| `on-surface-variant` | `#4B5563` | `#D1D5DB` | 補足の文字 |
-| `outline` | `#D1D5DB` | `#4B5563` | 境界線（文字には使わない） |
+| トークン | ダークのトーン | ライト（参考） | ダーク（参考） | ダークでの注意 |
+|---|---|---|---|---|
+| `primary` | primary 80 | `#5148D7` | `#C3C0FF` | ダークでは明るい色になる。塗りのボタンの文字は `on-primary` |
+| `on-primary` | primary 20 | `#FFFFFF` | `#1F00A4` | 塗りのボタン・会場の印の数字 |
+| `primary-container` | primary 30 | `#E3DFFF` | `#372ABF` | 選択中の切り替え・「公演予定」・「修正済み」のラベルの背景 |
+| `tertiary` | tertiary 80 | `#9B4500` | `#FFB68E` | 評価の星・受賞作バッジ |
+| `tertiary-container` | tertiary 30 | `#FFDBCA` | `#763300` | 受賞作バッジ・「NEW」の背景 |
+| `success` | （自作） | `#166534`（正） | `#86EFAC`（正） | 「公演中」・「▲3」の文字 |
+| `success-container` | （自作） | `#F0FDF4`（正） | `#052E16`（正） | 「公演中」のラベルの背景 |
+| `error` | error 80 | `#B91C1C` | `#FFB4AB` | 入力の誤り・削除のボタン |
+| `on-error` | error 20 | `#FFFFFF` | `#690005` | 削除のボタン（塗り）の文字 |
+| `background` / `surface` | neutral 6 | `#F8F9FF` | `#091421` | 画面の背景・カード |
+| `surface-container-low` | neutral 10 | `#EFF4FF` | `#121C2A` | SC-01 の左パネル・下のシート、フッター |
+| `surface-container` | neutral 12 | `#E6EEFF` | `#16202E` | 「終了」のラベル、表の見出し行、画面の上の案内の枠 |
+| `placeholder` | （自作） | `#E5E7EB`（正） | `#4B5563`（正） | ポスターがないとき・スケルトン・地図の読み込み前 |
+| `on-surface` | neutral 90 | `#121C2A` | `#D9E3F6` | 本文・見出し |
+| `on-surface-variant` | neutral-variant 90 | `#464554` | `#E4E0F3` | 補足の文字 |
+| `outline`（M3 の outline-variant） | neutral-variant 30 | `#C7C4D7` | `#464554` | 境界線（文字には使わない） |
 
 - ポスターの画像は明るさを変えない（写真に手を加えない）。
 - 影（2.5）はダークでは見えにくいが、Angular Material の既定のまま（境界線 `outline` で区切りが分かる）。
@@ -98,37 +119,39 @@ WCAG 2.x の計算式で求めた値（小数第2位を切り捨て）。すべ�
 
 #### 2.1.4 コントラスト（ダーク表示。文字と背景）
 
-2.1.2 と同じ計算式（小数第2位を切り捨て）。すべて 4.5:1 以上。
+2.1.2 と同じ計算式（2.1.3 の値から。小数第2位を切り捨て）。すべて 4.5:1 以上。
 
 | 文字 | 背景 | 比 |
 |---|---|---|
-| `on-surface` `#F3F4F6` | `surface` `#111827` | 16.1:1 |
-| `on-surface` `#F3F4F6` | `surface-container-low` `#1F2937` | 13.3:1 |
-| `on-surface` `#F3F4F6` | `surface-container` `#374151` | 9.3:1 |
-| `on-surface-variant` `#D1D5DB` | `surface` `#111827` | 12.0:1 |
-| `on-surface-variant` `#D1D5DB` | `surface-container-low` `#1F2937` | 9.9:1 |
-| `on-surface-variant` `#D1D5DB` | `surface-container` `#374151` | 6.9:1 |
-| `on-surface-variant` `#D1D5DB` | `placeholder` `#4B5563` | 5.1:1 |
-| `on-primary` `#1E1B4B` | `primary` `#A5B4FC` | 8.0:1 |
-| `primary` `#A5B4FC`（リンク・選択中のタブ） | `surface` `#111827` | 8.8:1 |
-| `primary` `#A5B4FC` | `surface-container-low` `#1F2937` | 7.3:1 |
-| `primary` `#A5B4FC` | `surface-container` `#374151` | 5.1:1 |
-| `primary` `#A5B4FC`（選択中の切り替え） | `primary-container` `#312E81` | 5.7:1 |
-| `tertiary` `#FCD34D` | `surface` `#111827` | 12.3:1 |
-| `tertiary` `#FCD34D` | `surface-container-low` `#1F2937` | 10.1:1 |
-| `tertiary` `#FCD34D` | `tertiary-container` `#451A03` | 10.3:1 |
+| `on-surface` `#D9E3F6` | `surface` `#091421` | 14.3:1 |
+| `on-surface` `#D9E3F6` | `surface-container-low` `#121C2A` | 13.2:1 |
+| `on-surface` `#D9E3F6` | `surface-container` `#16202E` | 12.7:1 |
+| `on-surface-variant` `#E4E0F3` | `surface` `#091421` | 14.3:1 |
+| `on-surface-variant` `#E4E0F3` | `surface-container-low` `#121C2A` | 13.2:1 |
+| `on-surface-variant` `#E4E0F3` | `surface-container` `#16202E` | 12.6:1 |
+| `on-surface-variant` `#E4E0F3` | `placeholder` `#4B5563` | 5.8:1 |
+| `on-primary` `#1F00A4` | `primary` `#C3C0FF` | 7.7:1 |
+| `primary` `#C3C0FF`（リンク・選択中のタブ） | `surface` `#091421` | 10.8:1 |
+| `primary` `#C3C0FF` | `surface-container-low` `#121C2A` | 10.0:1 |
+| `primary` `#C3C0FF` | `surface-container` `#16202E` | 9.6:1 |
+| `primary` `#C3C0FF`（選択中の切り替え） | `primary-container` `#372ABF` | 5.4:1 |
+| `tertiary` `#FFB68E` | `surface` `#091421` | 10.8:1 |
+| `tertiary` `#FFB68E` | `surface-container-low` `#121C2A` | 10.0:1 |
+| `tertiary` `#FFB68E` | `tertiary-container` `#763300` | 5.4:1 |
 | `success` `#86EFAC` | `success-container` `#052E16` | 10.6:1 |
-| `success` `#86EFAC`（「▲3」） | `surface` `#111827` | 12.6:1 |
-| `error` `#FCA5A5` | `surface` `#111827` | 9.3:1 |
-| `error` `#FCA5A5` | `surface-container-low` `#1F2937` | 7.7:1 |
-| `on-error` `#450A0A` | `error` `#FCA5A5` | 8.5:1 |
+| `success` `#86EFAC`（「▲3」） | `surface` `#091421` | 13.1:1 |
+| `error` `#FFB4AB` | `surface` `#091421` | 10.9:1 |
+| `error` `#FFB4AB` | `surface-container-low` `#121C2A` | 10.0:1 |
+| `on-error` `#690005` | `error` `#FFB4AB` | 7.7:1 |
 
 地図の上の自作の部分（4.5）:
 
-| 部分 | 前景 | 背景 | 比 |
-|---|---|---|---|
-| 会場の印の数字 | `on-primary` `#1E1B4B` | `primary` `#A5B4FC` | 8.0:1 |
-| 駅の印のアイコン | `surface` `#111827` | `on-surface` `#F3F4F6` | 16.1:1 |
+| 部分 | 表示 | 前景 | 背景 | 比 |
+|---|---|---|---|---|
+| 会場の印の数字 | ライト | `on-primary` `#FFFFFF` | `primary` `#5148D7` | 6.4:1 |
+| 会場の印の数字 | ダーク | `on-primary` `#1F00A4` | `primary` `#C3C0FF` | 7.7:1 |
+| 駅の印のアイコン | ライト | `surface` `#F8F9FF` | `on-surface` `#121C2A` | 16.3:1 |
+| 駅の印のアイコン | ダーク | `surface` `#091421` | `on-surface` `#D9E3F6` | 14.3:1 |
 
 - 印・円と地図の背景の見分けやすさは、地図の色が Google の表示で決まるため、ここでは数値にしない。実装で、暗い地図・明るい地図の両方で印・円が見分けられることを確かめる。
 
@@ -136,10 +159,10 @@ WCAG 2.x の計算式で求めた値（小数第2位を切り捨て）。すべ�
 
 ADR 0014 決定2（`mat.theme` で1か所にまとめる）の範囲で作る。新しいライブラリは使わない。
 
-1. `mat.theme` の `color` に、2.1.1 の色から作ったパレットと **`theme-type: color-scheme`** を指定する。こうすると Angular Material は M3 の役割の色（`--mat-sys-*`）を CSS の `light-dark()` で出し、ライト・ダークの両方の値を1つのテーマで持つ（公式のテーマのガイドの方法。名前は実装のときに公式のガイドで確かめる）。
+1. `mat.theme` の `color` に、2.1.0 の seed から theme-color で作ったパレット（生成したファイルの値を手で変えない）と **`theme-type: color-scheme`** を指定する。こうすると Angular Material は M3 の役割の色（`--mat-sys-*`）を CSS の `light-dark()` で出し、ライト・ダークの両方の値を1つのテーマで持つ（公式のテーマのガイドの方法。名前は実装のときに公式のガイドで確かめる）。
 2. 表示の切り替えは、`<html>` の CSS の **`color-scheme` を `light` または `dark`** にすることで行う。どちらにするかは 02 の 3.8 の判定（`localStorage` の値、なければ `prefers-color-scheme`）で決める。判定と設定の方法（最初の描画の前に行う）は 06・実装。ページは読み込み直さない（02 の 3.8）。
 3. 画面のスタイルでは `@media (prefers-color-scheme: dark)` を使わない（ブラウザに記憶した表示を優先できないため。F-36 ③）。
-4. M3 の役割の色は、生成したパレットのダークの値をそのまま使う。2.1.4 の比を満たさない組み合わせがあれば、公式の `mat.theme-overrides` で 2.1.3 の値にする（1. の公式のテーマの API）。
+4. M3 の役割の色は、ライト表示・ダーク表示とも生成したパレットの値をそのまま使い、**上書きしない**（`mat.theme-overrides` などで色を変えない。Issue #24 コメント 6758551367 の決定1）。2.1.1・2.1.3 の参考の値は 2026-11-10 に生成の結果と照合し、2.1.2・2.1.4 のとおりすべて 4.5:1 以上。seed や Angular Material のバージョンを変えて生成し直したときは、参考の値を書き直し、コントラストを計算し直す。4.5:1 に足りない組み合わせが出たら、上書きで直さずに ui-designer に報告し、seed を変えるかを人間が決める。
 5. 自作の部分の色（`success`・`success-container`・`placeholder`、地図の上の印・円）は、自作の CSS 変数に `light-dark(ライトの値, ダークの値)` で定義する（例: `--ct-success: light-dark(#166534, #86EFAC)`）。M3 の役割の色を使う部分は `--mat-sys-*` を参照する。
 6. `color-scheme` を変えると、ブラウザの標準の部分（スクロールバー・`<input>` の日付など）もその表示になる。
 
@@ -154,7 +177,7 @@ ADR 0014 決定2（`mat.theme` で1か所にまとめる）の範囲で作る。
 | 韓国語（`html[lang="ko"]`） | `"Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR", system-ui, sans-serif` |
 | 日本語（`html[lang="ja"]`） | `"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", "Noto Sans JP", "Noto Sans CJK JP", system-ui, sans-serif` |
 
-- 実装: `mat.theme` の `typography` に韓国語の並びを指定し、`html:lang(ja)` のセレクタの中で `typography` だけを指定した `mat.theme` をもう一度含める（部品の CSS は上書きしない）。表示言語の切り替えで `<html lang>` を変える（切り替えるとページを読み込み直す。02 の 3.1）。
+- 実装: `mat.theme` の `typography` に韓国語の並びを指定し、`html:lang(ja)` のセレクタの中で `typography` だけを指定した `mat.theme` をもう一度含める（部品の CSS は上書きしない）。表示言語の切り替えで `<html lang>` を変える（切り替えるとページを読み込み直す。選んだ言語を保存できないブラウザでは読み込み直さずに `<html lang>` と文言だけを変える例外がある。02 の 3.1）。
 - Android の標準のフォント（Noto Sans CJK）は `sans-serif` で選ばれる。
 - **試作のフォント**: Stitch は端末のフォントを指定できないため、試作は **Noto Sans KR**（Android の標準と同じ系統）で作る。試作のフォントの確認は「HTML の見出し・本文の `font-family` が Noto Sans（KR）であること」とする。
 
@@ -196,8 +219,9 @@ Stitch のデザインシステムには `ROUND_TWELVE`（カードの角丸）�
 
 - **余白は 4px の倍数**: 4 / 8 / 12 / 16 / 24 / 32 / 48px。部品の中は 8・12・16、節と節の間は 24（スマホ表示）・32（PC 表示）。
 - 画面の左右の余白: スマホ表示 16px、PC 表示 24px。
-- 表示の切り替え: CDK の `Breakpoints.Handset` が「スマホ表示」、それ以外が「PC 表示」（02 の 1.）。
+- 表示の切り替え: 画面の幅が **960px 未満**（メディアクエリ `(max-width: 959.98px)`）が「スマホ表示」、**960px 以上**が「PC 表示」（02 の 1.。Issue #28 コメント 6759899229 の決定 No.8）。端末の種類・画面の向きは見ない。CDK の `BreakpointObserver` の条件と、画面のスタイルの CSS のメディアクエリで同じ境目を使う（CDK の `Breakpoints.Handset` は使わない）。PC 表示のいちばん狭い幅は 960px で、ヘッダーなどの PC 表示の見た目はこの幅で収まるように決める（4.1）。
 - 中身の最大の幅: SC-02・SC-03・SC-11・SC-12・SC-13・SC-14 は 1200px で中央に置く。フォームだけの画面（SC-04〜SC-10）は 400px の1段で中央に置く。
+- **スマホ表示の幅の広いとき**: スマホ表示は幅 360px から 959px まで（縦の向きのタブレットなどを含む）。1段の並び（SC-02・SC-03・SC-12・SC-14 のスマホ表示）と1列のカードの並び（SC-11、SC-13 のスマホ表示）は、中身の最大の幅を **640px** にして中央に置く（幅 600〜959px で、1行の文字やカードが横に長くなりすぎないように。列の数は 02 のとおり1列のまま）。フォームだけの画面は 400px のまま。SC-01 は地図を画面いっぱいに出し、下のシートも画面の幅いっぱい（シートの中の一覧のカードは最大 640px で中央）。ヘッダー（4.1）・フッターは画面の幅いっぱい。
 - SC-01 の PC 表示: 左のパネルの幅は **400px** で固定、残りを地図にする。パネルの中は上に条件、下に一覧（02）。
 - 一覧のカードの並び（SC-11 の PC 表示）: 1列の幅が 280px 以上になる数の列。
 
@@ -261,11 +285,12 @@ Stitch のデザインシステムには `ROUND_TWELVE`（カードの角丸）�
 
 | 02 の要素 | 部品 | 見た目の決まり |
 |---|---|---|
-| CM-01 ヘッダー | `mat-toolbar`。スマホ表示のメニューは `mat-sidenav`（右から開く） | 背景 `surface`、下に境界線 `outline`。高さ PC 64px・スマホ 56px。選択中の画面の文字を `primary` |
-| 表示言語の切り替え | `mat-button-toggle-group`（「한국어」「日本語」） | 言語名は各言語で書く（切り替えても変えない）。**選択中の側は背景 `primary-container`・文字 `primary`**（薄い藍色。`primary` の塗りは使わない。人間の決定、コメント 6676583842 の 3.）。高さ 48px（2.6） |
+| CM-01 ヘッダー | `mat-toolbar`。スマホ表示のメニューは `mat-sidenav`（右から開く）、開くボタンは `mat-icon-button`（`menu`） | 背景 `surface`、下に境界線 `outline`。高さ PC 64px・スマホ 56px。選択中の画面の文字を `primary`。メニューのボタンの `aria-label` は「메뉴」（日本語「メニュー」。02 の 3.1）。アカウントのリンクは 4.1 |
+| 表示言語の切り替え | `mat-button-toggle-group`（「한국어」「日本語」） | 言語名は各言語で書く（切り替えても変えない）。**選択中の側は背景 `primary-container`・文字 `primary`**（薄い藍色。`primary` の塗りは使わない。人間の決定、コメント 6676583842 の 3.）。高さ 48px（2.6）。グループ全体の `aria-label` は「표시 언어」（日本語「表示言語」。02 の 3.1） |
 | ライト表示・ダーク表示の切り替え（F-36） | `mat-icon-button` | アイコンは押した後の表示（ライト表示のとき `dark_mode`、ダーク表示のとき `light_mode`）。`aria-label` も押した後の表示（韓国語「다크 표시로 전환」/「라이트 표시로 전환」、日本語「ダーク表示に切り替える」/「ライト表示に切り替える」。02 の 3.1）。色は `on-surface-variant` |
-| CM-02 フッター | 自作（`<footer>`） | 背景 `surface-container-low`、文字 `body-small`・`on-surface-variant` |
-| CM-03 通知 | `MatSnackBar` | 画面の下の中央。既定の見た目 |
+| CM-02 フッター | 自作（`<footer>`） | 背景 `surface-container-low`、文字 `body-small`・`on-surface-variant`。4.2 |
+| CM-03 通知 | `MatSnackBar` | 画面の下の中央。既定の見た目。表示は **4 秒**で自動で消える（`duration: 4000`。02 の 3.3） |
+| 長いニックネームのツールチップ（CM-01 のアカウントのリンク） | `matTooltip`（`MatTooltipModule`） | 既定の見た目。中身・出すときは 4.1 |
 | 主な操作（検索・ログイン・保存・登録） | `mat-flat-button`（塗り） | 1画面に1つを目安にする |
 | 補助の操作（条件をクリア・キャンセル・お気に入り・レビューを書く） | `mat-stroked-button`（枠） | — |
 | リンクの操作（会員登録・パスワードを忘れた方・ページ内の移動） | `mat-button`（文字）または `<a>` | 文字 `primary` |
@@ -301,13 +326,53 @@ Stitch のデザインシステムには `ROUND_TWELVE`（カードの角丸）�
 
 ### 4.1 CM-01 ヘッダー
 
-- PC 表示: 左にサービス名「CatTicket」、その右に「지도」「인기·트렌드」（ログインの状態に応じて「즐겨찾기」「관리」）、右端にログインの状態に応じたボタン（「로그인」「회원가입」/「계정（ニックネーム）」「로그아웃」）、言語の切り替え、ライト表示・ダーク表示の切り替え（この順）。
-- スマホ表示: 左にサービス名、右に言語の切り替え → ライト表示・ダーク表示の切り替え → メニューのボタン。ほかの項目はメニューの中（02 の 3.1）。
+- PC 表示: 左にサービス名「CatTicket」、その右に「지도」「인기·트렌드」（ログインの状態に応じて「즐겨찾기」「관리」）、右端にログインの状態に応じたボタン（「로그인」「회원가입」/「계정 (닉네임)」「로그아웃」）、言語の切り替え、ライト表示・ダーク表示の切り替え（この順）。
+- スマホ表示: 左にサービス名、右に言語の切り替え → ライト表示・ダーク表示の切り替え → メニューのボタン（`aria-label`「메뉴」/「メニュー」）。ほかの項目はメニューの中（02 の 3.1）。
 - 管理者にも同じ位置に切り替えを出す（P-16）。
+- 言語の切り替えのグループの `aria-label` は「표시 언어」（日本語「表示言語」）（02 の 3.1）。
+
+#### 4.1.1 アカウントのリンクと長いニックネーム（02 の 3.1。Issue #28 のやること No.7、コメント 6759899229 の決定 No.4・No.6・No.7）
+
+- **表示の形**: 韓国語「계정 (닉네임)」、日本語「アカウント (ニックネーム)」。括弧は半角 `(` `)`、前に半角の空白を1つ（例: 「계정 (Cat)」「アカウント (Cat)」）。PC 表示のヘッダーとスマホ表示のメニューで同じ形。部品は文字のリンク（`mat-button` の `<a>`。3. の「リンクの操作」）。
+- **切るのはニックネームの部分だけ**: 「계정 (」/「アカウント (」と「)」は常に表示し、間のニックネームだけを1行（`white-space: nowrap`）で、幅を超えたら末尾を「…」（`text-overflow: ellipsis`）で切る。例: 「계정 (고양이를좋아하는…)」。
+- **ニックネームの部分の最大の幅**:
+
+| 場所 | 最大の幅 | 狭いとき |
+|---|---|---|
+| PC 表示のヘッダー | **160px** | ヘッダーの残りの幅が 160px より狭いときは、ニックネームの部分だけが縮む（ほかの項目は縮めない）。幅 960px でも縮んだ後に約 70px（全角 3〜4 文字と「…」）が残る（下の見積もり） |
+| スマホ表示のメニューの中 | **160px** | メニューの項目の幅で決まる。幅 360px の画面でも収まる（下の見積もり） |
+
+- 実装の形（見た目の決まり）: ニックネームの部分を自作のクラスの `<span>` にし、`max-width: 160px`・`min-width: 0`・`overflow: hidden`・`text-overflow: ellipsis`・`white-space: nowrap`。ヘッダーの中では、この `<span>` だけが縮む（ほかの項目は `flex-shrink: 0`）。Angular Material の部品のクラスには CSS を書かない（1. の解釈）。
+- 160px は、韓国語・日本語の全角の文字（`label-large` 14px）でおよそ 11 文字、英数字でおよそ 20 文字。ニックネームの多く（数文字〜10 文字程度）は切らずに出せ、全角でおよそ 12 文字以上のときに切れる（PC 表示で画面が狭いときは、下の見積もりのとおりもっと短く切れる）。
+- **ツールチップ**: Angular Material の `matTooltip`（ADR 0014 の範囲。新しいライブラリは使わない）。中身は**全体のニックネームだけ**（「계정」/「アカウント」と括弧は付けない。例: 「고양이를좋아하는사람입니다」）。**ニックネームの部分が切れたときだけ**出す（切れていないときは `matTooltipDisabled` で出さない。切れたかどうかは、表示した `<span>` の幅と中身の幅を比べて決める。文字の幅は文字とフォントで変わるため、文字数では決めない）。スマホ表示では長押しでだけ出る（`aria-label` で全体のニックネームが伝わるので、それで足りるとする。02 の 3.1）。
+- **`aria-label`**: 「계정 (全体のニックネーム)」（日本語「アカウント (全体のニックネーム)」）。切れていても切れていなくても、全体のニックネームを入れる。
+
+**PC 表示の幅 960px での見積もり**（一般ユーザー、日本語表示がいちばん長い。文字は全角 1 文字 = 14px（`label-large`）、半角の空白・括弧 = 約 5px で見積もる）:
+
+| ヘッダーの要素 | 日本語表示 | 韓国語表示 |
+|---|---|---|
+| 左右の余白（24px × 2。2.4） | 48 | 48 |
+| サービス名「CatTicket」（`title-large` 22px） | 約 100 | 約 100 |
+| サービス名と項目の間 | 16 | 16 |
+| 「地図」「人気・トレンド」「お気に入り」（`mat-button`。文字 + 左右の余白 12px × 2、間 8px × 2） | 284（文字 14 文字 196 + 余白 72 + 間 16） | 約 247 |
+| 左の項目と右の項目の間（最小） | 16 | 16 |
+| アカウントのリンク（ニックネームを除く。「アカウント (」「)」+ 余白 24） | 約 108 | 約 66 |
+| 「ログアウト」（文字 + 余白 24） | 94 | 80 |
+| 言語の切り替え（「한국어」「日本語」各 3 文字 + 余白 24、枠 2） | 134 | 134 |
+| ライト表示・ダーク表示の切り替え（`mat-icon-button`） | 48 | 48 |
+| 右の項目どうしの間（8px × 3。2.6） | 24 | 24 |
+| **ニックネームを除く合計** | **約 872** | **約 779** |
+| 幅 960px で使える幅（縦のスクロールバー 約 17px を引く） | 約 943 | 約 943 |
+| **ニックネームの部分に残る幅** | **約 71**（160px より狭いので、ここまで縮む） | **約 164**（160px で切れる） |
+
+- 日本語表示・幅 960px では、20 文字の全角のニックネームは約 71px（全角 3〜4 文字と「…」）に縮むが、ヘッダーはあふれない。幅が広がるにつれてニックネームの部分が広がり、幅およそ 1050px 以上で 160px になる。
+- 見積もりには余裕が少ない（日本語表示で約 70px）。ヘッダーの項目・文言・余白を増やすときは、この表を計算し直す。実装では 6. の確認で実際の幅を確かめる。
+
+**スマホ表示のメニューの中での見積もり**: メニューの項目は左右の余白 16px × 2。日本語表示で「アカウント (」「)」が約 84px、ニックネームが最大 160px で、合計 約 276px。幅 360px の画面でメニュー（`mat-sidenav`。幅は Angular Material の既定のまま）がこの幅より狭いときも、ニックネームの部分だけが縮む（PC 表示と同じ決まり）。
 
 ### 4.2 CM-02 フッター
 
-- 出典を2行で表示（KOPIS、ソウル交通公社）。文言は韓国語の原文のまま（02 の 3.2）。
+- 出典を2行で表示（1行目 KOPIS、2行目ソウル交通公社）。**2行とも先頭に「출처: 」**（`출처:` と半角の空白）を付ける。文言は韓国語の原文のままで、日本語表示でも「출처: 」を含めて翻訳しない（02 の 3.2。Issue #28 コメント 6759899229 の決定 No.5）。
 - SC-01 のスマホ表示では、地図の左下に「출처」の文字のリンク（押せる範囲 44px）を置き、押すと同じ内容をダイアログで出す。
 
 ### 4.3 状態の表示（02 の 3.6）
@@ -318,7 +383,7 @@ Stitch のデザインシステムには `ROUND_TWELVE`（カードの角丸）�
 | 読み込み中（ボタン） | ボタンの文字の代わりにスピナー（20px）、ボタンは押せない |
 | 読み込み中（地図） | 地図の領域を `placeholder` の色で塗る |
 | 空 | 一覧の場所の中央に、02 の各画面の文言を `body-medium`・`on-surface-variant` で。リンク（SC-11 の SC-01 へのリンクなど、02 にあるものだけ）はその下に `mat-button` |
-| エラー（通信・サーバー） | 一覧の場所の中央に「읽어 오지 못했습니다」（`body-medium`）と「다시 불러오기」（`mat-stroked-button`）（02 の 3.6） |
+| エラー（通信・サーバー） | 一覧の場所の中央に「불러오지 못했습니다」（日本語「読み込めませんでした」。`body-medium`）と「다시 불러오기」（日本語「もう一度読み込む」。`mat-stroked-button`）（02 の 3.6） |
 | 入力の誤り | 入力欄の下に `mat-error`（色 `error`） |
 | 画面の上の案内（SC-04 の結果・ロック中など） | 入力欄の上に、背景 `surface-container`・文字 `on-surface` の枠（角 12px）。エラーの案内は左に 4px の `error` の線を付ける（色だけに頼らず、文言で伝える） |
 
@@ -338,7 +403,7 @@ Stitch のデザインシステムには `ROUND_TWELVE`（カードの角丸）�
 - 駅の印: `on-surface` の円に `surface` の色の `train` アイコン。
 - 地図の上のボタン（「근처 보기」「이 범위로 검색」）: `mat-flat-button` を地図の上に重ね、影を付ける。色はアプリの表示（ライト・ダーク）に従う。
 - Google Maps の地図の見た目（スタイル）は変えない。暗い表示は 02 の 3.8 のとおり `colorScheme`（`LIGHT` / `DARK`）だけで行う。
-- **印・円の色は地図の表示に合わせる**: 地図がダーク表示で作られたときは 2.1.3 のダークの値、ライトで作られたときは 2.1.1 のライトの値を使う。通常はアプリの表示と同じになる（02 の 3.8）。02 の 3.8 の「実装で確かめること」で、map ID のない地図が暗くならず**地図だけライト表示のまま**にしたときは、アプリがダーク表示でも印・円は**ライトの値**にする（明るい地図の上で明るい `primary` `#A5B4FC` の印は見分けにくいため）。地図の上のボタンはアプリの表示のまま。
+- **印・円の色は地図の表示に合わせる**: 地図がダーク表示で作られたときは 2.1.3 のダークの値、ライトで作られたときは 2.1.1 のライトの値を使う。通常はアプリの表示と同じになる（02 の 3.8）。02 の 3.8 の「実装で確かめること」で、map ID のない地図が暗くならず**地図だけライト表示のまま**にしたときは、アプリがダーク表示でも印・円は**ライトの値**にする（明るい地図の上で明るい `primary`（ダークの参考の値 `#C3C0FF`）の印は見分けにくいため）。地図の上のボタンはアプリの表示のまま。
 - 地図の上限（02 の 6.1）・読み込み前の領域の色は、アプリの表示のトークン（`surface-container`・`placeholder`）。
 
 ### 4.6 人気順位・集計期間（SC-02・SC-03。P-12・P-17・P-18）
@@ -363,7 +428,7 @@ Stitch のデザインシステムには `ROUND_TWELVE`（カードの角丸）�
 | SC-03 の PC 表示 | SC-03（mobile） | 2.4（最大 1200px）・3.（ジャンルはチップ）・4.6 |
 | SC-13 のスマホ表示 | SC-13（desktop） | 表の1行を1枚のカードにする（同じ項目。02） |
 | SC-14 管理: 公演の修正 | SC-13（desktop） | 項目ごとに「項目名・自動収集の値・現在の値・修正欄・修正を取り消す」を PC は横1行、スマホは縦に（02）。修正した項目は現在の値の横に「수정됨」のラベル（`primary-container`）。「저장」は画面の下に固定しない（ページの最後に置く） |
-| SC-99 エラー | — | 中央に文言（`headline-small`）と SC-01 へのリンク（`mat-flat-button`）。イラスト・画像は置かない |
+| SC-99 エラー | — | 中央に文言（`headline-small`）と SC-01 へのリンク「지도로 이동」（日本語「地図へ移動」。02 の SC-99。`mat-flat-button`）。イラスト・画像は置かない |
 | DL-01〜DL-04 | — | 3. の「ダイアログ」の行 |
 | 読み込み中・空・エラー（全画面） | — | 4.3 |
 | 地図を表示できない（02 の 6.1） | SC-01 | 地図の領域を `surface-container` で塗り、中央に 02 の文言。スマホ表示では下のシートを開いた状態 |
@@ -380,7 +445,8 @@ Stitch のデザインシステムには `ROUND_TWELVE`（カードの角丸）�
 
 | 場所 | 韓国語 → 日本語の例 | 決まり |
 |---|---|---|
-| ヘッダー（PC） | 인기·트렌드 → 人気・トレンド、즐겨찾기 → お気に入り、로그아웃 → ログアウト | 項目を折り返さない（`white-space: nowrap`）。PC 表示のいちばん狭い幅（960px）で日本語・管理者・一般ユーザーの3つを確かめる（言語の切り替え・ライト／ダークの切り替えを含めて） |
+| ヘッダー（PC） | 인기·트렌드 → 人気・トレンド、즐겨찾기 → お気に入り、로그아웃 → ログアウト、계정 (닉네임) → アカウント (ニックネーム) | 項目を折り返さない（`white-space: nowrap`）。PC 表示のいちばん狭い幅（960px）で日本語・管理者・一般ユーザーの3つを確かめる（言語の切り替え・ライト／ダークの切り替えを含めて）。一般ユーザーは **20 文字の全角のニックネーム**（例: 「あ」× 20、「가」× 20）でも確かめ、韓国語表示・日本語表示の両方で、ヘッダーがあふれず（項目が隠れない・横にはみ出さない）、ニックネームの部分だけが「…」で切れ、ツールチップに全体のニックネームが出ることを確かめる（4.1.1） |
+| ヘッダー（スマホ）のメニュー | 계정 (닉네임) → アカウント (ニックネーム) | 幅 360px で、20 文字の全角のニックネームのときにニックネームの部分だけが「…」で切れることを確かめる（4.1.1） |
 | ヘッダー（スマホ） | 言語名は切り替えても変わらない | サービス名・言語の切り替え（48px の高さ）・ライト／ダークの切り替え・メニューが幅 360px で1行に入ることを確かめる。入らないときはサービス名を `title-medium` にする |
 | SC-01 の場所の方法 | 구 / 지도 범위 / 공연장 → 区 / 地図の範囲 / 会場 | 400px のパネルに入らないときは2行に折り返す |
 | ボタン | 조건 지우기 → 条件をクリア、재인증 메일 보내기 → 再認証のメールを送る、관리 화면에서 수정 → 管理画面で修正 | ボタンの幅を固定しない。スマホ表示のフォームのボタン・SC-02 PC の操作の枠のボタンは幅いっぱい |
@@ -409,7 +475,7 @@ ADR 0014 決定6 のとおり、要件としての達成基準（WCAG の等級�
 | No. | 内容 | 結果 | 決定の出典 |
 |---|---|---|---|
 | U-1 | Material Symbols のアイコンのフォントの配り方 | **解決済み**: npm のパッケージ `@material-symbols/font-400` の Outlined を同梱し、Google Fonts から読み込まない。2.7 に反映 | 人間の決定: Issue #15 コメント 6676583842 の 5.、ADR 0016 の採用: コメント 6676943465 |
-| U-2 | 色・レイアウトの採否 | **解決済み**: 試作7つを採用、色（primary `#4338CA` ほか）・SC-01 の配置を採用。言語の切り替えの色（3.）、SC-02 PC の右の列（2.4.1）、ダーク表示（2.1.3〜2.1.5）を反映 | 人間の決定: Issue #15 コメント 6676583842 の 1.〜3.・6. |
+| U-2 | 色・レイアウトの採否 | **解決済み**: 試作7つを採用、色（primary `#4338CA` ほか。2026-11-10 に seed として扱うことにした。2.1）・SC-01 の配置を採用。言語の切り替えの色（3.）、SC-02 PC の右の列（2.4.1）、ダーク表示（2.1.3〜2.1.5）を反映 | 人間の決定: Issue #15 コメント 6676583842 の 1.〜3.・6. |
 | U-3 | `mat.button-toggle-overrides` で高さを 48px にすることが ADR 0014 決定2 の範囲か | **解決済み**: 公式のテーマの API は「部品の CSS を直接上書きする」に当たらない。禁止は部品のクラスに直接 CSS を書くこと。48px のとおり（1.・2.6） | 人間の決定: Issue #15 コメント 6676583842 の 4. |
 
 ## 9. 画面 ID と試作・節の対応表
@@ -441,11 +507,11 @@ ADR 0014 決定6 のとおり、要件としての達成基準（WCAG の等級�
 
 # 07. UI 디자인 가이드
 
-- 상태: 리뷰 완료(2026-11-06 승인, Issue #15 코멘트 6678921752. 관문 4(Issue #20): reviewer 지적(2026-11-09)을 반영함, 사람의 승인 대기)
+- 상태: 리뷰 완료(2026-11-06 승인, Issue #15 코멘트 6678921752. 관문 4(Issue #20): reviewer 지적(2026-11-09)을 반영함, 사람의 승인 대기). Issue #28(설계서 수정)의 내용을 반영(2026-11-10), reviewer 확인 대기
 - 담당: ui-designer
-- 최종 갱신: 2026-11-09
+- 최종 갱신: 2026-11-10
 - 전제: [02. 화면 설계서](02-screens.md)(P-01~P-18은 결정됨. Issue #15 코멘트 6651238358·6676943465), [01. 요건정의서](01-requirements.md)(N-01, N-02, F-36), ADR 0014(Angular Material + CDK), ADR 0015(Google Stitch), ADR 0016(Material Symbols를 npm으로 포함), ADR 0006(지도)
-- 사람의 결정 반영: Issue #15 코멘트 6676583842(시안·07 확인), 6676943465(ADR 0016·P-16~P-18), 6678516145(관문 3 reviewer 지적 6678542365 대응. 4.6의 기간 구분 기호). 2026-11-09 관문 4(Issue #20) reviewer 지적에 따라 SC-03의 "-" 표시 방식을 추가
+- 사람의 결정 반영: Issue #15 코멘트 6676583842(시안·07 확인), 6676943465(ADR 0016·P-16~P-18), 6678516145(관문 3 reviewer 지적 6678542365 대응. 4.6의 기간 구분 기호). 2026-11-09 관문 4(Issue #20) reviewer 지적에 따라 SC-03의 "-" 표시 방식을 추가. 2026-11-10 Issue #28에서 Issue #24 코멘트 6758551367의 결정 1·2·4·5(색을 "seed와 참고값"으로(2.1), 임시 문구·값(3.·4.1~4.3·5.), 계정 링크 표시(4.1), 상태 표시 문구(4.3))와 Issue #28의 할 일 No.7·코멘트 6759899229의 결정 No.4~8(긴 닉네임(4.1·6.), 스마트폰 표시·PC 표시의 경계(2.4))을 반영
 - 시안: [mockups/](mockups/README.md)
 
 ## 1. 위치
@@ -461,76 +527,97 @@ ADR 0014 決定6 のとおり、要件としての達成基準（WCAG の等級�
 
 ### 2.1 색
 
-색 값은 Material 3 테마의 **바탕이 되는 색**(seed)과, 직접 만드는 부분(지도 표시·가로 막대·스켈레톤 등)에 쓰는 값. Angular Material 팔레트는 구현 때 공식 `ng generate @angular/material:theme-color`로 아래 primary·tertiary·error·neutral에서 만든다. 만든 뒤 2.1.2·2.1.4의 대비를 만족하는지 구현에서 확인한다.
+색은 두 종류로 나눠 정한다(Issue #24 코멘트 6758551367의 결정 1).
+
+- **M3 역할의 색**(`primary`·`surface` 등): **기준은 seed(바탕이 되는 색)**. Angular Material 팔레트는 공식 `ng generate @angular/material:theme-color`로 2.1.0의 seed에서 만들고, **생성된 값을 그대로 쓴다**(손으로 값을 바꾸지 않음·`mat.theme-overrides` 등으로 덮어쓰지 않음). 2.1.1·2.1.3의 HEX는 그 생성 결과를 옮겨 적은 **참고값**이며, 생성 결과와 어긋나면 생성 결과가 맞다.
+- **직접 만든 색**(`success`·`success-container`·`placeholder`. M3에 역할이 없음): **이 문서의 값이 기준**(2.1.5의 5.).
+
+#### 2.1.0 seed(M3 역할 색의 바탕이 되는 색)
+
+| seed | HEX | 만들어지는 팔레트 |
+|---|---|---|
+| primary | `#4338CA` | primary(secondary도 primary에서 만들어진다) |
+| tertiary | `#B45309` | tertiary |
+| neutral | `#1F2937` | neutral(화면 배경·`surface-container-*`·`on-surface` 등) |
+| error | `#B91C1C` | error |
+
+- neutral seed `#1F2937`은 시안 디자인 시스템의 neutral([mockups/README.md](mockups/README.md))과 같다.
+- neutral-variant(`on-surface-variant`·`outline-variant`)의 seed는 두지 않는다(theme-color가 primary에서 만든다).
+- 참고값은 Angular Material 22.2.6의 theme-color로 위 네 seed에서 생성한 팔레트(구현의 `frontend/src/theme/_theme-colors.scss`. PR #25)와, `mat.theme`가 역할에 배정하는 톤(Angular Material의 `md-sys-color-values-light` / `-dark`)에서 옮겨 적었다(2026-11-10 대조). 표의 "톤"은 팔레트의 어느 단계 색인지를 나타낸다(예: `primary 40`은 primary 팔레트의 40).
+- seed를 바꿀 때는 theme-color로 다시 만들고, 2.1.1·2.1.3의 참고값과 2.1.2·2.1.4의 대비를 다시 계산한다(2.1.5의 4.).
 
 #### 2.1.1 색 목록(라이트 표시)
 
-| 토큰 | HEX | Material 3 역할 | 용도 |
+| 토큰 | Material 3 역할(톤) | 참고값 | 용도 |
 |---|---|---|---|
-| `primary` | `#4338CA` | primary | 주요 버튼(검색·로그인·저장), 링크, 선택된 탭·칩, 지도의 공연장 표시, "공연 예정" 라벨의 글자, 선택된 전환(`mat-button-toggle`)의 글자 |
-| `on-primary` | `#FFFFFF` | on-primary | primary 위의 글자·아이콘 |
-| `primary-container` | `#EEF2FF` | primary-container | "공연 예정" 라벨의 배경, 선택된 행·항목의 배경, 선택된 전환(`mat-button-toggle`)의 배경 |
-| `tertiary` | `#B45309` | tertiary | 평가의 별, 수상작 배지의 글자·테두리, 인기 순위 표시 |
-| `tertiary-container` | `#FFFBEB` | tertiary-container | 수상작 배지의 배경, "NEW"의 배경 |
-| `success` | `#166534` | (직접 만듦. M3에 역할이 없음) | "공연 중" 라벨의 글자, "▲3"의 글자 |
-| `success-container` | `#F0FDF4` | (직접 만듦) | "공연 중" 라벨의 배경 |
-| `error` | `#B91C1C` | error | 입력 오류, 오류 문구, 삭제 버튼 |
-| `on-error` | `#FFFFFF` | on-error | 삭제 버튼(채움)의 글자 |
-| `background` / `surface` | `#FFFFFF` | surface | 화면 배경, 카드 |
-| `surface-container-low` | `#F9FAFB` | surface-container-low | SC-01의 왼쪽 패널·아래 시트, 푸터의 배경 |
-| `surface-container` | `#F3F4F6` | surface-container | "종료" 라벨의 배경, 표의 머리 행 |
-| `placeholder` | `#E5E7EB` | (직접 만듦) | 이미지(포스터)가 없을 때의 틀, 로딩 중 스켈레톤, 지도를 불러오기 전의 틀 |
-| `on-surface` | `#1F2937` | on-surface | 본문·제목의 글자 |
-| `on-surface-variant` | `#4B5563` | on-surface-variant | 보조 글자(공연장명·기간·건수·원문 병기·출처·집계 기간), "종료" 라벨의 글자 |
-| `outline` | `#D1D5DB` | outline-variant | 카드·입력란·표의 경계선(글자에는 쓰지 않음) |
+| `primary` | primary(primary 40) | `#5148D7` | 주요 버튼(검색·로그인·저장), 링크, 선택된 탭·칩, 지도의 공연장 표시, "공연 예정" 라벨의 글자, 선택된 전환(`mat-button-toggle`)의 글자 |
+| `on-primary` | on-primary(primary 100) | `#FFFFFF` | primary 위의 글자·아이콘 |
+| `primary-container` | primary-container(primary 90) | `#E3DFFF` | "공연 예정" 라벨의 배경, 선택된 행·항목의 배경, 선택된 전환(`mat-button-toggle`)의 배경 |
+| `tertiary` | tertiary(tertiary 40) | `#9B4500` | 평가의 별, 수상작 배지의 글자·테두리, 인기 순위 표시 |
+| `tertiary-container` | tertiary-container(tertiary 90) | `#FFDBCA` | 수상작 배지의 배경, "NEW"의 배경 |
+| `success` | (직접 만듦. M3에 역할이 없음) | `#166534`(기준) | "공연 중" 라벨의 글자, "▲3"의 글자 |
+| `success-container` | (직접 만듦) | `#F0FDF4`(기준) | "공연 중" 라벨의 배경 |
+| `error` | error(error 40) | `#B91C1C` | 입력 오류, 오류 문구, 삭제 버튼 |
+| `on-error` | on-error(error 100) | `#FFFFFF` | 삭제 버튼(채움)의 글자 |
+| `background` / `surface` | surface(neutral 98) | `#F8F9FF` | 화면 배경, 카드 |
+| `surface-container-low` | surface-container-low(neutral 96) | `#EFF4FF` | SC-01의 왼쪽 패널·아래 시트, 푸터의 배경 |
+| `surface-container` | surface-container(neutral 94) | `#E6EEFF` | "종료" 라벨의 배경, 표의 머리 행 |
+| `placeholder` | (직접 만듦) | `#E5E7EB`(기준) | 이미지(포스터)가 없을 때의 틀, 로딩 중 스켈레톤, 지도를 불러오기 전의 틀 |
+| `on-surface` | on-surface(neutral 10) | `#121C2A` | 본문·제목의 글자 |
+| `on-surface-variant` | on-surface-variant(neutral-variant 30) | `#464554` | 보조 글자(공연장명·기간·건수·원문 병기·출처·집계 기간), "종료" 라벨의 글자 |
+| `outline` | outline-variant(neutral-variant 80) | `#C7C4D7` | 카드·입력란·표의 경계선(글자에는 쓰지 않음) |
 
 - 색만으로 의미를 전하지 않는다. 공연 상태는 반드시 글자("공연 중" "공연 예정" "종료")로 보여 주고 색은 보조로 한다.
 - 다크 표시(F-36)의 색은 2.1.3. 모든 화면에서 라이트 표시·다크 표시 모두 같은 토큰 이름을 쓴다(값만 바뀐다).
+- 화면 배경(`surface`)은 흰색이 아니라 약간 푸른 기가 있는 `#F8F9FF`가 된다(neutral seed에서 생성된 값. 덮어쓰지 않음). 카드도 같은 `surface`이므로 카드는 경계선 `outline`으로 구분한다(2.5).
 
 #### 2.1.2 대비(라이트 표시. 글자와 배경)
 
-WCAG 2.x 계산식으로 구한 값(소수 둘째 자리 버림). 모두 4.5:1 이상.
+2.1.1의 값(M3 역할의 색은 참고값)으로 WCAG 2.x 계산식으로 구한 값(소수 둘째 자리 버림). 모두 4.5:1 이상.
 
 | 글자 | 배경 | 비 |
 |---|---|---|
-| `on-surface` `#1F2937` | `#FFFFFF` | 14.6:1 |
-| `on-surface-variant` `#4B5563` | `#FFFFFF` | 7.5:1 |
-| `on-surface-variant` `#4B5563` | `surface-container` `#F3F4F6` | 6.8:1 |
-| `on-surface-variant` `#4B5563` | `placeholder` `#E5E7EB` | 6.1:1 |
-| `on-primary` `#FFFFFF` | `primary` `#4338CA` | 7.9:1 |
-| `primary` `#4338CA` | `primary-container` `#EEF2FF` | 7.0:1 |
-| `primary` `#4338CA`(링크) | `#FFFFFF` | 7.9:1 |
-| `tertiary` `#B45309` | `#FFFFFF` | 5.0:1 |
-| `tertiary` `#B45309` | `tertiary-container` `#FFFBEB` | 4.8:1 |
+| `on-surface` `#121C2A` | `surface` `#F8F9FF` | 16.3:1 |
+| `on-surface` `#121C2A` | `surface-container` `#E6EEFF` | 14.7:1 |
+| `on-surface-variant` `#464554` | `surface` `#F8F9FF` | 8.9:1 |
+| `on-surface-variant` `#464554` | `surface-container-low` `#EFF4FF` | 8.5:1 |
+| `on-surface-variant` `#464554` | `surface-container` `#E6EEFF` | 8.0:1 |
+| `on-surface-variant` `#464554` | `placeholder` `#E5E7EB` | 7.5:1 |
+| `on-primary` `#FFFFFF` | `primary` `#5148D7` | 6.4:1 |
+| `primary` `#5148D7`("공연 예정"·선택된 전환) | `primary-container` `#E3DFFF` | 4.9:1 |
+| `primary` `#5148D7`(링크) | `surface` `#F8F9FF` | 6.1:1 |
+| `primary` `#5148D7` | `surface-container-low` `#EFF4FF` | 5.8:1 |
+| `tertiary` `#9B4500` | `surface` `#F8F9FF` | 6.1:1 |
+| `tertiary` `#9B4500` | `tertiary-container` `#FFDBCA` | 5.0:1 |
 | `success` `#166534` | `success-container` `#F0FDF4` | 6.8:1 |
-| `success` `#166534`("▲3") | `#FFFFFF` | 7.1:1 |
-| `error` `#B91C1C` | `#FFFFFF` | 6.4:1 |
+| `success` `#166534`("▲3") | `surface` `#F8F9FF` | 6.7:1 |
+| `error` `#B91C1C` | `surface` `#F8F9FF` | 6.1:1 |
 | `on-error` `#FFFFFF` | `error` `#B91C1C` | 6.4:1 |
 
 #### 2.1.3 색 목록(다크 표시. F-36·P-16)
 
 **대상은 모든 화면**: SC-01~SC-14·SC-99(관리자 화면 SC-13·SC-14 포함. P-16), 다이얼로그 DL-01~DL-04, 공통 부품 CM-01~CM-03, 지도 위의 직접 만든 부분(4.5). 지도(Google Maps) 자체의 어두운 표시는 02의 3.8을 따른다(`colorScheme`).
 
-토큰 이름·용도는 2.1.1과 같다. 값만 다크 표시 값으로 한다.
+토큰 이름·용도는 2.1.1과 같다. 값만 다크 표시 값으로 한다. M3 역할 색의 다크 값은 2.1.1과 같은 팔레트(같은 seed)에서 `mat.theme`가 다른 톤을 배정한 것이며 **참고값**(2.1의 첫머리). 직접 만든 색(`success`·`success-container`·`placeholder`)은 이 표의 값이 기준.
 
-| 토큰 | 라이트 | 다크 | 다크에서의 주의 |
-|---|---|---|---|
-| `primary` | `#4338CA` | `#A5B4FC` | 다크에서는 밝은 색이 된다. 채움 버튼의 글자는 `on-primary` |
-| `on-primary` | `#FFFFFF` | `#1E1B4B` | 채움 버튼·공연장 표시의 숫자 |
-| `primary-container` | `#EEF2FF` | `#312E81` | 선택된 전환·"공연 예정"·"수정됨" 라벨의 배경 |
-| `tertiary` | `#B45309` | `#FCD34D` | 평가의 별·수상작 배지 |
-| `tertiary-container` | `#FFFBEB` | `#451A03` | 수상작 배지·"NEW"의 배경 |
-| `success` | `#166534` | `#86EFAC` | "공연 중"·"▲3"의 글자 |
-| `success-container` | `#F0FDF4` | `#052E16` | "공연 중" 라벨의 배경 |
-| `error` | `#B91C1C` | `#FCA5A5` | 입력 오류·삭제 버튼 |
-| `on-error` | `#FFFFFF` | `#450A0A` | 삭제 버튼(채움)의 글자 |
-| `background` / `surface` | `#FFFFFF` | `#111827` | 화면 배경·카드 |
-| `surface-container-low` | `#F9FAFB` | `#1F2937` | SC-01의 왼쪽 패널·아래 시트, 푸터 |
-| `surface-container` | `#F3F4F6` | `#374151` | "종료" 라벨, 표의 머리 행, 화면 위 안내의 틀 |
-| `placeholder` | `#E5E7EB` | `#4B5563` | 포스터가 없을 때·스켈레톤·지도를 불러오기 전 |
-| `on-surface` | `#1F2937` | `#F3F4F6` | 본문·제목 |
-| `on-surface-variant` | `#4B5563` | `#D1D5DB` | 보조 글자 |
-| `outline` | `#D1D5DB` | `#4B5563` | 경계선(글자에는 쓰지 않음) |
+| 토큰 | 다크의 톤 | 라이트(참고) | 다크(참고) | 다크에서의 주의 |
+|---|---|---|---|---|
+| `primary` | primary 80 | `#5148D7` | `#C3C0FF` | 다크에서는 밝은 색이 된다. 채움 버튼의 글자는 `on-primary` |
+| `on-primary` | primary 20 | `#FFFFFF` | `#1F00A4` | 채움 버튼·공연장 표시의 숫자 |
+| `primary-container` | primary 30 | `#E3DFFF` | `#372ABF` | 선택된 전환·"공연 예정"·"수정됨" 라벨의 배경 |
+| `tertiary` | tertiary 80 | `#9B4500` | `#FFB68E` | 평가의 별·수상작 배지 |
+| `tertiary-container` | tertiary 30 | `#FFDBCA` | `#763300` | 수상작 배지·"NEW"의 배경 |
+| `success` | (직접 만듦) | `#166534`(기준) | `#86EFAC`(기준) | "공연 중"·"▲3"의 글자 |
+| `success-container` | (직접 만듦) | `#F0FDF4`(기준) | `#052E16`(기준) | "공연 중" 라벨의 배경 |
+| `error` | error 80 | `#B91C1C` | `#FFB4AB` | 입력 오류·삭제 버튼 |
+| `on-error` | error 20 | `#FFFFFF` | `#690005` | 삭제 버튼(채움)의 글자 |
+| `background` / `surface` | neutral 6 | `#F8F9FF` | `#091421` | 화면 배경·카드 |
+| `surface-container-low` | neutral 10 | `#EFF4FF` | `#121C2A` | SC-01의 왼쪽 패널·아래 시트, 푸터 |
+| `surface-container` | neutral 12 | `#E6EEFF` | `#16202E` | "종료" 라벨, 표의 머리 행, 화면 위 안내의 틀 |
+| `placeholder` | (직접 만듦) | `#E5E7EB`(기준) | `#4B5563`(기준) | 포스터가 없을 때·스켈레톤·지도를 불러오기 전 |
+| `on-surface` | neutral 90 | `#121C2A` | `#D9E3F6` | 본문·제목 |
+| `on-surface-variant` | neutral-variant 90 | `#464554` | `#E4E0F3` | 보조 글자 |
+| `outline`(M3의 outline-variant) | neutral-variant 30 | `#C7C4D7` | `#464554` | 경계선(글자에는 쓰지 않음) |
 
 - 포스터 이미지는 밝기를 바꾸지 않는다(사진에 손대지 않는다).
 - 그림자(2.5)는 다크에서 잘 안 보이지만 Angular Material 기본 그대로(경계선 `outline`으로 구분이 된다).
@@ -539,37 +626,39 @@ WCAG 2.x 계산식으로 구한 값(소수 둘째 자리 버림). 모두 4.5:1 �
 
 #### 2.1.4 대비(다크 표시. 글자와 배경)
 
-2.1.2와 같은 계산식(소수 둘째 자리 버림). 모두 4.5:1 이상.
+2.1.2와 같은 계산식(2.1.3의 값으로. 소수 둘째 자리 버림). 모두 4.5:1 이상.
 
 | 글자 | 배경 | 비 |
 |---|---|---|
-| `on-surface` `#F3F4F6` | `surface` `#111827` | 16.1:1 |
-| `on-surface` `#F3F4F6` | `surface-container-low` `#1F2937` | 13.3:1 |
-| `on-surface` `#F3F4F6` | `surface-container` `#374151` | 9.3:1 |
-| `on-surface-variant` `#D1D5DB` | `surface` `#111827` | 12.0:1 |
-| `on-surface-variant` `#D1D5DB` | `surface-container-low` `#1F2937` | 9.9:1 |
-| `on-surface-variant` `#D1D5DB` | `surface-container` `#374151` | 6.9:1 |
-| `on-surface-variant` `#D1D5DB` | `placeholder` `#4B5563` | 5.1:1 |
-| `on-primary` `#1E1B4B` | `primary` `#A5B4FC` | 8.0:1 |
-| `primary` `#A5B4FC`(링크·선택된 탭) | `surface` `#111827` | 8.8:1 |
-| `primary` `#A5B4FC` | `surface-container-low` `#1F2937` | 7.3:1 |
-| `primary` `#A5B4FC` | `surface-container` `#374151` | 5.1:1 |
-| `primary` `#A5B4FC`(선택된 전환) | `primary-container` `#312E81` | 5.7:1 |
-| `tertiary` `#FCD34D` | `surface` `#111827` | 12.3:1 |
-| `tertiary` `#FCD34D` | `surface-container-low` `#1F2937` | 10.1:1 |
-| `tertiary` `#FCD34D` | `tertiary-container` `#451A03` | 10.3:1 |
+| `on-surface` `#D9E3F6` | `surface` `#091421` | 14.3:1 |
+| `on-surface` `#D9E3F6` | `surface-container-low` `#121C2A` | 13.2:1 |
+| `on-surface` `#D9E3F6` | `surface-container` `#16202E` | 12.7:1 |
+| `on-surface-variant` `#E4E0F3` | `surface` `#091421` | 14.3:1 |
+| `on-surface-variant` `#E4E0F3` | `surface-container-low` `#121C2A` | 13.2:1 |
+| `on-surface-variant` `#E4E0F3` | `surface-container` `#16202E` | 12.6:1 |
+| `on-surface-variant` `#E4E0F3` | `placeholder` `#4B5563` | 5.8:1 |
+| `on-primary` `#1F00A4` | `primary` `#C3C0FF` | 7.7:1 |
+| `primary` `#C3C0FF`(링크·선택된 탭) | `surface` `#091421` | 10.8:1 |
+| `primary` `#C3C0FF` | `surface-container-low` `#121C2A` | 10.0:1 |
+| `primary` `#C3C0FF` | `surface-container` `#16202E` | 9.6:1 |
+| `primary` `#C3C0FF`(선택된 전환) | `primary-container` `#372ABF` | 5.4:1 |
+| `tertiary` `#FFB68E` | `surface` `#091421` | 10.8:1 |
+| `tertiary` `#FFB68E` | `surface-container-low` `#121C2A` | 10.0:1 |
+| `tertiary` `#FFB68E` | `tertiary-container` `#763300` | 5.4:1 |
 | `success` `#86EFAC` | `success-container` `#052E16` | 10.6:1 |
-| `success` `#86EFAC`("▲3") | `surface` `#111827` | 12.6:1 |
-| `error` `#FCA5A5` | `surface` `#111827` | 9.3:1 |
-| `error` `#FCA5A5` | `surface-container-low` `#1F2937` | 7.7:1 |
-| `on-error` `#450A0A` | `error` `#FCA5A5` | 8.5:1 |
+| `success` `#86EFAC`("▲3") | `surface` `#091421` | 13.1:1 |
+| `error` `#FFB4AB` | `surface` `#091421` | 10.9:1 |
+| `error` `#FFB4AB` | `surface-container-low` `#121C2A` | 10.0:1 |
+| `on-error` `#690005` | `error` `#FFB4AB` | 7.7:1 |
 
 지도 위의 직접 만든 부분(4.5):
 
-| 부분 | 전경 | 배경 | 비 |
-|---|---|---|---|
-| 공연장 표시의 숫자 | `on-primary` `#1E1B4B` | `primary` `#A5B4FC` | 8.0:1 |
-| 역 표시의 아이콘 | `surface` `#111827` | `on-surface` `#F3F4F6` | 16.1:1 |
+| 부분 | 표시 | 전경 | 배경 | 비 |
+|---|---|---|---|---|
+| 공연장 표시의 숫자 | 라이트 | `on-primary` `#FFFFFF` | `primary` `#5148D7` | 6.4:1 |
+| 공연장 표시의 숫자 | 다크 | `on-primary` `#1F00A4` | `primary` `#C3C0FF` | 7.7:1 |
+| 역 표시의 아이콘 | 라이트 | `surface` `#F8F9FF` | `on-surface` `#121C2A` | 16.3:1 |
+| 역 표시의 아이콘 | 다크 | `surface` `#091421` | `on-surface` `#D9E3F6` | 14.3:1 |
 
 - 표시·원과 지도 배경의 구분은 지도 색이 Google 표시로 정해지므로 여기서는 수치로 하지 않는다. 구현에서 어두운 지도·밝은 지도 모두에서 표시·원을 구분할 수 있는지 확인한다.
 
@@ -577,10 +666,10 @@ WCAG 2.x 계산식으로 구한 값(소수 둘째 자리 버림). 모두 4.5:1 �
 
 ADR 0014 결정 2(`mat.theme`으로 한 곳에 모음)의 범위에서 만든다. 새 라이브러리는 쓰지 않는다.
 
-1. `mat.theme`의 `color`에 2.1.1의 색으로 만든 팔레트와 **`theme-type: color-scheme`**을 지정한다. 그러면 Angular Material은 M3 역할의 색(`--mat-sys-*`)을 CSS `light-dark()`로 내보내고, 라이트·다크 두 값을 테마 하나로 가진다(공식 테마 가이드의 방법. 이름은 구현 때 공식 가이드로 확인한다).
+1. `mat.theme`의 `color`에 2.1.0의 seed에서 theme-color로 만든 팔레트(생성된 파일의 값을 손으로 바꾸지 않음)와 **`theme-type: color-scheme`**을 지정한다. 그러면 Angular Material은 M3 역할의 색(`--mat-sys-*`)을 CSS `light-dark()`로 내보내고, 라이트·다크 두 값을 테마 하나로 가진다(공식 테마 가이드의 방법. 이름은 구현 때 공식 가이드로 확인한다).
 2. 표시 전환은 `<html>`의 CSS **`color-scheme`을 `light` 또는 `dark`**로 하는 것으로 한다. 어느 쪽으로 할지는 02의 3.8 판정(`localStorage` 값, 없으면 `prefers-color-scheme`)으로 정한다. 판정과 설정 방법(첫 그리기 전에 함)은 06·구현. 페이지는 다시 불러오지 않는다(02의 3.8).
 3. 화면 스타일에서는 `@media (prefers-color-scheme: dark)`를 쓰지 않는다(브라우저에 기억한 표시를 우선할 수 없으므로. F-36 ③).
-4. M3 역할의 색은 생성한 팔레트의 다크 값을 그대로 쓴다. 2.1.4의 비를 만족하지 않는 조합이 있으면 공식 `mat.theme-overrides`로 2.1.3의 값으로 한다(1.의 공식 테마 API).
+4. M3 역할의 색은 라이트 표시·다크 표시 모두 생성한 팔레트의 값을 그대로 쓰고 **덮어쓰지 않는다**(`mat.theme-overrides` 등으로 색을 바꾸지 않음. Issue #24 코멘트 6758551367의 결정 1). 2.1.1·2.1.3의 참고값은 2026-11-10에 생성 결과와 대조했고, 2.1.2·2.1.4대로 모두 4.5:1 이상. seed나 Angular Material 버전을 바꿔 다시 생성했을 때는 참고값을 고쳐 쓰고 대비를 다시 계산한다. 4.5:1에 못 미치는 조합이 나오면 덮어쓰기로 고치지 말고 ui-designer에게 보고하며, seed를 바꿀지는 사람이 정한다.
 5. 직접 만든 부분의 색(`success`·`success-container`·`placeholder`, 지도 위의 표시·원)은 직접 만든 CSS 변수에 `light-dark(라이트 값, 다크 값)`으로 정의한다(예: `--ct-success: light-dark(#166534, #86EFAC)`). M3 역할의 색을 쓰는 부분은 `--mat-sys-*`를 참조한다.
 6. `color-scheme`을 바꾸면 브라우저 기본 부분(스크롤바·`<input>` 날짜 등)도 그 표시가 된다.
 
@@ -595,7 +684,7 @@ ADR 0014 결정 2(`mat.theme`으로 한 곳에 모음)의 범위에서 만든다
 | 한국어(`html[lang="ko"]`) | `"Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR", system-ui, sans-serif` |
 | 일본어(`html[lang="ja"]`) | `"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", "Noto Sans JP", "Noto Sans CJK JP", system-ui, sans-serif` |
 
-- 구현: `mat.theme`의 `typography`에 한국어 순서를 지정하고, `html:lang(ja)` 선택자 안에서 `typography`만 지정한 `mat.theme`를 한 번 더 포함한다(부품의 CSS는 덮어쓰지 않음). 표시 언어를 바꿀 때 `<html lang>`을 바꾼다(바꾸면 페이지를 다시 불러온다. 02의 3.1).
+- 구현: `mat.theme`의 `typography`에 한국어 순서를 지정하고, `html:lang(ja)` 선택자 안에서 `typography`만 지정한 `mat.theme`를 한 번 더 포함한다(부품의 CSS는 덮어쓰지 않음). 표시 언어를 바꿀 때 `<html lang>`을 바꾼다(바꾸면 페이지를 다시 불러온다. 고른 언어를 저장할 수 없는 브라우저에서는 다시 불러오지 않고 `<html lang>`과 문구만 바꾸는 예외가 있다. 02의 3.1).
 - Android의 기본 글꼴(Noto Sans CJK)은 `sans-serif`로 선택된다.
 - **시안의 글꼴**: Stitch는 기기 글꼴을 지정할 수 없으므로 시안은 **Noto Sans KR**(Android 기본과 같은 계열)로 만든다. 시안의 글꼴 확인은 "HTML의 제목·본문 `font-family`가 Noto Sans(KR)인 것"으로 한다.
 
@@ -637,8 +726,9 @@ Stitch 디자인 시스템에는 `ROUND_TWELVE`(카드의 둥글기)를 지정�
 
 - **여백은 4px의 배수**: 4 / 8 / 12 / 16 / 24 / 32 / 48px. 부품 안은 8·12·16, 절과 절 사이는 24(스마트폰 표시)·32(PC 표시).
 - 화면 좌우 여백: 스마트폰 표시 16px, PC 표시 24px.
-- 표시 전환: CDK `Breakpoints.Handset`이 "스마트폰 표시", 그 밖이 "PC 표시"(02의 1.).
+- 표시 전환: 화면 폭이 **960px 미만**(미디어 쿼리 `(max-width: 959.98px)`)이면 "스마트폰 표시", **960px 이상**이면 "PC 표시"(02의 1.. Issue #28 코멘트 6759899229의 결정 No.8). 단말 종류·화면 방향은 보지 않는다. CDK `BreakpointObserver`의 조건과 화면 스타일의 CSS 미디어 쿼리에서 같은 경계를 쓴다(CDK `Breakpoints.Handset`은 쓰지 않는다). PC 표시의 가장 좁은 폭은 960px이며, 헤더 등 PC 표시의 겉모습은 이 폭에 들어가도록 정한다(4.1).
 - 내용의 최대 폭: SC-02·SC-03·SC-11·SC-12·SC-13·SC-14는 1200px로 가운데에 둔다. 폼만 있는 화면(SC-04~SC-10)은 400px 1단으로 가운데에 둔다.
+- **스마트폰 표시의 폭이 넓을 때**: 스마트폰 표시는 폭 360px부터 959px까지(세로 방향 태블릿 등 포함). 1단 배치(SC-02·SC-03·SC-12·SC-14의 스마트폰 표시)와 1열 카드 배치(SC-11, SC-13의 스마트폰 표시)는 내용의 최대 폭을 **640px**로 하고 가운데에 둔다(폭 600~959px에서 한 줄의 글자나 카드가 옆으로 너무 길어지지 않도록. 열 수는 02대로 1열 그대로). 폼만 있는 화면은 400px 그대로. SC-01은 지도를 화면 가득 보여 주고 아래 시트도 화면 폭 가득(시트 안 목록의 카드는 최대 640px로 가운데). 헤더(4.1)·푸터는 화면 폭 가득.
 - SC-01의 PC 표시: 왼쪽 패널 폭은 **400px** 고정, 나머지를 지도로 한다. 패널 안은 위에 조건, 아래에 목록(02).
 - 목록 카드의 배치(SC-11의 PC 표시): 한 열 폭이 280px 이상이 되는 수의 열.
 
@@ -702,11 +792,12 @@ Stitch 디자인 시스템에는 `ROUND_TWELVE`(카드의 둥글기)를 지정�
 
 | 02의 요소 | 부품 | 겉모습 규칙 |
 |---|---|---|
-| CM-01 헤더 | `mat-toolbar`. 스마트폰 표시의 메뉴는 `mat-sidenav`(오른쪽에서 열림) | 배경 `surface`, 아래에 경계선 `outline`. 높이 PC 64px·스마트폰 56px. 선택된 화면의 글자를 `primary` |
-| 표시 언어 전환 | `mat-button-toggle-group`("한국어" "日本語") | 언어 이름은 각 언어로 쓴다(전환해도 바꾸지 않음). **선택된 쪽은 배경 `primary-container`·글자 `primary`**(옅은 남색. `primary` 채움은 쓰지 않는다. 사람의 결정, 코멘트 6676583842의 3.). 높이 48px(2.6) |
+| CM-01 헤더 | `mat-toolbar`. 스마트폰 표시의 메뉴는 `mat-sidenav`(오른쪽에서 열림), 여는 버튼은 `mat-icon-button`(`menu`) | 배경 `surface`, 아래에 경계선 `outline`. 높이 PC 64px·스마트폰 56px. 선택된 화면의 글자를 `primary`. 메뉴 버튼의 `aria-label`은 "메뉴"(일본어 "メニュー". 02의 3.1). 계정 링크는 4.1 |
+| 표시 언어 전환 | `mat-button-toggle-group`("한국어" "日本語") | 언어 이름은 각 언어로 쓴다(전환해도 바꾸지 않음). **선택된 쪽은 배경 `primary-container`·글자 `primary`**(옅은 남색. `primary` 채움은 쓰지 않는다. 사람의 결정, 코멘트 6676583842의 3.). 높이 48px(2.6). 그룹 전체의 `aria-label`은 "표시 언어"(일본어 "表示言語". 02의 3.1) |
 | 라이트 표시·다크 표시 전환(F-36) | `mat-icon-button` | 아이콘은 누른 뒤의 표시(라이트 표시일 때 `dark_mode`, 다크 표시일 때 `light_mode`). `aria-label`도 누른 뒤의 표시(한국어 "다크 표시로 전환"/"라이트 표시로 전환", 일본어 "ダーク表示に切り替える"/"ライト表示に切り替える". 02의 3.1). 색은 `on-surface-variant` |
-| CM-02 푸터 | 직접 만듦(`<footer>`) | 배경 `surface-container-low`, 글자 `body-small`·`on-surface-variant` |
-| CM-03 알림 | `MatSnackBar` | 화면 아래 가운데. 기본 겉모습 |
+| CM-02 푸터 | 직접 만듦(`<footer>`) | 배경 `surface-container-low`, 글자 `body-small`·`on-surface-variant`. 4.2 |
+| CM-03 알림 | `MatSnackBar` | 화면 아래 가운데. 기본 겉모습. **4초** 표시하고 자동으로 사라진다(`duration: 4000`. 02의 3.3) |
+| 긴 닉네임의 툴팁(CM-01의 계정 링크) | `matTooltip`(`MatTooltipModule`) | 기본 겉모습. 내용·보이는 때는 4.1 |
 | 주요 조작(검색·로그인·저장·등록) | `mat-flat-button`(채움) | 한 화면에 하나를 기준으로 한다 |
 | 보조 조작(조건 지우기·취소·즐겨찾기·리뷰 쓰기) | `mat-stroked-button`(테두리) | — |
 | 링크 조작(회원가입·비밀번호 찾기·페이지 안 이동) | `mat-button`(텍스트) 또는 `<a>` | 글자 `primary` |
@@ -742,13 +833,53 @@ Stitch 디자인 시스템에는 `ROUND_TWELVE`(카드의 둥글기)를 지정�
 
 ### 4.1 CM-01 헤더
 
-- PC 표시: 왼쪽에 서비스명 "CatTicket", 그 오른쪽에 "지도" "인기·트렌드"(로그인 상태에 따라 "즐겨찾기" "관리"), 오른쪽 끝에 로그인 상태에 따른 버튼("로그인" "회원가입" / "계정(닉네임)" "로그아웃"), 언어 전환, 라이트 표시·다크 표시 전환(이 순서).
-- 스마트폰 표시: 왼쪽에 서비스명, 오른쪽에 언어 전환 → 라이트 표시·다크 표시 전환 → 메뉴 버튼. 나머지 항목은 메뉴 안(02의 3.1).
+- PC 표시: 왼쪽에 서비스명 "CatTicket", 그 오른쪽에 "지도" "인기·트렌드"(로그인 상태에 따라 "즐겨찾기" "관리"), 오른쪽 끝에 로그인 상태에 따른 버튼("로그인" "회원가입" / "계정 (닉네임)" "로그아웃"), 언어 전환, 라이트 표시·다크 표시 전환(이 순서).
+- 스마트폰 표시: 왼쪽에 서비스명, 오른쪽에 언어 전환 → 라이트 표시·다크 표시 전환 → 메뉴 버튼(`aria-label` "메뉴"/"メニュー"). 나머지 항목은 메뉴 안(02의 3.1).
 - 관리자에게도 같은 위치에 전환을 보여 준다(P-16).
+- 언어 전환 그룹의 `aria-label`은 "표시 언어"(일본어 "表示言語")(02의 3.1).
+
+#### 4.1.1 계정 링크와 긴 닉네임(02의 3.1. Issue #28의 할 일 No.7, 코멘트 6759899229의 결정 No.4·No.6·No.7)
+
+- **표시 형태**: 한국어 "계정 (닉네임)", 일본어 "アカウント (ニックネーム)". 괄호는 반각 `(` `)`, 앞에 반각 공백 하나(예: "계정 (Cat)" "アカウント (Cat)"). PC 표시의 헤더와 스마트폰 표시의 메뉴에서 같은 형태. 부품은 글자 링크(`mat-button`의 `<a>`. 3.의 "링크 조작").
+- **자르는 것은 닉네임 부분만**: "계정 ("/"アカウント ("와 ")"는 항상 표시하고, 사이의 닉네임만 한 줄(`white-space: nowrap`)로, 폭을 넘으면 끝을 "…"(`text-overflow: ellipsis`)로 자른다. 예: "계정 (고양이를좋아하는…)".
+- **닉네임 부분의 최대 폭**:
+
+| 위치 | 최대 폭 | 좁을 때 |
+|---|---|---|
+| PC 표시의 헤더 | **160px** | 헤더의 남은 폭이 160px보다 좁으면 닉네임 부분만 줄어든다(다른 항목은 줄이지 않음). 폭 960px에서도 줄어든 뒤 약 70px(전각 3~4글자와 "…")이 남는다(아래 어림) |
+| 스마트폰 표시의 메뉴 안 | **160px** | 메뉴 항목의 폭으로 정해진다. 폭 360px 화면에서도 들어간다(아래 어림) |
+
+- 구현 형태(겉모습 규칙): 닉네임 부분을 직접 만든 클래스의 `<span>`으로 하고 `max-width: 160px`·`min-width: 0`·`overflow: hidden`·`text-overflow: ellipsis`·`white-space: nowrap`. 헤더 안에서는 이 `<span>`만 줄어든다(다른 항목은 `flex-shrink: 0`). Angular Material 부품의 클래스에는 CSS를 쓰지 않는다(1.의 해석).
+- 160px는 한국어·일본어 전각 글자(`label-large` 14px)로 약 11자, 영숫자로 약 20자. 대부분의 닉네임(몇 자~10자 정도)은 자르지 않고 보여 줄 수 있고, 전각 약 12자 이상일 때 잘린다(PC 표시에서 화면이 좁을 때는 아래 어림대로 더 짧게 잘린다).
+- **툴팁**: Angular Material의 `matTooltip`(ADR 0014 범위. 새 라이브러리는 쓰지 않음). 내용은 **전체 닉네임만**("계정"/"アカウント"와 괄호는 붙이지 않음. 예: "고양이를좋아하는사람입니다"). **닉네임 부분이 잘렸을 때만** 보인다(잘리지 않았을 때는 `matTooltipDisabled`로 보이지 않게 한다. 잘렸는지는 표시한 `<span>`의 폭과 내용의 폭을 비교해 정한다. 글자 폭은 글자와 글꼴에 따라 달라지므로 글자 수로 정하지 않는다). 스마트폰 표시에서는 길게 눌러야만 나온다(`aria-label`로 전체 닉네임이 전달되므로 그것으로 충분하다고 본다. 02의 3.1).
+- **`aria-label`**: "계정 (전체 닉네임)"(일본어 "アカウント (전체 닉네임)"). 잘렸든 아니든 전체 닉네임을 넣는다.
+
+**PC 표시 폭 960px에서의 어림**(일반 사용자, 일본어 표시가 가장 길다. 글자는 전각 1자 = 14px(`label-large`), 반각 공백·괄호 = 약 5px로 어림):
+
+| 헤더 요소 | 일본어 표시 | 한국어 표시 |
+|---|---|---|
+| 좌우 여백(24px × 2. 2.4) | 48 | 48 |
+| 서비스명 "CatTicket"(`title-large` 22px) | 약 100 | 약 100 |
+| 서비스명과 항목 사이 | 16 | 16 |
+| "地図" "人気・トレンド" "お気に入り"(`mat-button`. 글자 + 좌우 여백 12px × 2, 사이 8px × 2) | 284(글자 14자 196 + 여백 72 + 사이 16) | 약 247 |
+| 왼쪽 항목과 오른쪽 항목 사이(최소) | 16 | 16 |
+| 계정 링크(닉네임 제외. "アカウント (" ")" + 여백 24) | 약 108 | 약 66 |
+| "ログアウト"(글자 + 여백 24) | 94 | 80 |
+| 언어 전환("한국어" "日本語" 각 3자 + 여백 24, 테두리 2) | 134 | 134 |
+| 라이트 표시·다크 표시 전환(`mat-icon-button`) | 48 | 48 |
+| 오른쪽 항목끼리의 사이(8px × 3. 2.6) | 24 | 24 |
+| **닉네임 제외 합계** | **약 872** | **약 779** |
+| 폭 960px에서 쓸 수 있는 폭(세로 스크롤바 약 17px를 뺌) | 약 943 | 약 943 |
+| **닉네임 부분에 남는 폭** | **약 71**(160px보다 좁으므로 여기까지 줄어든다) | **약 164**(160px에서 잘린다) |
+
+- 일본어 표시·폭 960px에서는 전각 20자 닉네임이 약 71px(전각 3~4자와 "…")로 줄어들지만 헤더는 넘치지 않는다. 폭이 넓어질수록 닉네임 부분이 넓어지고, 폭 약 1050px 이상에서 160px가 된다.
+- 어림에는 여유가 적다(일본어 표시에서 약 70px). 헤더의 항목·문구·여백을 늘릴 때는 이 표를 다시 계산한다. 구현에서는 6.의 확인으로 실제 폭을 확인한다.
+
+**스마트폰 표시의 메뉴 안에서의 어림**: 메뉴 항목은 좌우 여백 16px × 2. 일본어 표시에서 "アカウント (" ")"가 약 84px, 닉네임이 최대 160px로 합계 약 276px. 폭 360px 화면에서 메뉴(`mat-sidenav`. 폭은 Angular Material 기본 그대로)가 이 폭보다 좁을 때도 닉네임 부분만 줄어든다(PC 표시와 같은 규칙).
 
 ### 4.2 CM-02 푸터
 
-- 출처를 2줄로 표시(KOPIS, 서울교통공사). 문구는 한국어 원문 그대로(02의 3.2).
+- 출처를 2줄로 표시(1번째 줄 KOPIS, 2번째 줄 서울교통공사). **두 줄 모두 앞에 "출처: "**(`출처:`와 반각 공백)를 붙인다. 문구는 한국어 원문 그대로이며, 일본어 표시에서도 "출처: "를 포함해 번역하지 않는다(02의 3.2. Issue #28 코멘트 6759899229의 결정 No.5).
 - SC-01의 스마트폰 표시에서는 지도 왼쪽 아래에 "출처" 글자 링크(누르는 범위 44px)를 두고, 누르면 같은 내용을 다이얼로그로 보여 준다.
 
 ### 4.3 상태 표시(02의 3.6)
@@ -759,7 +890,7 @@ Stitch 디자인 시스템에는 `ROUND_TWELVE`(카드의 둥글기)를 지정�
 | 로딩 중(버튼) | 버튼 글자 대신 스피너(20px), 버튼은 누를 수 없음 |
 | 로딩 중(지도) | 지도 영역을 `placeholder` 색으로 칠한다 |
 | 빈 결과 | 목록 자리 가운데에 02의 각 화면 문구를 `body-medium`·`on-surface-variant`로. 링크(SC-11의 SC-01 링크 등 02에 있는 것만)는 그 아래에 `mat-button` |
-| 오류(통신·서버) | 목록 자리 가운데에 "읽어 오지 못했습니다"(`body-medium`)와 "다시 불러오기"(`mat-stroked-button`)(02의 3.6) |
+| 오류(통신·서버) | 목록 자리 가운데에 "불러오지 못했습니다"(일본어 "読み込めませんでした". `body-medium`)와 "다시 불러오기"(일본어 "もう一度読み込む". `mat-stroked-button`)(02의 3.6) |
 | 입력 오류 | 입력란 아래에 `mat-error`(색 `error`) |
 | 화면 위 안내(SC-04의 결과·잠금 등) | 입력란 위에 배경 `surface-container`·글자 `on-surface`의 틀(모서리 12px). 오류 안내는 왼쪽에 4px `error` 선을 붙인다(색에만 기대지 않고 문구로 전한다) |
 
@@ -779,7 +910,7 @@ Stitch 디자인 시스템에는 `ROUND_TWELVE`(카드의 둥글기)를 지정�
 - 역 표시: `on-surface` 원에 `surface` 색의 `train` 아이콘.
 - 지도 위 버튼("근처 보기" "이 범위로 검색"): `mat-flat-button`을 지도 위에 겹치고 그림자를 붙인다. 색은 앱의 표시(라이트·다크)를 따른다.
 - Google Maps 지도의 겉모습(스타일)은 바꾸지 않는다. 어두운 표시는 02의 3.8대로 `colorScheme`(`LIGHT` / `DARK`)만으로 한다.
-- **표시·원의 색은 지도의 표시에 맞춘다**: 지도가 다크 표시로 만들어졌을 때는 2.1.3의 다크 값, 라이트로 만들어졌을 때는 2.1.1의 라이트 값을 쓴다. 보통은 앱의 표시와 같다(02의 3.8). 02 3.8의 "구현에서 확인할 것"에서 map ID가 없는 지도가 어두워지지 않아 **지도만 라이트 표시 그대로**로 했을 때는, 앱이 다크 표시여도 표시·원은 **라이트 값**으로 한다(밝은 지도 위에서 밝은 `primary` `#A5B4FC` 표시는 구분하기 어렵기 때문). 지도 위 버튼은 앱의 표시 그대로.
+- **표시·원의 색은 지도의 표시에 맞춘다**: 지도가 다크 표시로 만들어졌을 때는 2.1.3의 다크 값, 라이트로 만들어졌을 때는 2.1.1의 라이트 값을 쓴다. 보통은 앱의 표시와 같다(02의 3.8). 02 3.8의 "구현에서 확인할 것"에서 map ID가 없는 지도가 어두워지지 않아 **지도만 라이트 표시 그대로**로 했을 때는, 앱이 다크 표시여도 표시·원은 **라이트 값**으로 한다(밝은 지도 위에서 밝은 `primary`(다크 참고값 `#C3C0FF`) 표시는 구분하기 어렵기 때문). 지도 위 버튼은 앱의 표시 그대로.
 - 지도 상한(02의 6.1)·불러오기 전 영역의 색은 앱 표시의 토큰(`surface-container`·`placeholder`).
 
 ### 4.6 인기 순위·집계 기간(SC-02·SC-03. P-12·P-17·P-18)
@@ -804,7 +935,7 @@ Stitch 디자인 시스템에는 `ROUND_TWELVE`(카드의 둥글기)를 지정�
 | SC-03의 PC 표시 | SC-03(mobile) | 2.4(최대 1200px)·3.(장르는 칩)·4.6 |
 | SC-13의 스마트폰 표시 | SC-13(desktop) | 표의 한 행을 카드 한 장으로(같은 항목. 02) |
 | SC-14 관리: 공연 수정 | SC-13(desktop) | 항목마다 "항목명·자동 수집 값·현재 값·수정란·수정 취소"를 PC는 가로 한 줄, 스마트폰은 세로로(02). 수정한 항목은 현재 값 옆에 "수정됨" 라벨(`primary-container`). "저장"은 화면 아래에 고정하지 않는다(페이지 끝에 둔다) |
-| SC-99 오류 | — | 가운데에 문구(`headline-small`)와 SC-01 링크(`mat-flat-button`). 일러스트·이미지는 두지 않는다 |
+| SC-99 오류 | — | 가운데에 문구(`headline-small`)와 SC-01 링크 "지도로 이동"(일본어 "地図へ移動". 02의 SC-99. `mat-flat-button`). 일러스트·이미지는 두지 않는다 |
 | DL-01~DL-04 | — | 3.의 "다이얼로그" 행 |
 | 로딩 중·빈 결과·오류(모든 화면) | — | 4.3 |
 | 지도를 표시할 수 없음(02의 6.1) | SC-01 | 지도 영역을 `surface-container`로 칠하고 가운데에 02의 문구. 스마트폰 표시에서는 아래 시트를 연 상태 |
@@ -821,7 +952,8 @@ Stitch 디자인 시스템에는 `ROUND_TWELVE`(카드의 둥글기)를 지정�
 
 | 위치 | 한국어 → 일본어 예 | 규칙 |
 |---|---|---|
-| 헤더(PC) | 인기·트렌드 → 人気・トレンド, 즐겨찾기 → お気に入り, 로그아웃 → ログアウト | 항목을 줄바꿈하지 않는다(`white-space: nowrap`). PC 표시의 가장 좁은 폭(960px)에서 일본어·관리자·일반 사용자 세 가지를 확인한다(언어 전환·라이트/다크 전환 포함) |
+| 헤더(PC) | 인기·트렌드 → 人気・トレンド, 즐겨찾기 → お気に入り, 로그아웃 → ログアウト, 계정 (닉네임) → アカウント (ニックネーム) | 항목을 줄바꿈하지 않는다(`white-space: nowrap`). PC 표시의 가장 좁은 폭(960px)에서 일본어·관리자·일반 사용자 세 가지를 확인한다(언어 전환·라이트/다크 전환 포함). 일반 사용자는 **전각 20자 닉네임**(예: "あ" × 20, "가" × 20)으로도 확인하며, 한국어 표시·일본어 표시 모두에서 헤더가 넘치지 않고(항목이 가려지거나 옆으로 삐져나오지 않음), 닉네임 부분만 "…"로 잘리며, 툴팁에 전체 닉네임이 나오는지 확인한다(4.1.1) |
+| 헤더(스마트폰)의 메뉴 | 계정 (닉네임) → アカウント (ニックネーム) | 폭 360px에서 전각 20자 닉네임일 때 닉네임 부분만 "…"로 잘리는지 확인한다(4.1.1) |
 | 헤더(스마트폰) | 언어 이름은 전환해도 바뀌지 않는다 | 서비스명·언어 전환(높이 48px)·라이트/다크 전환·메뉴가 폭 360px에서 한 줄에 들어가는지 확인한다. 들어가지 않으면 서비스명을 `title-medium`으로 한다 |
 | SC-01의 장소 방법 | 구 / 지도 범위 / 공연장 → 区 / 地図の範囲 / 会場 | 400px 패널에 들어가지 않으면 2줄로 줄바꿈 |
 | 버튼 | 조건 지우기 → 条件をクリア, 재인증 메일 보내기 → 再認証のメールを送る, 관리 화면에서 수정 → 管理画面で修正 | 버튼 폭을 고정하지 않는다. 스마트폰 표시 폼의 버튼·SC-02 PC 조작 틀의 버튼은 폭 가득 |
@@ -850,7 +982,7 @@ ADR 0014 결정 6대로 요건으로서의 달성 기준(WCAG 등급)은 두지 
 | No. | 내용 | 결과 | 결정의 출처 |
 |---|---|---|---|
 | U-1 | Material Symbols 아이콘 글꼴의 배포 방법 | **해결됨**: npm 패키지 `@material-symbols/font-400`의 Outlined를 포함하고 Google Fonts에서 불러오지 않는다. 2.7에 반영 | 사람의 결정: Issue #15 코멘트 6676583842의 5., ADR 0016 채택: 코멘트 6676943465 |
-| U-2 | 색·레이아웃의 채택 여부 | **해결됨**: 시안 7개 채택, 색(primary `#4338CA` 등)·SC-01 배치 채택. 언어 전환 색(3.), SC-02 PC 오른쪽 열(2.4.1), 다크 표시(2.1.3~2.1.5)를 반영 | 사람의 결정: Issue #15 코멘트 6676583842의 1.~3.·6. |
+| U-2 | 색·레이아웃의 채택 여부 | **해결됨**: 시안 7개 채택, 색(primary `#4338CA` 등. 2026-11-10에 seed로 다루기로 했다. 2.1)·SC-01 배치 채택. 언어 전환 색(3.), SC-02 PC 오른쪽 열(2.4.1), 다크 표시(2.1.3~2.1.5)를 반영 | 사람의 결정: Issue #15 코멘트 6676583842의 1.~3.·6. |
 | U-3 | `mat.button-toggle-overrides`로 높이를 48px로 하는 것이 ADR 0014 결정 2의 범위인가 | **해결됨**: 공식 테마 API는 "부품의 CSS를 직접 덮어쓰기"에 해당하지 않는다. 금지는 부품의 클래스에 CSS를 직접 쓰는 것. 48px대로(1.·2.6) | 사람의 결정: Issue #15 코멘트 6676583842의 4. |
 
 ## 9. 화면 ID와 시안·절의 대응표
