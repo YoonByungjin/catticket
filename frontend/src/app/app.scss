@@ -1,0 +1,14 @@
+.ct-shell {
+  min-height: 100vh;
+}
+
+// フッターを画面の下に置くため、中身を縦に並べて main を伸ばす
+.ct-shell-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.ct-main {
+  flex: 1 0 auto;
+}
