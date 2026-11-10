@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  複数の機能で使う SQL の断片（06 の 1.2・3.6）。
+  使う側は <include refid="com.catticket.common.db.SharedSql.publicCondition"/> のように完全名で参照する。
+-->
+<mapper namespace="com.catticket.common.db.SharedSql">
+
+  <!--
+    公開中の公演（03 の 1.6）: 非表示でない、かつ終了日 >= 今日、かつ開始日 <= 今日 + 180 日、かつソウル。
+    前提: ビュー performance_effective を別名 pe で FROM に置き、パラメーター today（LocalDate。Asia/Seoul の今日）を渡す。
+    NOW()・CURRENT_DATE は使わない（テストで Clock を替えられるように。06 の 3.1）。
+  -->
+  <sql id="publicCondition">
+    pe.is_hidden = FALSE
+    AND pe.is_seoul = TRUE
+    AND pe.end_date &gt;= #{today}
+    AND pe.start_date &lt;= DATE_ADD(#{today}, INTERVAL 180 DAY)
+  </sql>
+
+  <!--
+    公演のカードの列（PerformanceSummaryRow のコンストラクターと同じ順）。
+    前提: ビュー performance_effective を別名 pe、venue を別名 v で JOIN する。値は管理者の修正を反映したもの。
+  -->
+  <sql id="summaryColumns">
+    pe.id,
+    pe.kopis_performance_id AS performance_id,
+    pe.title,
+    pe.start_date,
+    pe.end_date,
+    pe.genre_code,
+    v.kopis_venue_id AS venue_id,
+    v.name AS venue_name,
+    pe.poster_url,
+    pe.has_award
+  </sql>
+
+</mapper>

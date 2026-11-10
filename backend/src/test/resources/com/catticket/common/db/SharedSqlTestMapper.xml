@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- テストだけ: SharedSql.xml の publicCondition・summaryColumns を完全名で参照できることを確かめる -->
+<mapper namespace="com.catticket.common.db.SharedSqlTestMapper">
+
+  <select id="findPublicSummaries" resultType="com.catticket.common.display.PerformanceSummaryRow">
+    SELECT <include refid="com.catticket.common.db.SharedSql.summaryColumns"/>
+    FROM performance_effective pe
+    JOIN venue v ON v.id = pe.venue_id
+    WHERE <include refid="com.catticket.common.db.SharedSql.publicCondition"/>
+    ORDER BY pe.start_date, pe.kopis_performance_id
+  </select>
+
+</mapper>
