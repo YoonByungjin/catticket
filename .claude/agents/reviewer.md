@@ -29,7 +29,7 @@ model: opus
 - 設計書（API・テーブル）との一致。
 - `CLAUDE.md` の規約: レイヤーの向き、`${}` の不使用、DTO の `record`、コンストラクタ注入、秘密情報の混入、適用済みマイグレーションの編集。
 - 不具合の可能性（null、境界値、トランザクション、N+1 クエリ、例外処理）。
-- 必要なら `./gradlew build` を実行して結果を確認する。ただしテスト用 DB `test_catticket` は全 worktree で共有なので、**他の worktree でテストが実行中かもしれないときは実行せず、実行 Claude に確認する。** `docker compose up` は実行しない。
+- 必要なら `./gradlew build` を実行して結果を確認する。テスト用 DB は worktree ごとに自動で分かれるが、`TEST_DB_NAME` で同じ名前を指定したチェックアウトどうしでは共有されるので、**同じ DB 名を使う別のチェックアウトでテストが実行中かもしれないときは実行せず、実行 Claude に確認する。** `docker compose up` は実行しない。
 
 ## 出力形式（韓国語で）
 
@@ -78,7 +78,7 @@ model: opus
 - 설계서(API·테이블)와 일치하는가.
 - `CLAUDE.md` 규약: 계층 방향, `${}` 미사용, DTO의 `record`, 생성자 주입, 비밀 정보 혼입, 적용된 마이그레이션 수정.
 - 버그 가능성(null, 경계값, 트랜잭션, N+1 쿼리, 예외 처리).
-- 필요하면 `./gradlew build`를 실행해 결과를 확인한다. 단, 테스트용 DB `test_catticket`은 모든 worktree가 공유하므로 **다른 worktree에서 테스트가 실행 중일 수 있을 때는 실행하지 말고 실행 Claude에게 확인한다.** `docker compose up`은 실행하지 않는다.
+- 필요하면 `./gradlew build`를 실행해 결과를 확인한다. 테스트용 DB는 worktree마다 자동으로 나뉘지만 `TEST_DB_NAME`으로 같은 이름을 지정한 체크아웃끼리는 공유되므로 **같은 DB 이름을 쓰는 다른 체크아웃에서 테스트가 실행 중일 수 있을 때는 실행하지 말고 실행 Claude에게 확인한다.** `docker compose up`은 실행하지 않는다.
 
 ### 출력 형식 (한국어로)
 

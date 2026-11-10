@@ -112,7 +112,8 @@ reviewer の判定とゲート:
 - 一時 worktree は実行中のブランチではなく `main` から作られる。**マージ前の変更（特にエージェント定義）を試すときは隔離を使わない。** 人間が Orca でそのブランチの worktree を作り、その worktree で Claude Code を起動（定義を変えた場合は再起動）してから試す。
 - サブエージェントはバックグラウンドで動くため、権限の承認を求められない。DB の確認は承認不要に設定した `scripts/db-inspect.sh`（読み取り専用）を使う。許可するコマンドは `.claude/settings.json` で管理する。
 - **MySQL はメインのチェックアウト（`C:\workspace\catticket`）で1つだけ起動する。** worktree で `docker compose up` しない（同じプロジェクトとして扱われ、メインの MySQL コンテナが作り直されることがある。他の worktree で実行中のテストが切れる）。各 worktree は `127.0.0.1:3306` の同じ MySQL に接続する。`compose.yaml` の `name: catticket` により、worktree からの `docker compose ps` / `exec` も同じコンテナを指す。
-- テスト用 DB `test_catticket` は共有なので、**複数の worktree で同時に `./gradlew test` を実行しない**。実行 Claude は同時に1つだけ実行させる。並行実装（工程5）の前に worktree ごとの DB 名を決める。
+- **テスト用 DB は worktree ごとに自動で分かれる**。worktree ではフォルダ名から `test_catticket_{フォルダ名}` になり（例: `test-db-per-worktree` → `test_catticket_test_db_per_worktree`。小文字にし、英数字以外は `_`。長いときは切り詰めてハッシュを付ける）、メインのチェックアウトと CI は `test_catticket`。DB は初回の `./gradlew test` で自動で作られ、ログの `Test DB:` で名前を確認できる。設定は要らないが、`.env` か環境変数の `TEST_DB_NAME`（形は `test_catticket` または `test_catticket_{英小文字・数字}`）で上書きできる。`.env` は worktree にコピーされるので、**メインの `.env` には `TEST_DB_NAME` を書かない**（全 worktree が同じ DB になる）。**同じ DB 名を使うチェックアウトどうしでは同時に `./gradlew test` を実行しない**。
+- アプリの DB ユーザーは `test_catticket` で始まる DB すべてに権限を持つ。新しいボリュームでは `docker/mysql/initdb/01-grant-test-db.sh` が付け、すでに動いている MySQL には `bash scripts/grant-test-dbs.sh` で1回付ける（権限を変えるので、実行 Claude は人間に報告してから実行する）。使わなくなった worktree のテスト用 DB は残っても害はない（消すときは実行 Claude に頼む）。
 - Claude Code の自動メモリは作業フォルダ（worktree）ごとに別になる。続けて必要な情報は自動メモリに頼らず、`CLAUDE.md`・設計書・ADR に書く。
 
 ## コーディング規約（バックエンド）
@@ -152,17 +153,18 @@ reviewer の判定とゲート:
 - Service: Mapper・外部 API をモックした単体テスト。
 - Controller: `@WebMvcTest`。
 - 外部 API を実際に呼ぶテストは書かない。レスポンスはテスト用ファイルで再現する。
-- **テスト用 DB は `test_catticket`**（開発用の `catticket` を汚さない）。`./gradlew test` が DB 名を切り替え、DB がなければ作る。Flyway はテスト起動時にこの DB へマイグレーションを適用する。CI も同じ DB 名を使う。
+- **テスト用 DB は worktree ごとに自動で決まる `test_catticket*`**（開発用の `catticket` を汚さない）。`./gradlew test` が DB 名を切り替え（環境変数 `TEST_DB_NAME` → `.env` の `TEST_DB_NAME` → 自動の順。自動の規則は「Orca での作業」。`test_catticket` で始まらない名前はエラー）、DB がなければ作る。Flyway はテスト起動時にこの DB へマイグレーションを適用する。CI は既定の `test_catticket` を使う。
 
 ## コマンド
 
 ```bash
 docker compose up -d                        # MySQL 起動（メインのチェックアウトでのみ。開発時は DB だけコンテナ）
 cd backend && ./gradlew bootRun             # アプリ起動（http://127.0.0.1:8080）。終了しないプロセス
-cd backend && ./gradlew test                # テスト（MySQL の起動が必要。test_catticket を使う）
+cd backend && ./gradlew test                # テスト（MySQL の起動が必要。worktree ごとのテスト用 DB を使う）
 cd backend && ./gradlew build               # ビルド + テスト（CI と同じ）
 docker compose --profile app up -d --build  # アプリもコンテナで起動
-bash scripts/db-inspect.sh tables          # テスト用 DB のテーブル一覧（読み取り専用。worktree からも可）
+bash scripts/db-inspect.sh tables          # この worktree のテスト用 DB のテーブル一覧（読み取り専用。worktree からも可）
+bash scripts/grant-test-dbs.sh              # 動いている MySQL に test_catticket* の権限を付ける（1回。人間に報告してから）
 ```
 
 Windows（PowerShell）は `.\gradlew.bat`。
@@ -309,7 +311,8 @@ reviewer의 판정과 관문:
 - 임시 worktree는 실행 중인 브랜치가 아니라 `main`에서 만들어진다. **머지 전 변경(특히 에이전트 정의)을 시험할 때는 격리를 쓰지 않는다.** 사람이 Orca에서 그 브랜치의 worktree를 만들고, 그 worktree에서 Claude Code를 실행(정의를 바꿨으면 재시작)한 뒤 시험한다.
 - 서브 에이전트는 백그라운드에서 돌아서 권한 승인을 받을 수 없다. DB 확인은 승인 없이 쓰도록 설정한 `scripts/db-inspect.sh`(읽기 전용)를 쓴다. 허용하는 명령은 `.claude/settings.json`에서 관리한다.
 - **MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 하나만 실행한다.** worktree에서 `docker compose up`을 하지 않는다(같은 프로젝트로 인식되어 메인의 MySQL 컨테이너가 다시 만들어질 수 있음. 다른 worktree에서 실행 중인 테스트가 끊김). 각 worktree는 `127.0.0.1:3306`의 같은 MySQL에 접속한다. `compose.yaml`의 `name: catticket` 덕분에 worktree에서 실행한 `docker compose ps`/`exec`도 같은 컨테이너를 가리킨다.
-- 테스트용 DB `test_catticket`은 공유이므로 **여러 worktree에서 동시에 `./gradlew test`를 실행하지 않는다**. 실행 Claude는 한 번에 하나만 실행시킨다. 병렬 구현(공정 5) 전에 worktree별 DB 이름을 정한다.
+- **테스트용 DB는 worktree마다 자동으로 나뉜다**. worktree에서는 폴더 이름으로 `test_catticket_{폴더 이름}`이 되고(예: `test-db-per-worktree` → `test_catticket_test_db_per_worktree`. 소문자로 바꾸고 영숫자 외에는 `_`. 길면 잘라서 해시를 붙인다), 메인 체크아웃과 CI는 `test_catticket`. DB는 첫 `./gradlew test` 때 자동으로 만들어지고, 로그의 `Test DB:`로 이름을 확인할 수 있다. 설정은 필요 없지만 `.env`나 환경변수의 `TEST_DB_NAME`(형식은 `test_catticket` 또는 `test_catticket_{영소문자·숫자}`)으로 덮어쓸 수 있다. `.env`는 worktree에 복사되므로 **메인 `.env`에는 `TEST_DB_NAME`을 쓰지 않는다**(모든 worktree가 같은 DB가 됨). **같은 DB 이름을 쓰는 체크아웃끼리는 동시에 `./gradlew test`를 실행하지 않는다**.
+- 앱의 DB 사용자는 `test_catticket`으로 시작하는 모든 DB에 권한을 가진다. 새 볼륨에서는 `docker/mysql/initdb/01-grant-test-db.sh`가 주고, 이미 돌고 있는 MySQL에는 `bash scripts/grant-test-dbs.sh`로 한 번 준다(권한을 바꾸므로 실행 Claude는 사람에게 보고한 뒤 실행한다). 안 쓰게 된 worktree의 테스트용 DB는 남아 있어도 해가 없다(지울 때는 실행 Claude에게 부탁한다).
 - Claude Code의 자동 메모리는 작업 폴더(worktree)마다 따로 생긴다. 계속 필요한 정보는 자동 메모리에 기대지 말고 `CLAUDE.md`·설계서·ADR에 쓴다.
 
 ## 코딩 규약 (백엔드)
@@ -349,17 +352,18 @@ reviewer의 판정과 관문:
 - Service: Mapper·외부 API를 목(mock)으로 대체한 단위 테스트.
 - Controller: `@WebMvcTest`.
 - 외부 API를 실제로 호출하는 테스트는 쓰지 않는다. 응답은 테스트용 파일로 재현한다.
-- **테스트용 DB는 `test_catticket`** (개발용 `catticket`을 더럽히지 않음). `./gradlew test`가 DB 이름을 바꾸고 DB가 없으면 만든다. Flyway는 테스트 시작 시 이 DB에 마이그레이션을 적용한다. CI도 같은 DB 이름을 쓴다.
+- **테스트용 DB는 worktree마다 자동으로 정해지는 `test_catticket*`** (개발용 `catticket`을 더럽히지 않음). `./gradlew test`가 DB 이름을 바꾸고(환경변수 `TEST_DB_NAME` → `.env`의 `TEST_DB_NAME` → 자동 순. 자동 규칙은 「Orca에서의 작업」. `test_catticket`으로 시작하지 않는 이름은 오류) DB가 없으면 만든다. Flyway는 테스트 시작 시 이 DB에 마이그레이션을 적용한다. CI는 기본값 `test_catticket`을 쓴다.
 
 ## 명령어
 
 ```bash
 docker compose up -d                        # MySQL 실행 (메인 체크아웃에서만. 개발 중에는 DB만 컨테이너)
 cd backend && ./gradlew bootRun             # 앱 실행 (http://127.0.0.1:8080). 끝나지 않는 프로세스
-cd backend && ./gradlew test                # 테스트 (MySQL 실행 필요. test_catticket 사용)
+cd backend && ./gradlew test                # 테스트 (MySQL 실행 필요. worktree별 테스트용 DB 사용)
 cd backend && ./gradlew build               # 빌드 + 테스트 (CI와 같음)
 docker compose --profile app up -d --build  # 앱도 컨테이너로 실행
-bash scripts/db-inspect.sh tables          # 테스트용 DB의 테이블 목록(읽기 전용. worktree에서도 가능)
+bash scripts/db-inspect.sh tables          # 이 worktree의 테스트용 DB 테이블 목록(읽기 전용. worktree에서도 가능)
+bash scripts/grant-test-dbs.sh              # 돌고 있는 MySQL에 test_catticket* 권한 부여(한 번. 사람에게 보고한 뒤)
 ```
 
 Windows(PowerShell)는 `.\gradlew.bat`.

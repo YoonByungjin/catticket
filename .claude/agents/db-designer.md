@@ -33,11 +33,11 @@ model: opus
 
 ## 検証（必須）
 
-SQL を書いたら、実際の MySQL で適用できることを確認する。`./gradlew test` はテスト起動時に Flyway でテスト用 DB（`test_catticket`）へマイグレーションを適用するので、これで検証する（`bootRun` は終了しないプロセスなので使わない）。
+SQL を書いたら、実際の MySQL で適用できることを確認する。`./gradlew test` はテスト起動時に Flyway でテスト用 DB（worktree ごとに自動。`test_catticket*`）へマイグレーションを適用するので、これで検証する（`bootRun` は終了しないプロセスなので使わない）。
 
 - MySQL はメインのチェックアウト（`C:\workspace\catticket`）で起動済みの前提。**`docker compose up` は実行しない**（worktree で実行すると、同じプロジェクトとして扱われ、メインの MySQL コンテナが作り直されることがある。実行中のテストが切れる）。
 - 起動しているかは `docker compose ps db` で確認する。起動していなければ作業を止めて報告する。
-- テスト用 DB `test_catticket` は全 worktree で共有。**他の worktree でテストが実行中かもしれないときは実行せず、実行 Claude に確認する。**
+- テスト用 DB は worktree ごとに自動で分かれる（ログの `Test DB:` で確認できる）。**`TEST_DB_NAME` を指定して同じ DB 名を使う別のチェックアウトでテストが実行中かもしれないときは実行せず、実行 Claude に確認する。**
 
 ```bash
 docker compose ps db                  # 起動確認（up はしない）
@@ -98,11 +98,11 @@ bash scripts/db-inspect.sh history            # Flyway の適用履歴
 
 ### 검증 (필수)
 
-SQL을 쓰면 실제 MySQL에 적용되는지 확인한다. `./gradlew test`는 테스트 시작 시 Flyway로 테스트용 DB(`test_catticket`)에 마이그레이션을 적용하므로 이것으로 검증한다(`bootRun`은 끝나지 않는 프로세스라 쓰지 않는다).
+SQL을 쓰면 실제 MySQL에 적용되는지 확인한다. `./gradlew test`는 테스트 시작 시 Flyway로 테스트용 DB(worktree마다 자동. `test_catticket*`)에 마이그레이션을 적용하므로 이것으로 검증한다(`bootRun`은 끝나지 않는 프로세스라 쓰지 않는다).
 
 - MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 이미 실행 중이라고 전제한다. **`docker compose up`은 실행하지 않는다**(worktree에서 실행하면 같은 프로젝트로 인식되어 메인의 MySQL 컨테이너가 다시 만들어질 수 있다. 실행 중인 테스트가 끊긴다).
 - 실행 중인지는 `docker compose ps db`로 확인한다. 실행 중이 아니면 작업을 멈추고 보고한다.
-- 테스트용 DB `test_catticket`은 모든 worktree가 공유한다. **다른 worktree에서 테스트가 실행 중일 수 있을 때는 실행하지 말고 실행 Claude에게 확인한다.**
+- 테스트용 DB는 worktree마다 자동으로 나뉜다(로그의 `Test DB:`로 확인할 수 있다). **`TEST_DB_NAME`을 지정해 같은 DB 이름을 쓰는 다른 체크아웃에서 테스트가 실행 중일 수 있을 때는 실행하지 말고 실행 Claude에게 확인한다.**
 
 ```bash
 docker compose ps db                  # 실행 확인 (up은 하지 않음)
