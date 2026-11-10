@@ -1,6 +1,6 @@
 # 06. クラス設計書
 
-- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10。reviewer の確認待ち）
+- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10）。PR #32 の reviewer の判定は条件付き承認で、06 への指摘（U-01・U-04・U-06・U-07 の更新、4.5・7.2・8.1・3.2 の追記）を反映済み（2026-11-10。人間の確認待ち）
 - 担当: architect
 - 入力: `01-requirements.md`、`02-screens.md`、`03-api.md`（API 仕様の詳細）、`04-tables.md` と `backend/src/main/resources/db/migration/V1__create_schema.sql`、`05-batch.md`、ADR 0001〜0016。
 - 対象: バックエンド（`backend/`、Spring Boot）だけ。Angular のクラス設計は対象外（工程5で frontend-dev が `02`・`03`・`07` から作る）。
@@ -147,7 +147,7 @@ flowchart LR
 | `RequestValidationException`（Service・Controller の解析） | 400 | `VALIDATION_FAILED` | 渡された項目 |
 | `MethodArgumentNotValidException`（`@Valid @RequestBody`） | 400 | `VALIDATION_FAILED` | 各 `FieldError`: `field` = 本文の経路（例: `bookingSites[0].url`）、`reason` = 制約の `message`（3.3） |
 | `BindException`（`@Valid` のクエリの record。`MethodArgumentNotValidException` はこの子なので、本文と同じハンドラーで受ける） | 400 | `VALIDATION_FAILED` | 制約の誤りは上と同じ。型の変換の失敗（`FieldError.isBindingFailure()`）は `reason` = `TYPE`。クエリは `field` から `[n]` を除く（`genre[1]` → `genre`） |
-| `HandlerMethodValidationException`（メソッドの検証。引数に直接の制約がある Controller のメソッド。3.3 の「クエリの record が 2 つ以上あるメソッド」） | 400 | `VALIDATION_FAILED` | `@RequestParam` などの引数はパラメーター名と制約の `message`。`@Valid` の record・本文の誤り（`ParameterErrors`）は上の `BindException`・`MethodArgumentNotValidException` の行と同じに変える（クエリは `[n]` を除き、本文は経路のまま） |
+| `HandlerMethodValidationException`（メソッドの検証。引数に直接の制約がある Controller のメソッド。3.3 の「クエリの record が 2 つ以上あるメソッド」） | 400 | `VALIDATION_FAILED` | `@RequestParam`・`@PathVariable` などの引数は `field` = アノテーションの `name` があればそれ、なければ引数名（03 の 7.3 の `field` はクエリ・パスの名前なので、Java の引数名と違うときもリクエストの名前にする）、`reason` = 制約の `message`。`@Valid` の record・本文の誤り（`ParameterErrors`）は上の `BindException`・`MethodArgumentNotValidException` の行と同じに変える（クエリは `[n]` を除き、本文は経路のまま） |
 | `MissingServletRequestParameterException` | 400 | `VALIDATION_FAILED` | `REQUIRED` |
 | `MethodArgumentTypeMismatchException`（パス・クエリの型） | 400 | `VALIDATION_FAILED` | `TYPE` |
 | `HttpMessageNotReadableException`（JSON が読めない・型が違う） | 400 | `MALFORMED_REQUEST` | `[]` |
@@ -197,7 +197,7 @@ flowchart LR
   - 確認先: Spring Framework 7.0 リファレンス「Web on Servlet Stack > Annotated Controllers > Validation」（https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-validation.html 。表示の版 7.0.10）、`ModelAttributeMethodProcessor` のソース（v7.0.10。型の変換の失敗はすぐ投げる）。確認日 2026-11-10。
 - **座標**: `BigDecimal` で受ける（`NaN`・`Infinity` は型の変換で失敗し `TYPE`）。
 - **パスの ID**（`common.validation.PathIds`）: 公演 ID・会場 ID は `^[A-Za-z0-9]{1,20}$`（04 の `kopis_*_id` の長さ）に合わなければ Service を呼ばずに 404（`PERFORMANCE_NOT_FOUND`・`VENUE_NOT_FOUND`）。レビュー ID は文字列で受けて `^[1-9][0-9]{0,18}$` かつ `Long` に入るか → 合わなければ 404 `REVIEW_NOT_FOUND`。API-45（お気に入りの解除）は形が合わなくても 204（03 の 8.7）。
-- **JSON の型の厳しさ**（`JacksonConfig`）: 数値の項目への文字列、真偽の項目への文字列・数値、整数の項目への小数は `HttpMessageNotReadableException`（→ `MALFORMED_REQUEST`）にする。`spring.jackson.deserialization.accept-float-as-int=false` と、`JsonMapperBuilderCustomizer` で文字列 → 数値・真偽の型の変換（coercion）を `Fail` にする。Jackson 3 の正確なメソッド名は実装のときに Jackson の公式ドキュメントで確かめる（11 の U-01）。
+- **JSON の型の厳しさ**（`JacksonConfig`）: 数値の項目への文字列、真偽の項目への文字列・数値、整数の項目への小数は `HttpMessageNotReadableException`（→ `MALFORMED_REQUEST`）にする。`spring.jackson.deserialization.accept-float-as-int=false` と、`JsonMapperBuilderCustomizer`（`org.springframework.boot.jackson.autoconfigure`）で文字列 → 数値・真偽の型の変換（coercion）を `Fail` にする（`builder.withCoercionConfig(LogicalType.Integer / Float / Boolean, c -> c.setCoercion(CoercionInputShape.String, CoercionAction.Fail) …)`。真偽は `CoercionInputShape.Integer` も `Fail`）。**空文字列・空白だけの文字列も `Fail` にする**（`CoercionInputShape.EmptyString` を `Fail`、`setAcceptBlankAsEmpty(false)`）: Jackson の既定では空文字列 `""` は `String` とは別の形で、数値・真偽の項目に黙って `null` が入る（実装のテストで確かめた）ため。テスト: `ErrorResponseWebMvcTest$StrictJsonTypes`（`emptyStringForIntegerIsMalformed`・`blankStringForDecimalIsMalformed`・`emptyStringForBooleanIsMalformed`・`blankStringForIntegerAndBooleanIsMalformed` など）。メソッド名の確認は 11 の U-01（解消）。
 
 ### 3.4 セキュリティとセッション（`common.security`、ADR 0013、03 の 7.4）
 
@@ -448,7 +448,7 @@ flowchart LR
 | `AuthAdminService.createAdmin(String email, String password)` | RW | B-03（5.5） |
 | `AuthPurgeService.purgeExpiredSignups(LocalDateTime t)` → `int` | RW | B-04（5.6、03 の 9.2） |
 
-- `TokenPurpose`（enum）: `SIGNUP`, `PASSWORD_RESET`, `UNLOCK`（04 の `auth_token.purpose`）。`UserStatus`: `PENDING`, `ACTIVE`。
+- `TokenPurpose`（enum）: `SIGNUP`, `PASSWORD_RESET`, `UNLOCK`（04 の `auth_token.purpose`）。`UserStatus`（enum、`com.catticket.auth` の直下。`auth` だけの部品なので 2.1 の「直下: その機能だけの部品」に置く。`SessionUserRow.status` の型）: `PENDING`, `ACTIVE`。
 - パスワードのルールの判定は `common.validation.PasswordPolicy`（3.3。`auth` には置かない）。
 - `auth.client.RecaptchaClient`: `RecaptchaResult verify(String token)`。`tokenProperties.valid` が真なら `PASSED`、偽なら `FAILED`（→ 400 `RECAPTCHA_FAILED`）。429・5xx・タイムアウト・通信の失敗は `RecaptchaUnavailableException`（→ 503 `RECAPTCHA_UNAVAILABLE`）。再試行しない（03 の 7.5）。
 
@@ -859,7 +859,7 @@ verify(token):
 | `MailService` | 単体 | `JavaMailSender` を Mockito のモックにする（送った `SimpleMailMessage` を確かめる。`MailSendException` を投げさせて 503 を確かめる） |
 | Service | 単体 | Mapper・クライアント・`Clock`（`Clock.fixed`）・`Sleeper`（待たない実装）を Mockito で替える |
 | Mapper | `@MybatisTest`（実際の MySQL の、`./gradlew test` が決めるテスト用 DB（`test_catticket*`。CLAUDE.md「テスト」）。`@AutoConfigureTestDatabase(replace = NONE)`） | Flyway が V1 を適用した DB。データは各テストで入れる |
-| Controller | `@WebMvcTest` + `@Import(SecurityConfig.class)` + spring-security-test（`with(csrf())`、`with(user(...))` の代わりに `SessionUser` の `Authentication` を入れる小さな部品 `TestAuth`）。JSON 以外の本文の 415・`Accept: application/xml` でも JSON（3.1 の「JSON だけにする」のテスト ①〜③）を含める | Service を `@MockitoBean` |
+| Controller | `@WebMvcTest` + `@Import({SecurityConfig.class, JacksonConfig.class})`（`JacksonConfig` は `@Configuration` なので `@WebMvcTest` では読み込まれない。3.3 の JSON の型の厳しさを再現するために入れる） + spring-security-test（`with(csrf())`、`with(user(...))` の代わりに `SessionUser` の `Authentication` を入れる小さな部品 `TestAuth`）。JSON 以外の本文の 415・`Accept: application/xml` でも JSON（3.1 の「JSON だけにする」のテスト ①〜③）を含める | Service を `@MockitoBean` |
 | バッチの部品（`SubwayRowConverter`・`RisingCalculator`・`GenreTrendCalculator`・`CollectWindows`・`AdminPatchParser`・`NearbyFilter`・`AdminEffectiveValues`・`PasswordPolicy`・`EmailRule`） | 単体（`PasswordPolicy`・`EmailRule` のテストは `common/validation/`） | なし（Spring に依存しない）。駅のファイルは `src/test/resources/data/subway-sample/` |
 
 - 外部 API を実際に呼ぶテストは書かない。テストの設定（`src/test/resources/application.yml` など）で `catticket.scheduler.enabled=false` にし、`catticket.task` を設定しない。API キーなどは空の値（`""`）で起動できるようにする（`CatticketProperties` は起動時に必須を確かめない。使う時点で空なら失敗）。
@@ -939,6 +939,7 @@ catticket:
 - 既存の設定（`spring.application.name`、`spring.config.import`（`.env` の読み込み）、`spring.datasource.username`・`password`、`mybatis`）は残す。上はこの文書で足す・変えるキー（`mybatis` は確認のため既存の値を再掲）。既存の最上位の `kopis.api-key` は `catticket.kopis.api-key` に移して消す。
 - 秘密の値（キー・パスワード）は既定値を空にし、`.env` → 環境変数で渡す（`CLAUDE.md` の「セキュリティ」）。ファイルに値を書かない。
 - `catticket.task` は手での実行のときだけコマンドの引数で渡す（5.1）。
+- `catticket.subway.*` は、U-03 でファイル名が決まるまで `application.yml` に置かない（`{ファイル名}` のままでは起動の設定として使えないため。B-02 を作るときに足す）。
 
 ### 8.2 環境変数
 
@@ -1035,13 +1036,13 @@ catticket:
 
 | ID | 事項 | 誰が・いつ | 決まらないと困るもの |
 |---|---|---|---|
-| U-01 | Jackson 3（`tools.jackson`）で、文字列 → 数値・真偽の型の変換を失敗にする設定のメソッド名と、`jackson-dataformat-xml` の読み取りのアノテーションの名前（Jackson 2 から変わったもの） | backend-dev（実装のとき、Jackson の公式ドキュメントで確かめる）。新しいライブラリは要らない | 3.3、4.9 |
+| U-01 | Jackson 3（`tools.jackson`）で、文字列 → 数値・真偽の型の変換を失敗にする設定のメソッド名と、`jackson-dataformat-xml` の読み取りのアノテーションの名前（Jackson 2 から変わったもの） | **解消**（2026-11-10、Issue #23・PR #32）。jackson-databind 3.1.7（Spring Boot 4.1.2 が管理）: `MapperBuilder.withCoercionConfig(LogicalType, Consumer<MutableCoercionConfig>)`、`MutableCoercionConfig.setCoercion(CoercionInputShape, CoercionAction)`・`setAcceptBlankAsEmpty(Boolean)`、`DeserializationFeature.ACCEPT_FLOAT_AS_INT`。Spring Boot の `org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer`。XML のアノテーションは `tools.jackson.dataformat.xml.annotation` の `JacksonXmlRootElement`・`JacksonXmlProperty`・`JacksonXmlElementWrapper`・`JacksonXmlText`（jackson-dataformat-xml 3.1.7）。テスト: `ErrorResponseWebMvcTest$StrictJsonTypes`。確認先（確認日 2026-11-10）: https://javadoc.io/doc/tools.jackson.core/jackson-databind/3.1.7 （`cfg.MapperBuilder`・`cfg.MutableCoercionConfig`・`DeserializationFeature`）、https://docs.spring.io/spring-boot/api/java/org/springframework/boot/jackson/autoconfigure/JsonMapperBuilderCustomizer.html （Spring Boot 4.1.2 API）、https://docs.spring.io/spring-boot/appendix/dependency-versions/coordinates.html （両方 3.1.7）、XML のアノテーションは javadoc.io に 3.1.7 の頁がないため FasterXML/jackson-dataformat-xml のタグ `jackson-dataformat-xml-3.1.7` のソース（`src/main/java/tools/jackson/dataformat/xml/annotation/`） | 3.3、4.9 |
 | U-02 | KOPIS の結果コードの要素名・ジャンルの名前（`genrenm`）の一覧（05 の 7）、`prfstsPrfBy` の意味（05 の 3.6） | backend-dev（05 の 7 の確認）。要件を満たせないときは止めて報告 | 4.9 の `KopisClient`・`Genre` |
 | U-03 | 駅・コインロッカーのファイルの名前・文字コード・列の名前・結びつけのキー（05 の 4.2・4.3・7） | ファイルを取得したとき（backend-dev。結果は 05 と `data/subway/README.md`） | 5.4、8.1 の `catticket.subway.*` |
-| U-04 | 接続の `@@session.time_zone` が `Asia/Seoul` になること（A-05） | backend-dev（Mapper のテストで `SELECT @@session.time_zone` を確かめる） | 3.1 |
+| U-04 | 接続の `@@session.time_zone` が `Asia/Seoul` になること（A-05） | **解消**（2026-11-10、Issue #23・PR #32）。テスト `AuthMapperTest.sessionTimeZoneIsSeoul`（`@MybatisTest`。`SELECT @@session.time_zone` が `Asia/Seoul`） | 3.1 |
 | U-05 | API-01・50・B-04 の SQL の `EXPLAIN`（B-04 の DELETE が主キーでロックすること） | backend-dev（実装のとき） | 5.6、6.3 |
-| U-06 | Spring Security の `csrf.spa()` と共有の `CookieCsrfTokenRepository` の組み合わせで、`LoginSessionManager.establish` の Cookie の消去が期待どおりか | backend-dev（`@WebMvcTest` で確かめる） | 3.4 |
-| U-07 | Dockerfile の `ENTRYPOINT` を exec 形式にすること、`.env.example` に 8.2 の新しい環境変数を足すこと、本番の MySQL を Asia/Seoul にすること | 実行 Claude（担当のファイル） | 5.1、8.2、A-05 |
+| U-06 | Spring Security の `csrf.spa()` と共有の `CookieCsrfTokenRepository` の組み合わせで、`LoginSessionManager.establish` の Cookie の消去が期待どおりか | **解消**（2026-11-10、Issue #23・PR #32）。テスト `CsrfCookieWebMvcTest`: `establish` の後 `XSRF-TOKEN` が `Max-Age=0` で消え、新しいトークンで付け直されない（`establishClearsCsrfCookieAndCreatesSession`）。CSRF のヘッダーがない・違う POST は 403 `CSRF_INVALID`（`wrongOrMissingHeaderIsCsrfInvalid`）。未ログインの logout は 204 で `JSESSIONID`（と `XSRF-TOKEN`）を消す（`logoutWithoutLoginIs204AndClearsCookies`） | 3.4 |
+| U-07 | Dockerfile の `ENTRYPOINT` を exec 形式にすること、`.env.example` に 8.2 の新しい環境変数を足すこと、本番の MySQL を Asia/Seoul にすること | 残り: 本番の MySQL の TZ（工程7。実行 Claude）。Dockerfile・`.env.example` は Issue #23・PR #32 で済み | 5.1、8.2、A-05 |
 | U-08 | reCAPTCHA のサイトキーをフロントエンドのビルドの設定に入れる方法 | frontend-dev（工程5。フロントエンドのクラス設計は 06 の対象外） | API-37 の画面 |
 | U-09 | A-03（API-50 で公演 ID の大文字・小文字を無視）は管理者に見える変更。人間に伝える | **解消**（2026-11-09、人間が「無視する」で確定。9 の最後） | — |
 | U-10 | クエリの型の変換の失敗（`page=abc` など）は Spring MVC が結び付けのときにすぐ例外にするため、ほかの引数・項目の制約の誤りと一緒に返らない（3.3 の「クエリの record が 2 つ以上ある…」）。03 の 7.3 の「複数の項目が誤っていれば、`errors` にすべて入れる」の例外として 03 に書くか、すべてを返す作り（クエリを `String` で受けて自分で変換するなど）にするか | 人間が決める（Issue #23 の後。決まるまでは今の動き: 型の誤りだけを返す）。画面は入力欄から正しい型の値だけを送るので、利用者への影響は小さい | 3.3、03 の 7.3 |
@@ -1054,7 +1055,7 @@ catticket:
 
 ### 06. 클래스 설계서
 
-- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10. reviewer 확인 대기)
+- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10). PR #32의 reviewer 판정은 조건부 승인이며, 06에 대한 지적(U-01·U-04·U-06·U-07 갱신, 4.5·7.2·8.1·3.2 추가 기술)을 반영함(2026-11-10. 사람의 확인 대기)
 - 담당: architect
 - 입력: `01-requirements.md`, `02-screens.md`, `03-api.md`(API 사양 상세), `04-tables.md`와 `backend/src/main/resources/db/migration/V1__create_schema.sql`, `05-batch.md`, ADR 0001~0016.
 - 대상: 백엔드(`backend/`, Spring Boot)만. Angular 클래스 설계는 대상 외(공정 5에서 frontend-dev가 `02`·`03`·`07`로 만든다).
@@ -1183,7 +1184,7 @@ catticket:
 | `RequestValidationException`(Service·Controller 해석) | 400 | `VALIDATION_FAILED` | 넘겨받은 항목 |
 | `MethodArgumentNotValidException`(`@Valid @RequestBody`) | 400 | `VALIDATION_FAILED` | 각 `FieldError`: `field` = 본문 경로(예: `bookingSites[0].url`), `reason` = 제약의 `message`(3.3) |
 | `BindException`(`@Valid` 쿼리 record. `MethodArgumentNotValidException`은 이것의 자식이므로 본문과 같은 핸들러로 받는다) | 400 | `VALIDATION_FAILED` | 제약 오류는 위와 같음. 타입 변환 실패(`FieldError.isBindingFailure()`)는 `reason` = `TYPE`. 쿼리는 `field`에서 `[n]`을 뺀다(`genre[1]` → `genre`) |
-| `HandlerMethodValidationException`(메서드 검증. 인자에 직접 제약이 있는 Controller 메서드. 3.3의 "쿼리 record가 2개 이상인 메서드") | 400 | `VALIDATION_FAILED` | `@RequestParam` 등의 인자는 파라미터명과 제약의 `message`. `@Valid` record·본문의 오류(`ParameterErrors`)는 위의 `BindException`·`MethodArgumentNotValidException` 행과 같이 바꾼다(쿼리는 `[n]`을 빼고, 본문은 경로 그대로) |
+| `HandlerMethodValidationException`(메서드 검증. 인자에 직접 제약이 있는 Controller 메서드. 3.3의 "쿼리 record가 2개 이상인 메서드") | 400 | `VALIDATION_FAILED` | `@RequestParam`·`@PathVariable` 등의 인자는 `field` = 어노테이션의 `name`이 있으면 그것, 없으면 인자명(03의 7.3의 `field`는 쿼리·경로 이름이므로 Java 인자명과 다를 때도 요청의 이름으로 한다), `reason` = 제약의 `message`. `@Valid` record·본문의 오류(`ParameterErrors`)는 위의 `BindException`·`MethodArgumentNotValidException` 행과 같이 바꾼다(쿼리는 `[n]`을 빼고, 본문은 경로 그대로) |
 | `MissingServletRequestParameterException` | 400 | `VALIDATION_FAILED` | `REQUIRED` |
 | `MethodArgumentTypeMismatchException`(경로·쿼리 타입) | 400 | `VALIDATION_FAILED` | `TYPE` |
 | `HttpMessageNotReadableException`(JSON을 못 읽음·타입 다름) | 400 | `MALFORMED_REQUEST` | `[]` |
@@ -1233,7 +1234,7 @@ catticket:
   - 확인처: Spring Framework 7.0 레퍼런스 "Web on Servlet Stack > Annotated Controllers > Validation"(https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-validation.html . 표시된 버전 7.0.10), `ModelAttributeMethodProcessor` 소스(v7.0.10. 타입 변환 실패는 바로 던진다). 확인일 2026-11-10.
 - **좌표**: `BigDecimal`로 받는다(`NaN`·`Infinity`는 타입 변환에서 실패해 `TYPE`).
 - **경로 ID**(`common.validation.PathIds`): 공연 ID·공연장 ID는 `^[A-Za-z0-9]{1,20}$`(04의 `kopis_*_id` 길이)에 맞지 않으면 Service를 부르지 않고 404(`PERFORMANCE_NOT_FOUND`·`VENUE_NOT_FOUND`). 리뷰 ID는 문자열로 받아 `^[1-9][0-9]{0,18}$`이고 `Long`에 들어가는지 → 아니면 404 `REVIEW_NOT_FOUND`. API-45(즐겨찾기 해제)는 형식이 틀려도 204(03의 8.7).
-- **JSON 타입 엄격함**(`JacksonConfig`): 수치 항목에 문자열, 진위 항목에 문자열·수치, 정수 항목에 소수는 `HttpMessageNotReadableException`(→ `MALFORMED_REQUEST`)으로 한다. `spring.jackson.deserialization.accept-float-as-int=false`와, `JsonMapperBuilderCustomizer`로 문자열 → 수치·진위 변환(coercion)을 `Fail`로 한다. Jackson 3의 정확한 메서드명은 구현 때 Jackson 공식 문서로 확인한다(11의 U-01).
+- **JSON 타입 엄격함**(`JacksonConfig`): 수치 항목에 문자열, 진위 항목에 문자열·수치, 정수 항목에 소수는 `HttpMessageNotReadableException`(→ `MALFORMED_REQUEST`)으로 한다. `spring.jackson.deserialization.accept-float-as-int=false`와, `JsonMapperBuilderCustomizer`(`org.springframework.boot.jackson.autoconfigure`)로 문자열 → 수치·진위 변환(coercion)을 `Fail`로 한다(`builder.withCoercionConfig(LogicalType.Integer / Float / Boolean, c -> c.setCoercion(CoercionInputShape.String, CoercionAction.Fail) …)`. 진위는 `CoercionInputShape.Integer`도 `Fail`). **빈 문자열·공백뿐인 문자열도 `Fail`로 한다**(`CoercionInputShape.EmptyString`을 `Fail`, `setAcceptBlankAsEmpty(false)`): Jackson 기본값에서는 빈 문자열 `""`이 `String`과 다른 형태라 수치·진위 항목에 조용히 `null`이 들어가기 때문(구현 테스트로 확인). 테스트: `ErrorResponseWebMvcTest$StrictJsonTypes`(`emptyStringForIntegerIsMalformed`·`blankStringForDecimalIsMalformed`·`emptyStringForBooleanIsMalformed`·`blankStringForIntegerAndBooleanIsMalformed` 등). 메서드명 확인은 11의 U-01(해소).
 
 **3.4 보안과 세션(`common.security`, ADR 0013, 03의 7.4)**
 
@@ -1484,7 +1485,7 @@ Service
 | `AuthAdminService.createAdmin(String email, String password)` | RW | B-03(5.5) |
 | `AuthPurgeService.purgeExpiredSignups(LocalDateTime t)` → `int` | RW | B-04(5.6, 03의 9.2) |
 
-- `TokenPurpose`(enum): `SIGNUP`, `PASSWORD_RESET`, `UNLOCK`(04의 `auth_token.purpose`). `UserStatus`: `PENDING`, `ACTIVE`.
+- `TokenPurpose`(enum): `SIGNUP`, `PASSWORD_RESET`, `UNLOCK`(04의 `auth_token.purpose`). `UserStatus`(enum, `com.catticket.auth` 바로 아래. `auth`만의 부품이므로 2.1의 "바로 아래: 그 기능만의 부품"에 둔다. `SessionUserRow.status`의 타입): `PENDING`, `ACTIVE`.
 - 비밀번호 규칙 판정은 `common.validation.PasswordPolicy`(3.3. `auth`에는 두지 않는다).
 - `auth.client.RecaptchaClient`: `RecaptchaResult verify(String token)`. `tokenProperties.valid`가 참이면 `PASSED`, 거짓이면 `FAILED`(→ 400 `RECAPTCHA_FAILED`). 429·5xx·타임아웃·통신 실패는 `RecaptchaUnavailableException`(→ 503 `RECAPTCHA_UNAVAILABLE`). 재시도하지 않는다(03의 7.5).
 
@@ -1822,7 +1823,7 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 | `MailService` | 단위 | `JavaMailSender`를 Mockito 목으로(보낸 `SimpleMailMessage` 확인. `MailSendException`을 던지게 해 503 확인) |
 | Service | 단위 | Mapper·클라이언트·`Clock`(`Clock.fixed`)·`Sleeper`(기다리지 않는 구현)를 Mockito로 바꾼다 |
 | Mapper | `@MybatisTest`(실제 MySQL에서 `./gradlew test`가 정하는 테스트용 DB(`test_catticket*`. CLAUDE.md "테스트"). `@AutoConfigureTestDatabase(replace = NONE)`) | Flyway가 V1을 적용한 DB. 데이터는 각 테스트에서 넣는다 |
-| Controller | `@WebMvcTest` + `@Import(SecurityConfig.class)` + spring-security-test(`with(csrf())`, `with(user(...))` 대신 `SessionUser`의 `Authentication`을 넣는 작은 부품 `TestAuth`). JSON이 아닌 본문의 415·`Accept: application/xml`이어도 JSON(3.1의 "JSON만으로 하기"의 테스트 ①~③)을 포함한다 | Service를 `@MockitoBean` |
+| Controller | `@WebMvcTest` + `@Import({SecurityConfig.class, JacksonConfig.class})`(`JacksonConfig`는 `@Configuration`이라 `@WebMvcTest`에서는 읽히지 않는다. 3.3의 JSON 타입 엄격함을 재현하기 위해 넣는다) + spring-security-test(`with(csrf())`, `with(user(...))` 대신 `SessionUser`의 `Authentication`을 넣는 작은 부품 `TestAuth`). JSON이 아닌 본문의 415·`Accept: application/xml`이어도 JSON(3.1의 "JSON만으로 하기"의 테스트 ①~③)을 포함한다 | Service를 `@MockitoBean` |
 | 배치 부품(`SubwayRowConverter`·`RisingCalculator`·`GenreTrendCalculator`·`CollectWindows`·`AdminPatchParser`·`NearbyFilter`·`AdminEffectiveValues`·`PasswordPolicy`·`EmailRule`) | 단위(`PasswordPolicy`·`EmailRule` 테스트는 `common/validation/`) | 없음(Spring 비의존). 역 파일은 `src/test/resources/data/subway-sample/` |
 
 - 외부 API를 실제로 부르는 테스트는 쓰지 않는다. 테스트 설정(`src/test/resources/application.yml` 등)에서 `catticket.scheduler.enabled=false`로 하고 `catticket.task`를 설정하지 않는다. API 키 등은 빈 값(`""`)으로 기동할 수 있게 한다(`CatticketProperties`는 기동 시 필수를 확인하지 않음. 쓰는 시점에 비어 있으면 실패).
@@ -1830,7 +1831,7 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 
 #### 8. 설정
 
-**8.1 `application.yml` 키**: YAML 블록은 일본어 부분 8.1과 같다. 요점: `spring.datasource.url`에 기존 값(`createDatabaseIfNotExist=true`)과 A-05의 `connectionTimeZone=Asia/Seoul&forceConnectionTimeZoneToSession=true`, `spring.jackson.deserialization.accept-float-as-int: false`, `spring.mail.*`(smtp.gmail.com:587, STARTTLS 필수, UTF-8, 타임아웃 5000/10000/10000 ms), `server.forward-headers-strategy: native`, `server.servlet.session.timeout: 30m`과 Cookie(`http-only`, `secure: ${SESSION_COOKIE_SECURE:true}`, `same-site: lax`), `mybatis`(기존), `catticket.*`(`public-base-url`, `scheduler.enabled`, `kopis.*`(기본 URL·키·간격 500ms), `azure.*`(엔드포인트·키·지역·1회 10000자·분당 30000자·월 1800000자), `recaptcha.*`, `mail.from`·`daily-limit: 400`, `admin.*`, `subway.*`(파일 경로·문자 코드. 파일명은 받은 뒤 정함. U-03)).
+**8.1 `application.yml` 키**: YAML 블록은 일본어 부분 8.1과 같다. 요점: `spring.datasource.url`에 기존 값(`createDatabaseIfNotExist=true`)과 A-05의 `connectionTimeZone=Asia/Seoul&forceConnectionTimeZoneToSession=true`, `spring.jackson.deserialization.accept-float-as-int: false`, `spring.mail.*`(smtp.gmail.com:587, STARTTLS 필수, UTF-8, 타임아웃 5000/10000/10000 ms), `server.forward-headers-strategy: native`, `server.servlet.session.timeout: 30m`과 Cookie(`http-only`, `secure: ${SESSION_COOKIE_SECURE:true}`, `same-site: lax`), `mybatis`(기존), `catticket.*`(`public-base-url`, `scheduler.enabled`, `kopis.*`(기본 URL·키·간격 500ms), `azure.*`(엔드포인트·키·지역·1회 10000자·분당 30000자·월 1800000자), `recaptcha.*`, `mail.from`·`daily-limit: 400`, `admin.*`, `subway.*`(파일 경로·문자 코드. 파일명은 받은 뒤 정함. U-03)). `catticket.subway.*`는 U-03에서 파일명이 정해질 때까지 `application.yml`에 두지 않는다(`{파일명}` 그대로는 기동 설정으로 쓸 수 없기 때문. B-02를 만들 때 추가한다).
 
 - 기존 설정(`spring.application.name`, `spring.config.import`(`.env` 읽기), `spring.datasource.username`·`password`, `mybatis`)은 남긴다. 위는 이 문서에서 더하거나 바꾸는 키(`mybatis`는 확인을 위해 기존 값을 다시 실음). 기존 최상위 `kopis.api-key`는 `catticket.kopis.api-key`로 옮기고 지운다.
 - 비밀 값(키·비밀번호)은 기본값을 비우고 `.env` → 환경 변수로 넘긴다(`CLAUDE.md`의 "보안"). 파일에 값을 쓰지 않는다.
@@ -1931,13 +1932,13 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 
 | ID | 사항 | 누가·언제 | 정해지지 않으면 곤란한 것 |
 |---|---|---|---|
-| U-01 | Jackson 3(`tools.jackson`)에서 문자열 → 수치·진위 변환을 실패로 하는 설정의 메서드명과, `jackson-dataformat-xml` 읽기 어노테이션 이름(Jackson 2에서 바뀐 것) | backend-dev(구현 때 Jackson 공식 문서로 확인). 새 라이브러리는 필요 없음 | 3.3, 4.9 |
+| U-01 | Jackson 3(`tools.jackson`)에서 문자열 → 수치·진위 변환을 실패로 하는 설정의 메서드명과, `jackson-dataformat-xml` 읽기 어노테이션 이름(Jackson 2에서 바뀐 것) | **해소**(2026-11-10, Issue #23·PR #32). jackson-databind 3.1.7(Spring Boot 4.1.2가 관리): `MapperBuilder.withCoercionConfig(LogicalType, Consumer<MutableCoercionConfig>)`, `MutableCoercionConfig.setCoercion(CoercionInputShape, CoercionAction)`·`setAcceptBlankAsEmpty(Boolean)`, `DeserializationFeature.ACCEPT_FLOAT_AS_INT`. Spring Boot의 `org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer`. XML 어노테이션은 `tools.jackson.dataformat.xml.annotation`의 `JacksonXmlRootElement`·`JacksonXmlProperty`·`JacksonXmlElementWrapper`·`JacksonXmlText`(jackson-dataformat-xml 3.1.7). 테스트: `ErrorResponseWebMvcTest$StrictJsonTypes`. 확인처(확인일 2026-11-10): https://javadoc.io/doc/tools.jackson.core/jackson-databind/3.1.7 (`cfg.MapperBuilder`·`cfg.MutableCoercionConfig`·`DeserializationFeature`), https://docs.spring.io/spring-boot/api/java/org/springframework/boot/jackson/autoconfigure/JsonMapperBuilderCustomizer.html (Spring Boot 4.1.2 API), https://docs.spring.io/spring-boot/appendix/dependency-versions/coordinates.html (둘 다 3.1.7), XML 어노테이션은 javadoc.io에 3.1.7 페이지가 없어 FasterXML/jackson-dataformat-xml 태그 `jackson-dataformat-xml-3.1.7`의 소스(`src/main/java/tools/jackson/dataformat/xml/annotation/`) | 3.3, 4.9 |
 | U-02 | KOPIS 결과 코드 요소명·장르 이름(`genrenm`) 목록(05의 7), `prfstsPrfBy`의 의미(05의 3.6) | backend-dev(05의 7 확인). 요건을 채울 수 없으면 멈추고 보고 | 4.9의 `KopisClient`·`Genre` |
 | U-03 | 역·물품보관함 파일의 이름·문자 코드·열 이름·연결 키(05의 4.2·4.3·7) | 파일을 받을 때(backend-dev. 결과는 05와 `data/subway/README.md`) | 5.4, 8.1의 `catticket.subway.*` |
-| U-04 | 접속의 `@@session.time_zone`이 `Asia/Seoul`이 되는지(A-05) | backend-dev(Mapper 테스트에서 `SELECT @@session.time_zone` 확인) | 3.1 |
+| U-04 | 접속의 `@@session.time_zone`이 `Asia/Seoul`이 되는지(A-05) | **해소**(2026-11-10, Issue #23·PR #32). 테스트 `AuthMapperTest.sessionTimeZoneIsSeoul`(`@MybatisTest`. `SELECT @@session.time_zone`이 `Asia/Seoul`) | 3.1 |
 | U-05 | API-01·50·B-04 SQL의 `EXPLAIN`(B-04의 DELETE가 기본 키로 잠그는지) | backend-dev(구현 때) | 5.6, 6.3 |
-| U-06 | Spring Security `csrf.spa()`와 공유 `CookieCsrfTokenRepository` 조합에서 `LoginSessionManager.establish`의 Cookie 삭제가 기대대로인지 | backend-dev(`@WebMvcTest`로 확인) | 3.4 |
-| U-07 | Dockerfile `ENTRYPOINT`를 exec 형식으로, `.env.example`에 8.2의 새 환경 변수 추가, 운영 MySQL을 Asia/Seoul로 | 실행 Claude(담당 파일) | 5.1, 8.2, A-05 |
+| U-06 | Spring Security `csrf.spa()`와 공유 `CookieCsrfTokenRepository` 조합에서 `LoginSessionManager.establish`의 Cookie 삭제가 기대대로인지 | **해소**(2026-11-10, Issue #23·PR #32). 테스트 `CsrfCookieWebMvcTest`: `establish` 후 `XSRF-TOKEN`이 `Max-Age=0`으로 지워지고 새 토큰으로 다시 붙지 않는다(`establishClearsCsrfCookieAndCreatesSession`). CSRF 헤더가 없거나 틀린 POST는 403 `CSRF_INVALID`(`wrongOrMissingHeaderIsCsrfInvalid`). 미로그인 logout은 204이고 `JSESSIONID`(와 `XSRF-TOKEN`)를 지운다(`logoutWithoutLoginIs204AndClearsCookies`) | 3.4 |
+| U-07 | Dockerfile `ENTRYPOINT`를 exec 형식으로, `.env.example`에 8.2의 새 환경 변수 추가, 운영 MySQL을 Asia/Seoul로 | 남은 것: 운영 MySQL의 TZ(공정 7. 실행 Claude). Dockerfile·`.env.example`은 Issue #23·PR #32에서 완료 | 5.1, 8.2, A-05 |
 | U-08 | reCAPTCHA 사이트 키를 프론트엔드 빌드 설정에 넣는 방법 | frontend-dev(공정 5. 프론트엔드 클래스 설계는 06 대상 외) | API-37 화면 |
 | U-09 | A-03(API-50에서 공연 ID 대소문자 무시)은 관리자에게 보이는 변경. 사람에게 전한다 | **해소**(2026-11-09, 사람이 "무시"로 확정. 9의 끝) | — |
 | U-10 | 쿼리의 타입 변환 실패(`page=abc` 등)는 Spring MVC가 바인딩 때 바로 예외로 하므로 다른 인자·항목의 제약 오류와 함께 반환되지 않는다(3.3의 "쿼리 record가 2개 이상인…"). 03의 7.3 "여러 항목이 틀렸으면 `errors`에 모두 넣는다"의 예외로 03에 쓸지, 모두 반환하는 구조(쿼리를 `String`으로 받아 직접 변환하는 등)로 할지 | 사람이 정한다(Issue #23 이후. 정해질 때까지는 지금 동작: 타입 오류만 반환). 화면은 입력란에서 올바른 타입의 값만 보내므로 이용자 영향은 작다 | 3.3, 03의 7.3 |
