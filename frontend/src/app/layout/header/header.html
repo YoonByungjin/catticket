@@ -1,0 +1,82 @@
+<mat-toolbar class="ct-header" [class.ct-header--handset]="handset()">
+  <a class="ct-brand" routerLink="/">{{ serviceName }}</a>
+
+  @if (!handset()) {
+    <nav class="ct-nav">
+      @for (link of navLinks(); track link.path) {
+        <a
+          mat-button
+          class="ct-nav-link"
+          [routerLink]="link.path"
+          routerLinkActive="ct-nav-link--active"
+          [routerLinkActiveOptions]="{ exact: link.exact }"
+          ariaCurrentWhenActive="page"
+          >{{ link.labelKey | translate }}</a
+        >
+      }
+    </nav>
+  }
+
+  <span class="ct-spacer"></span>
+
+  @if (!handset()) {
+    <div class="ct-actions">
+      @for (link of accountLinks(); track link.path) {
+        <a
+          mat-button
+          [routerLink]="link.path"
+          routerLinkActive="ct-nav-link--active"
+          ariaCurrentWhenActive="page"
+          >{{
+            link.labelKey
+              | translate: (link.showNickname ? { name: auth().nickname ?? '' } : undefined)
+          }}</a
+        >
+      }
+      @if (auth().authenticated) {
+        <button mat-button type="button" (click)="logout.emit()">
+          {{ 'header.logout' | translate }}
+        </button>
+      }
+    </div>
+  }
+
+  <div class="ct-controls">
+    <mat-button-toggle-group
+      class="ct-language"
+      [value]="lang()"
+      (change)="switchLanguage($event.value)"
+      [attr.aria-label]="'header.language' | translate"
+      hideSingleSelectionIndicator
+    >
+      @for (option of languageOptions; track option.value) {
+        <mat-button-toggle [value]="option.value" [attr.lang]="option.value">{{
+          option.label
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+
+    <button
+      mat-icon-button
+      type="button"
+      class="ct-theme-toggle"
+      (click)="toggleTheme()"
+      [attr.aria-label]="themeLabelKey() | translate"
+    >
+      <mat-icon aria-hidden="true">{{ themeIcon() }}</mat-icon>
+    </button>
+
+    @if (handset()) {
+      <button
+        mat-icon-button
+        type="button"
+        class="ct-menu-button"
+        (click)="menuToggle.emit()"
+        [attr.aria-label]="'header.menu' | translate"
+        [attr.aria-expanded]="menuOpen()"
+      >
+        <mat-icon aria-hidden="true">menu</mat-icon>
+      </button>
+    }
+  </div>
+</mat-toolbar>

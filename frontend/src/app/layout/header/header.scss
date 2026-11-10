@@ -1,0 +1,71 @@
+@use '@angular/material' as mat;
+
+// 07 の 3.・4.1。部品の見た目は公式のテーマの API（*-overrides）だけで変える（ADR 0014 決定2）
+
+.ct-header {
+  gap: 8px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  // PC 64px（07 の 3.）
+  @include mat.toolbar-overrides(
+    (
+      container-background-color: var(--mat-sys-surface),
+      container-text-color: var(--mat-sys-on-surface),
+      standard-height: 64px,
+    )
+  );
+}
+
+// スマホ表示は 56px。Toolbar の既定の切り替え幅と CDK の Handset がずれるため、自分で指定する
+.ct-header--handset {
+  gap: 4px;
+  @include mat.toolbar-overrides(
+    (
+      standard-height: 56px,
+    )
+  );
+}
+
+.ct-brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: inherit;
+  font: var(--mat-sys-title-large);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ct-nav,
+.ct-actions,
+.ct-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  // 日本語でも項目を折り返さない（07 の 6.）
+  white-space: nowrap;
+}
+
+.ct-header--handset .ct-controls {
+  gap: 4px;
+}
+
+// 選択中の画面の文字だけ primary（07 の 3.）
+.ct-nav-link {
+  @include mat.button-overrides(
+    (
+      text-label-text-color: var(--mat-sys-on-surface),
+    )
+  );
+}
+
+.ct-nav-link--active {
+  @include mat.button-overrides(
+    (
+      text-label-text-color: var(--mat-sys-primary),
+    )
+  );
+}
+
+.ct-spacer {
+  flex: 1 1 auto;
+}

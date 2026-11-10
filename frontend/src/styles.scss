@@ -1,0 +1,71 @@
+@use 'sass:string';
+@use '@angular/material' as mat;
+@use './theme/theme-colors' as colors;
+
+// 07 の 2.2.1: 端末のフォントだけを使う（Web フォントを読み込まない）。韓国語・日本語で並びを変える
+// 名前の引用符を CSS にそのまま残すため、文字列を unquote して渡す
+$font-ko: string.unquote(
+  '"Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR", system-ui, sans-serif'
+);
+$font-ja: string.unquote(
+  '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", "Noto Sans JP", "Noto Sans CJK JP", system-ui, sans-serif'
+);
+
+html {
+  // 最初の表示は index.html のインラインスクリプトが style 属性で light / dark に決める（02 の 3.8）
+  color-scheme: light;
+
+  // ADR 0014 決定2・3、07 の 2.1.5: テーマは mat.theme の1か所。color-scheme 型で light-dark() を出す
+  @include mat.theme(
+    (
+      color: (
+        primary: colors.$primary-palette,
+        tertiary: colors.$tertiary-palette,
+        theme-type: color-scheme,
+      ),
+      typography: (
+        plain-family: $font-ko,
+        brand-family: $font-ko,
+      ),
+      density: 0,
+    )
+  );
+
+  // 07 の 2.6・3.: 言語などの切り替えは高さ 48px、選択中は primary-container の背景・primary の文字
+  @include mat.button-toggle-overrides(
+    (
+      height: 48px,
+      selected-state-background-color: var(--mat-sys-primary-container),
+      selected-state-text-color: var(--mat-sys-primary),
+    )
+  );
+
+  // 07 の 2.1.5 の 5.: M3 に役割のない自作の色
+  --ct-success: light-dark(#166534, #86efac);
+  --ct-success-container: light-dark(#f0fdf4, #052e16);
+  --ct-placeholder: light-dark(#e5e7eb, #4b5563);
+}
+
+// 07 の 2.2.1: 日本語表示は typography だけを差し替える
+html:lang(ja) {
+  @include mat.theme(
+    (
+      typography: (
+        plain-family: $font-ja,
+        brand-family: $font-ja,
+      ),
+    )
+  );
+}
+
+body {
+  margin: 0;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+}
+
+// 07 の 2.7・ADR 0016 決定6: 塗りのアイコン（星・お気に入り）は FILL 軸で切り替える。<mat-icon> に付ける自作のクラス
+.ct-icon-filled {
+  font-variation-settings: 'FILL' 1;
+}
