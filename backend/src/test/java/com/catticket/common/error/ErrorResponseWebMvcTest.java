@@ -130,6 +130,28 @@ class ErrorResponseWebMvcTest {
 		}
 
 		@Test
+		void emptyStringForIntegerIsMalformed() throws Exception {
+			// 空の文字列を null として通さない（03 の 7.1）
+			assertError(postJson("{\"name\":\"cat\",\"count\":\"\"}"), 400, "MALFORMED_REQUEST");
+		}
+
+		@Test
+		void blankStringForDecimalIsMalformed() throws Exception {
+			assertError(postJson("{\"name\":\"cat\",\"ratio\":\" \"}"), 400, "MALFORMED_REQUEST");
+		}
+
+		@Test
+		void emptyStringForBooleanIsMalformed() throws Exception {
+			assertError(postJson("{\"name\":\"cat\",\"flag\":\"\"}"), 400, "MALFORMED_REQUEST");
+		}
+
+		@Test
+		void blankStringForIntegerAndBooleanIsMalformed() throws Exception {
+			assertError(postJson("{\"name\":\"cat\",\"count\":\"  \"}"), 400, "MALFORMED_REQUEST");
+			assertError(postJson("{\"name\":\"cat\",\"flag\":\" \"}"), 400, "MALFORMED_REQUEST");
+		}
+
+		@Test
 		void brokenJsonIsMalformed() throws Exception {
 			assertError(postJson("{\"name\":"), 400, "MALFORMED_REQUEST");
 		}
@@ -254,6 +276,15 @@ class ErrorResponseWebMvcTest {
 			assertError(actions, 400, "VALIDATION_FAILED");
 			actions.andExpect(jsonPath("$.errors[0].field").value("n"))
 				.andExpect(jsonPath("$.errors[0].reason").value("RANGE"));
+		}
+
+		@Test
+		void methodValidationUsesRequestNamesNotJavaNames() throws Exception {
+			ResultActions actions = mvc.perform(get("/api/test/named/0").param("max", "11"));
+			assertError(actions, 400, "VALIDATION_FAILED");
+			actions.andExpect(jsonPath("$.errors", hasSize(2)))
+				.andExpect(jsonPath("$.errors[*].field", containsInAnyOrder("no", "max")))
+				.andExpect(jsonPath("$.errors[*].reason", containsInAnyOrder("RANGE", "RANGE")));
 		}
 
 		@Test

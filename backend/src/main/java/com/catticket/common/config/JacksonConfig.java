@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 
 import tools.jackson.databind.cfg.CoercionAction;
 import tools.jackson.databind.cfg.CoercionInputShape;
+import tools.jackson.databind.cfg.MutableCoercionConfig;
 import tools.jackson.databind.type.LogicalType;
 
 /**
@@ -17,12 +18,20 @@ public class JacksonConfig {
 
 	@Bean
 	JsonMapperBuilderCustomizer strictCoercionCustomizer() {
-		return builder -> builder
-			.withCoercionConfig(LogicalType.Integer,
-					c -> c.setCoercion(CoercionInputShape.String, CoercionAction.Fail))
-			.withCoercionConfig(LogicalType.Float, c -> c.setCoercion(CoercionInputShape.String, CoercionAction.Fail))
-			.withCoercionConfig(LogicalType.Boolean, c -> c.setCoercion(CoercionInputShape.String, CoercionAction.Fail)
-				.setCoercion(CoercionInputShape.Integer, CoercionAction.Fail));
+		return builder -> builder.withCoercionConfig(LogicalType.Integer, JacksonConfig::failOnStrings)
+			.withCoercionConfig(LogicalType.Float, JacksonConfig::failOnStrings)
+			.withCoercionConfig(LogicalType.Boolean,
+					c -> failOnStrings(c).setCoercion(CoercionInputShape.Integer, CoercionAction.Fail));
+	}
+
+	/**
+	 * 文字列を失敗にする。既定では空の文字列（""）は String とは別の形で、黙って null になるので、
+	 * EmptyString も失敗にする。空白だけの文字列（" "）も空の扱いにせず、文字列として失敗させる。
+	 */
+	private static MutableCoercionConfig failOnStrings(MutableCoercionConfig config) {
+		return config.setCoercion(CoercionInputShape.String, CoercionAction.Fail)
+			.setCoercion(CoercionInputShape.EmptyString, CoercionAction.Fail)
+			.setAcceptBlankAsEmpty(false);
 	}
 
 }
