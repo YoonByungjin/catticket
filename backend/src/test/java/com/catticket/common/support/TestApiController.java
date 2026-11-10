@@ -121,6 +121,14 @@ public class TestApiController {
 		return Map.of("n", n);
 	}
 
+	/** Java の引数の名前（maxCount・seq）とクエリ・パスの名前（max・no）が違う */
+	@GetMapping("/api/test/named/{no}")
+	public Map<String, Object> named(
+			@PathVariable("no") @Min(value = 1, message = "RANGE") int seq,
+			@RequestParam(name = "max", required = false) @Max(value = 10, message = "RANGE") Integer maxCount) {
+		return Map.of("no", seq);
+	}
+
 	@GetMapping("/api/test/path/{id}")
 	public Map<String, Object> path(@PathVariable long id) {
 		return Map.of("id", id);

@@ -21,7 +21,9 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -69,7 +71,7 @@ public class GlobalExceptionHandler {
 				items.addAll(toItems(errors, isRequestBody(result.getMethodParameter())));
 				continue;
 			}
-			String name = result.getMethodParameter().getParameterName();
+			String name = requestName(result.getMethodParameter());
 			result.getResolvableErrors().forEach(e -> items.add(new FieldErrorItem(name, e.getDefaultMessage())));
 		}
 		return validationFailed(items);
@@ -143,6 +145,22 @@ public class GlobalExceptionHandler {
 			}
 		}
 		return items;
+	}
+
+	/**
+	 * 03 の 7.3 の field はクエリ・パスの名前なので、@RequestParam・@PathVariable に名前があればそれを使う
+	 * （Java の引数の名前と違うことがある）。なければ引数の名前。
+	 */
+	private static String requestName(MethodParameter parameter) {
+		RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
+		if (requestParam != null && !requestParam.name().isEmpty()) {
+			return requestParam.name();
+		}
+		PathVariable pathVariable = parameter.getParameterAnnotation(PathVariable.class);
+		if (pathVariable != null && !pathVariable.name().isEmpty()) {
+			return pathVariable.name();
+		}
+		return parameter.getParameterName();
 	}
 
 	private static boolean isRequestBody(MethodParameter parameter) {
