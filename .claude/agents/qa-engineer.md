@@ -34,10 +34,10 @@ model: opus
 - 結合テスト: Spring Boot のテストで API を実際に呼び、MySQL まで通す。
 - E2E テスト: 画面の主要な流れを確認する（ツールは ADR で決まったものを使う）。
 - 外部 API は実際に呼ばず、テスト用ファイルで再現する。
-- バックエンドのテストはテスト用 DB（`TEST_DB_NAME`、既定 `test_catticket`）で動く（`./gradlew test` が切り替える）。
+- バックエンドのテストはテスト用 DB（worktree ごとに自動。`test_catticket*`）で動く（`./gradlew test` が切り替える）。
 - テストは何度実行しても同じ結果になるようにする（データの準備・後片付け）。
 - MySQL はメインのチェックアウト（`C:\workspace\catticket`）で起動済みの前提。**`docker compose up` は実行しない**（worktree で実行すると、同じプロジェクトとして扱われ、メインの MySQL コンテナが作り直されることがある。実行中のテストが切れる）。起動しているかは `docker compose ps db` で確認し、起動していなければ作業を止めて報告する。
-- テスト用 DB は worktree の `.env` の `TEST_DB_NAME`（空なら `test_catticket`）。**同じ DB 名を使う別の worktree でテストが実行中かもしれないときは実行せず、実行 Claude に確認する。**
+- テスト用 DB は worktree ごとに自動で分かれる（ログの `Test DB:` で確認できる）。**`TEST_DB_NAME` を指定して同じ DB 名を使う別のチェックアウトでテストが実行中かもしれないときは実行せず、実行 Claude に確認する。**
 
 ```bash
 docker compose ps db          # 起動確認（up はしない）
@@ -86,10 +86,10 @@ cd backend && ./gradlew test
 - 결합 테스트: Spring Boot 테스트로 API를 실제로 호출해 MySQL까지 통과시킨다.
 - E2E 테스트: 화면의 주요 흐름을 확인한다(도구는 ADR로 정해진 것을 쓴다).
 - 외부 API는 실제로 호출하지 않고 테스트용 파일로 재현한다.
-- 백엔드 테스트는 테스트용 DB(`TEST_DB_NAME`, 기본 `test_catticket`)에서 돈다(`./gradlew test`가 바꿔 준다).
+- 백엔드 테스트는 테스트용 DB(worktree마다 자동. `test_catticket*`)에서 돈다(`./gradlew test`가 바꿔 준다).
 - 테스트는 몇 번 실행해도 같은 결과가 나오게 한다(데이터 준비·정리).
 - MySQL은 메인 체크아웃(`C:\workspace\catticket`)에서 이미 실행 중이라고 전제한다. **`docker compose up`은 실행하지 않는다**(worktree에서 실행하면 같은 프로젝트로 인식되어 메인의 MySQL 컨테이너가 다시 만들어질 수 있다. 실행 중인 테스트가 끊긴다). 실행 중인지는 `docker compose ps db`로 확인하고, 실행 중이 아니면 작업을 멈추고 보고한다.
-- 테스트용 DB는 worktree `.env`의 `TEST_DB_NAME`(비어 있으면 `test_catticket`). **같은 DB 이름을 쓰는 다른 worktree에서 테스트가 실행 중일 수 있을 때는 실행하지 말고 실행 Claude에게 확인한다.**
+- 테스트용 DB는 worktree마다 자동으로 나뉜다(로그의 `Test DB:`로 확인할 수 있다). **`TEST_DB_NAME`을 지정해 같은 DB 이름을 쓰는 다른 체크아웃에서 테스트가 실행 중일 수 있을 때는 실행하지 말고 실행 Claude에게 확인한다.**
 
 ```bash
 docker compose ps db          # 실행 확인 (up은 하지 않음)

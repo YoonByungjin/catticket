@@ -66,7 +66,7 @@ catticket/
    ./gradlew bootRun
    ```
 
-テストは `cd backend && ./gradlew test`（テスト専用 DB を使います。既定は `test_catticket`、`.env` の `TEST_DB_NAME` で worktree ごとに変えられます）。
+テストは `cd backend && ./gradlew test`（テスト専用 DB を使います。メインのチェックアウトは `test_catticket`、git worktree ではフォルダごとに自動で別の DB になります）。
 
 ---
 
@@ -109,4 +109,4 @@ catticket/
 2. `docker compose up -d`로 MySQL을 실행합니다.
 3. `cd backend` 후 `./gradlew bootRun`으로 Spring Boot를 실행합니다(Windows PowerShell은 `.\gradlew.bat bootRun`). 테이블은 Flyway가 시작할 때 만듭니다.
 
-테스트는 `cd backend && ./gradlew test` (테스트 전용 DB 사용. 기본은 `test_catticket`, `.env`의 `TEST_DB_NAME`으로 worktree마다 바꿀 수 있습니다).
+테스트는 `cd backend && ./gradlew test` (테스트 전용 DB 사용. 메인 체크아웃은 `test_catticket`, git worktree에서는 폴더마다 자동으로 다른 DB가 됩니다).

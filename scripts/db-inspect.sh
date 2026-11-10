@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# この worktree のテスト用 DB（TEST_DB_NAME。なければ test_catticket）を読み取り専用で確認する。
+# この worktree のテスト用 DB（./gradlew test と同じ名前）を読み取り専用で確認する。
 # サブエージェントは権限の承認を受けられないため、docker compose exec を直接許可する代わりに
 # 実行できる SQL をこのスクリプトの中に固定し、.claude/settings.json でこれだけを許可する。
 #
@@ -7,7 +7,7 @@
 #   bash scripts/db-inspect.sh create {テーブル}   SHOW CREATE TABLE
 #   bash scripts/db-inspect.sh history           Flyway の適用履歴
 #
-# [한국어] 이 worktree의 테스트용 DB(TEST_DB_NAME. 없으면 test_catticket)를 읽기 전용으로 확인한다.
+# [한국어] 이 worktree의 테스트용 DB(./gradlew test와 같은 이름)를 읽기 전용으로 확인한다.
 # 서브 에이전트는 권한 승인을 받을 수 없으므로, docker compose exec를 직접 허용하는 대신
 # 실행할 수 있는 SQL을 이 스크립트 안에 고정하고 .claude/settings.json에서 이것만 허용한다.
 #   tables: 테이블 목록 / create {테이블}: SHOW CREATE TABLE / history: Flyway 적용 이력
@@ -39,12 +39,32 @@ case "${1:-}" in
     ;;
 esac
 
-# DB 名は ./gradlew test と同じ順で決める: 環境変数 → この worktree の .env → test_catticket
+# DB 名は backend/build.gradle と同じ規則で決める（片方を変えたらもう片方も変える）:
+# 環境変数 TEST_DB_NAME → この worktree の .env の TEST_DB_NAME → 自動
+# 自動: メインのチェックアウト・CI（.git がディレクトリ）は test_catticket、
+#       git worktree（.git がファイル）はフォルダ名から test_catticket_{名前}
+auto_db_name() {
+  [[ -f .git ]] || { echo test_catticket; return; }
+  local dir s hash
+  dir=$(basename "$PWD")
+  s=$(printf '%s' "$dir" | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C sed -E 's/[^a-z0-9]+/_/g; s/^_+//; s/_+$//')
+  if [[ -z "$s" ]]; then
+    echo test_catticket
+  elif (( ${#s} <= 49 )); then
+    echo "test_catticket_$s"
+  else
+    # 64 文字の上限に収めるため、切り詰めて元の名前の SHA-1 の先頭 8 文字で区別する
+    hash=$(printf '%s' "$dir" | sha1sum | cut -c1-8)
+    s=$(printf '%s' "${s:0:40}" | sed -E 's/_+$//')
+    echo "test_catticket_${s}_$hash"
+  fi
+}
+
 db="${TEST_DB_NAME:-}"
 if [[ -z "$db" && -f .env ]]; then
-  db=$(sed -n 's/^[[:space:]]*TEST_DB_NAME[[:space:]]*=[[:space:]]*//p' .env | tail -n 1 | tr -d '' | sed 's/[[:space:]]*$//')
+  db=$(sed -n 's/^[[:space:]]*TEST_DB_NAME[[:space:]]*=[[:space:]]*//p' .env | tail -n 1 | tr -d '\r' | sed 's/[[:space:]]*$//')
 fi
-db="${db:-test_catticket}"
+db="${db:-$(auto_db_name)}"
 if ! [[ "$db" =~ ^test_catticket(_[a-z0-9]+)*$ ]] || (( ${#db} > 64 )); then
   echo "TEST_DB_NAME は test_catticket または test_catticket_{英小文字・数字}（64 文字以下）にしてください: $db" >&2
   exit 2
