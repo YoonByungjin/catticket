@@ -7,7 +7,7 @@ export const ja: Messages = {
   'header.nav.map': '地図',
   'header.nav.rankings': '人気・トレンド',
   'header.nav.favorites': 'お気に入り',
-  'header.nav.account': 'アカウント',
+  'header.nav.account': 'アカウント ({name})',
   'header.nav.admin': '管理',
   'header.login': 'ログイン',
   'header.signup': '会員登録',

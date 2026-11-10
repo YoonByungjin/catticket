@@ -2,12 +2,12 @@ import { AuthMeResponse } from '../core/api/api.types';
 import { MessageKey } from '../core/i18n/messages';
 
 export interface NavLink {
-  /** 文言のキー。account のときは代わりにニックネームを出す */
+  /** 文言のキー。showNickname のときは {name} にニックネームを入れる */
   labelKey: MessageKey;
   path: string;
   /** '/' だけ完全一致にしないと、すべての画面で「地図」が選択中になる */
   exact: boolean;
-  /** 一般ユーザーの「アカウント」はニックネームを表示する（02 の 3.1） */
+  /** 一般ユーザーの「アカウント」は「계정 (ニックネーム)」と表示する（02 の 3.1、07 の 4.1） */
   showNickname?: boolean;
 }
 

@@ -1,9 +1,10 @@
-import { signal } from '@angular/core';
+import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { App } from './app';
 import { routes } from './app.routes';
+import { AuthMeResponse } from './core/api/api.types';
 import { BROWSER_STORAGE } from './core/storage/safe-storage';
 import { ViewportService } from './core/viewport/viewport.service';
 
@@ -80,6 +81,27 @@ describe('App shell and routes', () => {
     await TestBed.inject(Router).navigateByUrl('/rankings');
     await fixture.whenStable();
     expect(el.querySelector('.ct-menu-button')?.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('shows "계정 (nickname)" and logout in the handset menu for a user (Issue #24 decision 4)', async () => {
+    handset.set(true);
+    const fixture = TestBed.createComponent(App);
+    // API-30 の取得は Wave 2。枠の auth を直接一般ユーザーにする
+    (fixture.componentInstance as unknown as { auth: WritableSignal<AuthMeResponse> }).auth.set({
+      authenticated: true,
+      role: 'USER',
+      nickname: 'Cat',
+    });
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+
+    (el.querySelector('.ct-menu-button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    const items = Array.from(el.querySelectorAll('mat-sidenav a')).map((a) =>
+      a.textContent?.trim(),
+    );
+    expect(items).toEqual(['지도', '인기·트렌드', '즐겨찾기', '계정 (Cat)']);
+    expect(el.querySelector('mat-sidenav button')?.textContent?.trim()).toBe('로그아웃');
   });
 
   // CI で起きた競合の再現: mat-sidenav は開いたことを setTimeout で遅れて通知する（openedChange）。

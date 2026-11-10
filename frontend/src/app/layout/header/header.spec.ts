@@ -53,11 +53,12 @@ describe('Header (CM-01)', () => {
     expect(el.querySelector('.ct-menu-button')).toBeNull();
   });
 
-  it('PC, user: favorites, account with nickname, logout', async () => {
+  it('PC, user: favorites, "계정 (nickname)", logout (Issue #24 decision 4)', async () => {
     const fixture = await render({ authenticated: true, role: 'USER', nickname: 'Cat' });
     const el = fixture.nativeElement as HTMLElement;
     expect(texts(el, '.ct-nav a')).toEqual(['지도', '인기·트렌드', '즐겨찾기']);
-    expect(texts(el, '.ct-actions a')).toEqual(['Cat']);
+    expect(texts(el, '.ct-actions a')).toEqual(['계정 (Cat)']);
+    expect(el.querySelector('.ct-actions a')?.getAttribute('href')).toBe('/account');
     expect(texts(el, '.ct-actions button')).toEqual(['로그아웃']);
 
     const logout = vi.fn();
@@ -130,5 +131,14 @@ describe('Header (CM-01)', () => {
     );
     // 言語名は切り替えても変えない（07 の 3.）
     expect(texts(el, 'mat-button-toggle')).toEqual(['한국어', '日本語']);
+  });
+
+  it('shows "アカウント (nickname)" in Japanese', async () => {
+    TestBed.overrideProvider(BROWSER_STORAGE, { useValue: null });
+    TestBed.inject(LanguageService).switchTo('ja');
+    const el = (await render({ authenticated: true, role: 'USER', nickname: 'ネコ' }))
+      .nativeElement as HTMLElement;
+    expect(texts(el, '.ct-actions a')).toEqual(['アカウント (ネコ)']);
+    expect(texts(el, '.ct-actions button')).toEqual(['ログアウト']);
   });
 });

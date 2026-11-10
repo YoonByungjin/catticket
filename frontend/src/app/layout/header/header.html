@@ -27,7 +27,10 @@
           [routerLink]="link.path"
           routerLinkActive="ct-nav-link--active"
           ariaCurrentWhenActive="page"
-          >{{ link.showNickname ? auth().nickname : (link.labelKey | translate) }}</a
+          >{{
+            link.labelKey
+              | translate: (link.showNickname ? { name: auth().nickname ?? '' } : undefined)
+          }}</a
         >
       }
       @if (auth().authenticated) {

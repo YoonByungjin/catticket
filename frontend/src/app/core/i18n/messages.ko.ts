@@ -8,7 +8,8 @@ export const ko = {
   'header.nav.map': '지도',
   'header.nav.rankings': '인기·트렌드',
   'header.nav.favorites': '즐겨찾기',
-  'header.nav.account': '계정',
+  // {name} はニックネーム（02 の 3.1、07 の 4.1。Issue #24 の決定4: 半角スペースと半角の括弧）
+  'header.nav.account': '계정 ({name})',
   'header.nav.admin': '관리',
   'header.login': '로그인',
   'header.signup': '회원가입',
