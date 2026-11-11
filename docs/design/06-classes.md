@@ -1,6 +1,6 @@
 # 06. クラス設計書
 
-- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10）。PR #32 の reviewer の判定は条件付き承認で、06 への指摘（U-01・U-04・U-06・U-07 の更新、4.5・7.2・8.1・3.2 の追記）を反映済み（2026-11-10。人間の確認待ち）
+- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10）。PR #32 の reviewer の判定は条件付き承認で、06 への指摘（U-01・U-04・U-06・U-07 の更新、4.5・7.2・8.1・3.2 の追記）を反映済み（2026-11-10。人間の確認待ち）。Issue #23 の決定 E-2・E-3（コメント 6783513546）を 3.3・11 に反映（2026-11-11）
 - 担当: architect
 - 入力: `01-requirements.md`、`02-screens.md`、`03-api.md`（API 仕様の詳細）、`04-tables.md` と `backend/src/main/resources/db/migration/V1__create_schema.sql`、`05-batch.md`、ADR 0001〜0016。
 - 対象: バックエンド（`backend/`、Spring Boot）だけ。Angular のクラス設計は対象外（工程5で frontend-dev が `02`・`03`・`07` から作る）。
@@ -192,8 +192,8 @@ flowchart LR
   - 方法: **引数に直接の制約を1つ以上付ける**。直接の制約を付ける `@RequestParam` などがないときは、`PageQuery` の引数を `@Valid @NotNull(message = "REQUIRED") PageQuery page` にする（クエリの record は Spring がいつも作るので `null` にならず、この `@NotNull` は失敗しない。メソッドの検証にするためだけに付ける。`PageQuery` がないメソッドは、ほかのクエリの record の1つに付ける）。対象は 4. の API-01・API-43・API-50。
   - Controller のクラスに `@Validated` を付けない（付けると AOP のプロキシでの検証になり、Spring MVC のメソッドの検証が使われない）。
   - 応答: `GlobalExceptionHandler` が `HandlerMethodValidationException` の `getParameterValidationResults()` を1つずつ見て、`ParameterErrors`（`@Valid` の record）は `BindException` と同じ変え方（項目名から `[n]` を除く）、ほかは引数の名前と `message` にする（3.2）。
-  - 型の変換の失敗（`page=abc` など）は検証の前の結び付け（binding）で起き、その record の `MethodArgumentNotValidException`（`reason` = `TYPE`）がすぐ投げられる（メソッドの検証の対象にならない）。このときは型の誤りのあった最初の record の誤りだけが返り、ほかの引数の制約の誤りは入らない（11 の U-10）。
-  - テスト（`@WebMvcTest`）: 2 つ以上のクエリの record の誤りが1回の応答にまとまること。共通部品ではテスト用の Controller（`queryRecordsAreAggregatedWithMethodValidation`。直接の制約のある `@RequestParam` を足した形）で確かめた。各機能の Controller のテストでは、API-01・43・50 で2つの record に誤りのある値を送り、`errors` に両方が入ることを確かめる。
+  - 型の変換の失敗（`page=abc` など）は検証の前の結び付け（binding）で起き、その record の `MethodArgumentNotValidException`（`reason` = `TYPE`）がすぐ投げられる（メソッドの検証の対象にならない）。このときは型の誤りのあった最初の record の誤りだけが返り、ほかの引数の制約の誤りは入らない（03 の 7.3 の例外のとおり。Issue #23 の E-2）。
+  - テスト（`@WebMvcTest`）: 2 つ以上のクエリの record の誤りが1回の応答にまとまること。共通部品ではテスト用の Controller で確かめた: `queryRecordsAreAggregatedWithMethodValidation`（直接の制約のある `@RequestParam` を足した形）、`queryRecordsAreAggregatedWithNotNullPageQuery`（`@Valid @NotNull PageQuery` の形。4. の API-01・43・50 と同じ）。区を韓国語の名前で比べること（D-3）は `districtIsComparedByKoreanName`（いずれも `ErrorResponseWebMvcTest$Validation`。Issue #23 の E-3）。各機能の Controller のテストでは、API-01・43・50 で2つの record に誤りのある値を送り、`errors` に両方が入ることを確かめる。
   - 確認先: Spring Framework 7.0 リファレンス「Web on Servlet Stack > Annotated Controllers > Validation」（https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-validation.html 。表示の版 7.0.10）、`ModelAttributeMethodProcessor` のソース（v7.0.10。型の変換の失敗はすぐ投げる）。確認日 2026-11-10。
 - **座標**: `BigDecimal` で受ける（`NaN`・`Infinity` は型の変換で失敗し `TYPE`）。
 - **パスの ID**（`common.validation.PathIds`）: 公演 ID・会場 ID は `^[A-Za-z0-9]{1,20}$`（04 の `kopis_*_id` の長さ）に合わなければ Service を呼ばずに 404（`PERFORMANCE_NOT_FOUND`・`VENUE_NOT_FOUND`）。レビュー ID は文字列で受けて `^[1-9][0-9]{0,18}$` かつ `Long` に入るか → 合わなければ 404 `REVIEW_NOT_FOUND`。API-45（お気に入りの解除）は形が合わなくても 204（03 の 8.7）。
@@ -1045,7 +1045,7 @@ catticket:
 | U-07 | Dockerfile の `ENTRYPOINT` を exec 形式にすること、`.env.example` に 8.2 の新しい環境変数を足すこと、本番の MySQL を Asia/Seoul にすること | 残り: 本番の MySQL の TZ（工程7。実行 Claude）。Dockerfile・`.env.example` は Issue #23・PR #32 で済み | 5.1、8.2、A-05 |
 | U-08 | reCAPTCHA のサイトキーをフロントエンドのビルドの設定に入れる方法 | frontend-dev（工程5。フロントエンドのクラス設計は 06 の対象外） | API-37 の画面 |
 | U-09 | A-03（API-50 で公演 ID の大文字・小文字を無視）は管理者に見える変更。人間に伝える | **解消**（2026-11-09、人間が「無視する」で確定。9 の最後） | — |
-| U-10 | クエリの型の変換の失敗（`page=abc` など）は Spring MVC が結び付けのときにすぐ例外にするため、ほかの引数・項目の制約の誤りと一緒に返らない（3.3 の「クエリの record が 2 つ以上ある…」）。03 の 7.3 の「複数の項目が誤っていれば、`errors` にすべて入れる」の例外として 03 に書くか、すべてを返す作り（クエリを `String` で受けて自分で変換するなど）にするか | 人間が決める（Issue #23 の後。決まるまでは今の動き: 型の誤りだけを返す）。画面は入力欄から正しい型の値だけを送るので、利用者への影響は小さい | 3.3、03 の 7.3 |
+| U-10 | クエリの型の変換の失敗（`page=abc` など）は Spring MVC が結び付けのときにすぐ例外にするため、ほかの引数・項目の制約の誤りと一緒に返らない（3.3 の「クエリの record が 2 つ以上ある…」）。03 の 7.3 の「複数の項目が誤っていれば、`errors` にすべて入れる」の例外として 03 に書くか、すべてを返す作り（クエリを `String` で受けて自分で変換するなど）にするか | **解消**（03 の 7.3 に例外として記載。今の動き（型の誤りだけを返す）のまま。Issue #23 E-2、2026-11-11） | 3.3、03 の 7.3 |
 
 - db-designer に渡すもの: なし（新しいテーブル・列・インデックスは要らない。U-05 の `EXPLAIN` でインデックスが要るとわかったら db-designer に渡す）。
 
@@ -1055,7 +1055,7 @@ catticket:
 
 ### 06. 클래스 설계서
 
-- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10). PR #32의 reviewer 판정은 조건부 승인이며, 06에 대한 지적(U-01·U-04·U-06·U-07 갱신, 4.5·7.2·8.1·3.2 추가 기술)을 반영함(2026-11-10. 사람의 확인 대기)
+- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10). PR #32의 reviewer 판정은 조건부 승인이며, 06에 대한 지적(U-01·U-04·U-06·U-07 갱신, 4.5·7.2·8.1·3.2 추가 기술)을 반영함(2026-11-10. 사람의 확인 대기). Issue #23의 결정 E-2·E-3(코멘트 6783513546)을 3.3·11에 반영(2026-11-11)
 - 담당: architect
 - 입력: `01-requirements.md`, `02-screens.md`, `03-api.md`(API 사양 상세), `04-tables.md`와 `backend/src/main/resources/db/migration/V1__create_schema.sql`, `05-batch.md`, ADR 0001~0016.
 - 대상: 백엔드(`backend/`, Spring Boot)만. Angular 클래스 설계는 대상 외(공정 5에서 frontend-dev가 `02`·`03`·`07`로 만든다).
@@ -1229,8 +1229,8 @@ catticket:
   - 방법: **인자에 직접 제약을 하나 이상 붙인다**. 직접 제약을 붙일 `@RequestParam` 등이 없을 때는 `PageQuery` 인자를 `@Valid @NotNull(message = "REQUIRED") PageQuery page`로 한다(쿼리 record는 Spring이 항상 만들므로 `null`이 되지 않아 이 `@NotNull`은 실패하지 않는다. 메서드 검증이 되게 하기 위해서만 붙인다. `PageQuery`가 없는 메서드는 다른 쿼리 record 하나에 붙인다). 대상은 4.의 API-01·API-43·API-50.
   - Controller 클래스에 `@Validated`를 붙이지 않는다(붙이면 AOP 프록시 검증이 되어 Spring MVC의 메서드 검증이 쓰이지 않는다).
   - 응답: `GlobalExceptionHandler`가 `HandlerMethodValidationException`의 `getParameterValidationResults()`를 하나씩 보고, `ParameterErrors`(`@Valid` record)는 `BindException`과 같은 방식(항목명에서 `[n]` 제거)으로, 그 밖은 인자 이름과 `message`로 바꾼다(3.2).
-  - 타입 변환 실패(`page=abc` 등)는 검증 전의 바인딩에서 일어나고, 그 record의 `MethodArgumentNotValidException`(`reason` = `TYPE`)이 바로 던져진다(메서드 검증 대상이 아님). 이때는 타입 오류가 있던 첫 record의 오류만 반환되고, 다른 인자의 제약 오류는 들어가지 않는다(11의 U-10).
-  - 테스트(`@WebMvcTest`): 2개 이상의 쿼리 record의 오류가 한 번의 응답에 모이는 것. 공통 부품에서는 테스트용 Controller(`queryRecordsAreAggregatedWithMethodValidation`. 직접 제약이 있는 `@RequestParam`을 더한 형태)로 확인했다. 각 기능의 Controller 테스트에서는 API-01·43·50에서 두 record에 오류가 있는 값을 보내 `errors`에 둘 다 들어가는지 확인한다.
+  - 타입 변환 실패(`page=abc` 등)는 검증 전의 바인딩에서 일어나고, 그 record의 `MethodArgumentNotValidException`(`reason` = `TYPE`)이 바로 던져진다(메서드 검증 대상이 아님). 이때는 타입 오류가 있던 첫 record의 오류만 반환되고, 다른 인자의 제약 오류는 들어가지 않는다(03의 7.3의 예외대로. Issue #23의 E-2).
+  - 테스트(`@WebMvcTest`): 2개 이상의 쿼리 record의 오류가 한 번의 응답에 모이는 것. 공통 부품에서는 테스트용 Controller로 확인했다: `queryRecordsAreAggregatedWithMethodValidation`(직접 제약이 있는 `@RequestParam`을 더한 형태), `queryRecordsAreAggregatedWithNotNullPageQuery`(`@Valid @NotNull PageQuery` 형태. 4.의 API-01·43·50과 같음). 구를 한국어 이름으로 비교하는 것(D-3)은 `districtIsComparedByKoreanName`(모두 `ErrorResponseWebMvcTest$Validation`. Issue #23의 E-3). 각 기능의 Controller 테스트에서는 API-01·43·50에서 두 record에 오류가 있는 값을 보내 `errors`에 둘 다 들어가는지 확인한다.
   - 확인처: Spring Framework 7.0 레퍼런스 "Web on Servlet Stack > Annotated Controllers > Validation"(https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-validation.html . 표시된 버전 7.0.10), `ModelAttributeMethodProcessor` 소스(v7.0.10. 타입 변환 실패는 바로 던진다). 확인일 2026-11-10.
 - **좌표**: `BigDecimal`로 받는다(`NaN`·`Infinity`는 타입 변환에서 실패해 `TYPE`).
 - **경로 ID**(`common.validation.PathIds`): 공연 ID·공연장 ID는 `^[A-Za-z0-9]{1,20}$`(04의 `kopis_*_id` 길이)에 맞지 않으면 Service를 부르지 않고 404(`PERFORMANCE_NOT_FOUND`·`VENUE_NOT_FOUND`). 리뷰 ID는 문자열로 받아 `^[1-9][0-9]{0,18}$`이고 `Long`에 들어가는지 → 아니면 404 `REVIEW_NOT_FOUND`. API-45(즐겨찾기 해제)는 형식이 틀려도 204(03의 8.7).
@@ -1941,6 +1941,6 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 | U-07 | Dockerfile `ENTRYPOINT`를 exec 형식으로, `.env.example`에 8.2의 새 환경 변수 추가, 운영 MySQL을 Asia/Seoul로 | 남은 것: 운영 MySQL의 TZ(공정 7. 실행 Claude). Dockerfile·`.env.example`은 Issue #23·PR #32에서 완료 | 5.1, 8.2, A-05 |
 | U-08 | reCAPTCHA 사이트 키를 프론트엔드 빌드 설정에 넣는 방법 | frontend-dev(공정 5. 프론트엔드 클래스 설계는 06 대상 외) | API-37 화면 |
 | U-09 | A-03(API-50에서 공연 ID 대소문자 무시)은 관리자에게 보이는 변경. 사람에게 전한다 | **해소**(2026-11-09, 사람이 "무시"로 확정. 9의 끝) | — |
-| U-10 | 쿼리의 타입 변환 실패(`page=abc` 등)는 Spring MVC가 바인딩 때 바로 예외로 하므로 다른 인자·항목의 제약 오류와 함께 반환되지 않는다(3.3의 "쿼리 record가 2개 이상인…"). 03의 7.3 "여러 항목이 틀렸으면 `errors`에 모두 넣는다"의 예외로 03에 쓸지, 모두 반환하는 구조(쿼리를 `String`으로 받아 직접 변환하는 등)로 할지 | 사람이 정한다(Issue #23 이후. 정해질 때까지는 지금 동작: 타입 오류만 반환). 화면은 입력란에서 올바른 타입의 값만 보내므로 이용자 영향은 작다 | 3.3, 03의 7.3 |
+| U-10 | 쿼리의 타입 변환 실패(`page=abc` 등)는 Spring MVC가 바인딩 때 바로 예외로 하므로 다른 인자·항목의 제약 오류와 함께 반환되지 않는다(3.3의 "쿼리 record가 2개 이상인…"). 03의 7.3 "여러 항목이 틀렸으면 `errors`에 모두 넣는다"의 예외로 03에 쓸지, 모두 반환하는 구조(쿼리를 `String`으로 받아 직접 변환하는 등)로 할지 | **해소**(03의 7.3에 예외로 기재. 지금 동작(타입 오류만 반환) 그대로. Issue #23 E-2, 2026-11-11) | 3.3, 03의 7.3 |
 
 - db-designer에게 넘길 것: 없음(새 테이블·열·인덱스 불필요. U-05의 `EXPLAIN`에서 인덱스가 필요하다고 판명되면 db-designer에게 넘긴다).
