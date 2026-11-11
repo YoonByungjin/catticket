@@ -7,9 +7,41 @@ spring:
     import: optional:file:../.env[.properties]
   datasource:
     # createDatabaseIfNotExist: テスト用 DB（./gradlew test が決める test_catticket*）を初回に自動で作るため
-    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME}?createDatabaseIfNotExist=true
+    # connectionTimeZone・forceConnectionTimeZoneToSession: 接続の time_zone を Asia/Seoul にする（06 の A-05）
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME}?createDatabaseIfNotExist=true&connectionTimeZone=Asia/Seoul&forceConnectionTimeZoneToSession=true
     username: ${DB_USER}
     password: ${DB_PASSWORD}
+  jackson:
+    deserialization:
+      # 整数の項目への小数を 400 にする（03 の 7.1）
+      accept-float-as-int: false
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_APP_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      "[mail.smtp.auth]": true
+      "[mail.smtp.starttls.enable]": true
+      "[mail.smtp.starttls.required]": true
+      # SMTP の既定は無限に待つので必ず設定する（06 の 7.1）
+      "[mail.smtp.connectiontimeout]": 5000
+      "[mail.smtp.timeout]": 10000
+      "[mail.smtp.writetimeout]": 10000
+
+server:
+  # Nginx の後ろで https と判断させる（ADR 0010）
+  forward-headers-strategy: native
+  servlet:
+    session:
+      # 最後のリクエストから 30 分で自動ログアウト（ADR 0013）
+      timeout: 30m
+      cookie:
+        http-only: true
+        # ローカルの http だけ false にする
+        secure: ${SESSION_COOKIE_SECURE:true}
+        same-site: lax
 
 mybatis:
   # SQL lives in XML files under src/main/resources/mapper/
@@ -18,5 +50,29 @@ mybatis:
     # venue_id (DB column) <-> venueId (Java field)
     map-underscore-to-camel-case: true
 
-kopis:
-  api-key: ${KOPIS_API_KEY:}
+catticket:
+  public-base-url: ${CATTICKET_PUBLIC_BASE_URL:http://localhost:4200}
+  scheduler:
+    enabled: true
+  kopis:
+    base-url: http://www.kopis.or.kr/openApi/restful
+    api-key: ${KOPIS_API_KEY:}
+    interval: 500ms
+  azure:
+    translator-endpoint: https://api.cognitive.microsofttranslator.com
+    translator-key: ${AZURE_TRANSLATOR_KEY:}
+    translator-region: ${AZURE_TRANSLATOR_REGION:}
+    request-max-chars: 10000
+    chars-per-minute: 30000
+    monthly-limit-chars: 1800000
+  recaptcha:
+    project-id: ${RECAPTCHA_PROJECT_ID:}
+    api-key: ${RECAPTCHA_API_KEY:}
+    site-key: ${RECAPTCHA_SITE_KEY:}
+  mail:
+    from: ${MAIL_USERNAME:}
+    daily-limit: 400
+  admin:
+    email: ${CATTICKET_ADMIN_EMAIL:}
+    password: ${CATTICKET_ADMIN_PASSWORD:}
+  # catticket.subway.*（駅・コインロッカーのファイル）は、ファイルの名前・文字コードが決まってから足す（06 の 11 の U-03）
