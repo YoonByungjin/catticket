@@ -57,6 +57,11 @@
   flex: 1 1 auto;
   padding: 0 16px;
   border-radius: 0;
+
+  // 外側に出すと mat-sidenav の端で左右の線が切れるため、メニューの中だけ内側に描く
+  &:focus-visible {
+    outline-offset: -2px;
+  }
 }
 
 // メニューの中で、アカウントの画面を開いているとき: 選択中の項目の背景 primary-container（07 の 2.1.1）。
