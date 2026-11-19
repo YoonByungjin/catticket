@@ -1,5 +1,6 @@
 package com.catticket.common.security;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -30,7 +31,9 @@ import com.catticket.common.error.JsonAuthenticationEntryPoint;
 		LoginSessionManager.class })
 public class SecurityConfig {
 
+	/** 手での実行（Web サーバーなし。06 の 5.1）では HttpSecurity がないので作らない */
 	@Bean
+	@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 	SecurityFilterChain securityFilterChain(HttpSecurity http, AuthSessionService authSessionService,
 			HttpSessionSecurityContextRepository securityContextRepository,
 			CookieCsrfTokenRepository csrfTokenRepository, JsonAuthenticationEntryPoint authenticationEntryPoint,

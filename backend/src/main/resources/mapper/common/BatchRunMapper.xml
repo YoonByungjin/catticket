@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.catticket.common.batch.BatchRunMapper">
+
+  <insert id="insertJobRun" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+    INSERT INTO batch_job_run (job_name, started_at, created_at, updated_at)
+    VALUES (#{jobName}, #{startedAt}, #{startedAt}, #{startedAt})
+  </insert>
+
+  <update id="updateJobRun">
+    UPDATE batch_job_run
+    SET finished_at = #{finishedAt},
+        result = #{result},
+        error_message = #{errorMessage},
+        updated_at = #{finishedAt}
+    WHERE id = #{id}
+  </update>
+
+  <insert id="insertStepRun" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+    INSERT INTO batch_step_run (job_run_id, step_name, started_at, created_at, updated_at)
+    VALUES (#{jobRunId}, #{stepName}, #{startedAt}, #{startedAt}, #{startedAt})
+  </insert>
+
+  <update id="updateStepRun">
+    UPDATE batch_step_run
+    SET finished_at = #{finishedAt},
+        result = #{result},
+        processed_count = #{processedCount},
+        summary = #{summary},
+        error_message = #{errorMessage},
+        updated_at = #{finishedAt}
+    WHERE id = #{id}
+  </update>
+
+  <!-- record なのでコンストラクターで渡す -->
+  <resultMap id="lastS1" type="com.catticket.common.batch.LastS1">
+    <constructor>
+      <arg column="success_date" name="successDate" javaType="java.time.LocalDate"/>
+      <arg column="window_end_date" name="windowEndDate" javaType="java.time.LocalDate"/>
+    </constructor>
+  </resultMap>
+
+  <!-- 同じ開始日時の行があっても1行に決まるよう id でも並べる -->
+  <select id="findLastSuccessfulS1" resultMap="lastS1">
+    SELECT DATE(started_at) AS success_date, window_end_date
+    FROM batch_step_run
+    WHERE step_name = 'S1' AND result = 'SUCCESS'
+    ORDER BY started_at DESC, id DESC
+    LIMIT 1
+  </select>
+
+</mapper>
