@@ -16,7 +16,7 @@
 | [0004](0004-map-google-maps.md) | 地図は Google Maps を使う | 置き換え済み（→ 0006） |
 | [0005](0005-dev-environment-docker.md) | 開発環境は Docker Compose の MySQL + IDE 実行 | 採用 |
 | [0006](0006-map-google-maps-cost-control.md) | 地図は Google Maps JavaScript API を使い、使用量の上限と予算アラートを設定する（0004 を置き換える） | 採用 |
-| [0007](0007-translation-azure-translator.md) | 外部データの翻訳は Azure AI Translator の無料レベル（F0）を使う | 採用 |
+| [0007](0007-translation-azure-translator.md) | 外部データの翻訳は Azure AI Translator の無料レベル（F0）を使う | 置き換え済み（→ 0018） |
 | [0008](0008-kopis-data-scope.md) | KOPIS Open API のデータ範囲と、人気急上昇の順位の変化の計算方式（0003 を置き換える） | 採用 |
 | [0009](0009-station-locker-data-source.md) | 駅・コインロッカーのデータは、ソウル交通公社の公開データから作る | 採用 |
 | [0010](0010-server-oracle-cloud-duckdns.md) | サーバーは Oracle Cloud の Always Free（A1 を優先）、ドメインは DuckDNS にする | 採用 |
@@ -27,6 +27,7 @@
 | [0015](0015-ui-design-google-stitch-mcp.md) | 画面のデザインは Google Stitch を公式の MCP サーバー経由で使い、使えないときは Angular Material の標準の見た目で作る | 採用 |
 | [0016](0016-icon-font-material-symbols-npm.md) | アイコンのフォント（Material Symbols）は npm のパッケージ `@material-symbols/font-400` でアプリに同梱する | 採用 |
 | [0017](0017-frontend-lint-angular-eslint.md) | フロントエンドの静的解析（lint）は angular-eslint（Angular の公式の方法）で行い、CI で実行する | 採用 |
+| [0018](0018-translation-google-cloud.md) | 外部データの翻訳は Google Cloud Translation（Basic、v2）を使う（0007 を置き換える） | 採用 |
 
 ## テンプレート
 
@@ -68,7 +69,7 @@
 | 0004 | 지도는 Google Maps를 쓴다 | 대체됨(→ 0006) |
 | 0005 | 개발 환경은 Docker Compose의 MySQL + IDE 실행 | 채택 |
 | 0006 | 지도는 Google Maps JavaScript API를 쓰고, 사용량 상한과 예산 알림을 설정한다(0004를 대체) | 채택 |
-| 0007 | 외부 데이터 번역은 Azure AI Translator 무료 등급(F0)을 쓴다 | 채택 |
+| 0007 | 외부 데이터 번역은 Azure AI Translator 무료 등급(F0)을 쓴다 | 대체됨(→ 0018) |
 | 0008 | KOPIS Open API 데이터 범위와 인기 급상승 순위 변화 계산 방식(0003을 대체) | 채택 |
 | 0009 | 역·물품보관함 데이터는 서울교통공사의 공개 데이터로 만든다 | 채택 |
 | 0010 | 서버는 Oracle Cloud Always Free(A1 우선), 도메인은 DuckDNS로 한다 | 채택 |
@@ -79,3 +80,4 @@
 | 0015 | 화면 디자인은 Google Stitch를 공식 MCP 서버를 통해 쓰고, 쓸 수 없을 때는 Angular Material 기본 겉모습으로 만든다 | 채택 |
 | 0016 | 아이콘 글꼴(Material Symbols)은 npm 패키지 `@material-symbols/font-400`으로 앱에 함께 넣는다 | 채택 |
 | 0017 | 프론트엔드 정적 분석(lint)은 angular-eslint(Angular 공식 방법)로 하고 CI에서 실행한다 | 채택 |
+| 0018 | 외부 데이터 번역은 Google Cloud Translation(Basic, v2)을 쓴다(0007을 대체) | 채택 |
