@@ -10,6 +10,7 @@ import { Lang, MessageKey, isLang } from '../../core/i18n/messages';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { ThemeService } from '../../core/theme/theme.service';
 import { ViewportService } from '../../core/viewport/viewport.service';
+import { AccountLink } from '../account-link/account-link';
 import { SIGNED_OUT, accountLinksFor, navLinksFor } from '../nav-items';
 
 /** サービス名（固有名詞なので辞書に入れない） */
@@ -35,6 +36,7 @@ export const LANGUAGE_OPTIONS: readonly { value: Lang; label: string }[] = [
     RouterLink,
     RouterLinkActive,
     TranslatePipe,
+    AccountLink,
   ],
   templateUrl: './header.html',
   styleUrl: './header.scss',

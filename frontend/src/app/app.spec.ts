@@ -101,6 +101,11 @@ describe('App shell and routes', () => {
       a.textContent?.trim(),
     );
     expect(items).toEqual(['지도', '인기·트렌드', '즐겨찾기', '계정 (Cat)']);
+    // ヘッダーと同じ部品で、ニックネームの部分だけを切る（07 の 4.1.1）
+    const account = el.querySelector('mat-sidenav app-account-link') as HTMLElement;
+    expect(account.classList.contains('ct-account--menu')).toBe(true);
+    expect(account.querySelector('.ct-account-link__name')?.textContent).toBe('Cat');
+    expect(account.querySelector('a')?.getAttribute('aria-label')).toBe('계정 (Cat)');
     expect(el.querySelector('mat-sidenav button')?.textContent?.trim()).toBe('로그아웃');
   });
 

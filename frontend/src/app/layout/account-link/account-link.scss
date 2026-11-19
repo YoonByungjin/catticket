@@ -1,0 +1,60 @@
+// 07 の 4.1.1。自作のクラスだけに書く（Angular Material の部品のクラスには書かない）
+
+// ヘッダーの右の項目のまとまり（.ct-actions）の中で、この部品だけが縮む
+:host {
+  display: flex;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+// 文字のリンク: 文字 primary・label-large、押せる範囲 44px 以上（2.6）、フォーカスが見える（7.）
+.ct-account-link {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex-shrink: 1;
+  box-sizing: border-box;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: var(--mat-sys-corner-full);
+  color: var(--mat-sys-primary);
+  font: var(--mat-sys-label-large);
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    background-color: color-mix(
+      in srgb,
+      var(--mat-sys-primary) calc(var(--mat-sys-hover-state-layer-opacity) * 100%),
+      transparent
+    );
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+}
+
+// 「계정 (」と「)」は常に表示し、切らない
+.ct-account-link__affix {
+  flex-shrink: 0;
+}
+
+// ニックネームの部分だけを最大 160px で「…」に切る
+.ct-account-link__name {
+  display: block;
+  max-width: 160px;
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// スマホ表示のメニュー（mat-sidenav）の中: 幅いっぱいを押せるようにし、左右の余白を 16px（07 の 4.1.1）
+:host(.ct-account--menu) .ct-account-link {
+  flex: 1 1 auto;
+  padding: 0 16px;
+  border-radius: 0;
+}

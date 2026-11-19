@@ -1,0 +1,11 @@
+<a
+  class="ct-account-link"
+  [routerLink]="path()"
+  ariaCurrentWhenActive="page"
+  [attr.aria-label]="ariaLabel()"
+  [matTooltip]="nickname()"
+  [matTooltipDisabled]="!truncated()"
+  ><span class="ct-account-link__affix">{{ parts().prefix }}</span
+  ><span #name class="ct-account-link__name">{{ nickname() }}</span
+  ><span class="ct-account-link__affix">{{ parts().suffix }}</span></a
+>

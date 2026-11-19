@@ -1,4 +1,4 @@
-<mat-toolbar class="ct-header" [class.ct-header--handset]="handset()">
+<mat-toolbar class="ct-header">
   <a class="ct-brand" routerLink="/">{{ serviceName }}</a>
 
   @if (!handset()) {
@@ -22,19 +22,22 @@
   @if (!handset()) {
     <div class="ct-actions">
       @for (link of accountLinks(); track link.path) {
-        <a
-          mat-button
-          [routerLink]="link.path"
-          routerLinkActive="ct-nav-link--active"
-          ariaCurrentWhenActive="page"
-          >{{
-            link.labelKey
-              | translate: (link.showNickname ? { name: auth().nickname ?? '' } : undefined)
-          }}</a
-        >
+        @if (link.showNickname) {
+          <!-- 長いニックネームはこの部品の中で切る（07 の 4.1.1） -->
+          <app-account-link [nickname]="auth().nickname ?? ''" [path]="link.path" />
+        } @else {
+          <a
+            mat-button
+            class="ct-fixed"
+            [routerLink]="link.path"
+            routerLinkActive="ct-nav-link--active"
+            ariaCurrentWhenActive="page"
+            >{{ link.labelKey | translate }}</a
+          >
+        }
       }
       @if (auth().authenticated) {
-        <button mat-button type="button" (click)="logout.emit()">
+        <button mat-button class="ct-fixed" type="button" (click)="logout.emit()">
           {{ 'header.logout' | translate }}
         </button>
       }

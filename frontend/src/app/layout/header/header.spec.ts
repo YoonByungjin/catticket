@@ -67,6 +67,25 @@ describe('Header (CM-01)', () => {
     expect(logout).toHaveBeenCalled();
   });
 
+  it('PC, user: only the nickname part can shrink (07 4.1.1)', async () => {
+    const nickname = 'あ'.repeat(20);
+    const el = (await render({ authenticated: true, role: 'USER', nickname }))
+      .nativeElement as HTMLElement;
+    const account = el.querySelector('.ct-actions > app-account-link') as HTMLElement;
+    expect(account.querySelector('.ct-account-link__name')?.textContent).toBe(nickname);
+    expect(account.querySelector('a')?.getAttribute('aria-label')).toBe(`계정 (${nickname})`);
+    // 縮めない項目には自作のクラスで flex-shrink: 0 を付ける
+    expect(el.querySelector('.ct-actions > button')?.classList.contains('ct-fixed')).toBe(true);
+  });
+
+  it('PC, signed out: login and signup do not shrink', async () => {
+    const el = (await render()).nativeElement as HTMLElement;
+    const links = Array.from(el.querySelectorAll('.ct-actions > a'));
+    expect(links.length).toBe(2);
+    expect(links.every((a) => a.classList.contains('ct-fixed'))).toBe(true);
+    expect(el.querySelector('app-account-link')).toBeNull();
+  });
+
   it('PC, admin: admin link and logout, no account', async () => {
     const el = (await render({ authenticated: true, role: 'ADMIN', nickname: null }))
       .nativeElement as HTMLElement;
@@ -139,6 +158,7 @@ describe('Header (CM-01)', () => {
     const el = (await render({ authenticated: true, role: 'USER', nickname: 'ネコ' }))
       .nativeElement as HTMLElement;
     expect(texts(el, '.ct-actions a')).toEqual(['アカウント (ネコ)']);
+    expect(el.querySelector('.ct-actions a')?.getAttribute('aria-label')).toBe('アカウント (ネコ)');
     expect(texts(el, '.ct-actions button')).toEqual(['ログアウト']);
   });
 });
