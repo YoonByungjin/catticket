@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.catticket.surrounding.batch.SubwayImportMapper">
+
+  <delete id="deleteAllLockers">
+    DELETE FROM coin_locker
+  </delete>
+
+  <delete id="deleteAllStations">
+    DELETE FROM station
+  </delete>
+
+  <!-- created_at・updated_at はアプリの時刻（06 の A-05） -->
+  <insert id="insertStations">
+    INSERT INTO station (external_station_code, line, name_ko, name_ja, latitude, longitude, created_at, updated_at)
+    VALUES
+    <foreach collection="stations" item="s" separator=",">
+      (#{s.externalStationCode}, #{s.line}, #{s.nameKo}, #{s.nameJa}, #{s.latitude}, #{s.longitude}, #{now}, #{now})
+    </foreach>
+  </insert>
+
+  <!-- 生成されたキーは record に書き戻せないので、station_id は外部の駅コードで引く（06 の 5.4） -->
+  <insert id="insertLockers">
+    INSERT INTO coin_locker (station_id, name, location_text, created_at, updated_at)
+    VALUES
+    <foreach collection="lockers" item="l" separator=",">
+      ((SELECT id FROM station WHERE external_station_code = #{l.stationExternalCode}),
+       #{l.name}, #{l.locationText}, #{now}, #{now})
+    </foreach>
+  </insert>
+
+</mapper>

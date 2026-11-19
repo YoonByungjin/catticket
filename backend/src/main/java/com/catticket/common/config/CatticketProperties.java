@@ -60,7 +60,7 @@ public record CatticketProperties(String publicBaseUrl, Scheduler scheduler, Kop
 
 	}
 
-	/** ファイルの名前・文字コードは U-03 で決める（06 の 8.1） */
+	/** B-02 の4つのファイル（Spring の Resource の場所）と文字コード（06 の 8.1） */
 	public record Subway(String stationLocation, String stationAddress, String locker, String stationNameJa,
 			String charset) {
 	}

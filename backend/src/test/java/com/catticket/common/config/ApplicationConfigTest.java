@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -27,6 +28,9 @@ class ApplicationConfigTest {
 
 	@Autowired
 	Clock clock;
+
+	@Autowired
+	ResourceLoader resourceLoader;
 
 	@Autowired
 	@Qualifier("kopisRestClient")
@@ -54,6 +58,18 @@ class ApplicationConfigTest {
 		assertThat(props.publicBaseUrl()).isNotBlank();
 		assertThat(props.recaptcha()).isNotNull();
 		assertThat(props.admin()).isNotNull();
+	}
+
+	@Test
+	void subwayFilesExist() {
+		// B-02 の4つのファイル（06 の 8.1）。jar の中でも読めるよう classpath: で指す
+		assertThat(props.subway().charset()).isEqualTo("MS949");
+		assertThat(java.nio.charset.Charset.isSupported(props.subway().charset())).isTrue();
+		for (String location : new String[] { props.subway().stationLocation(), props.subway().stationAddress(),
+				props.subway().locker(), props.subway().stationNameJa() }) {
+			assertThat(location).startsWith("classpath:data/subway/");
+			assertThat(resourceLoader.getResource(location).exists()).as(location).isTrue();
+		}
 	}
 
 	@Test

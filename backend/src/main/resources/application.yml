@@ -75,4 +75,12 @@ catticket:
   admin:
     email: ${CATTICKET_ADMIN_EMAIL:}
     password: ${CATTICKET_ADMIN_PASSWORD:}
-  # catticket.subway.*（駅・コインロッカーのファイル）は、ファイルの名前・文字コードが決まってから足す（06 の 11 の U-03）
+  subway:
+    # 05 の 4.2 のファイル（06 の 8.1）。新しい版に替えるときは同じ PR でここも変える。
+    # ファイル名に空白・括弧・ハングルを含むので " で囲む
+    station-location: "classpath:data/subway/서울교통공사_1_8호선 역사 좌표(위경도) 정보_20250814.csv"
+    station-address: "classpath:data/subway/서울교통공사_역주소 및 전화번호_20250318.csv"
+    locker: "classpath:data/subway/서울교통공사_물품보관함 위치정보_20260930.csv"
+    station-name-ja: "classpath:data/subway/서울교통공사_역명다국어표기_20241101.csv"
+    # CP949（Java の名前 MS949）。4つとも同じ（05 の 4.2）
+    charset: MS949
