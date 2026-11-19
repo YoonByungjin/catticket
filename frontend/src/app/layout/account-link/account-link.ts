@@ -12,7 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { LanguageService } from '../../core/i18n/language.service';
 
 /** 文言の `{name}` の前後（「계정 (」と「)」）。ニックネームの部分だけを切るために分ける */
@@ -32,7 +32,7 @@ export function splitAroundName(text: string): { prefix: string; suffix: string 
  */
 @Component({
   selector: 'app-account-link',
-  imports: [RouterLink, MatTooltipModule],
+  imports: [RouterLink, RouterLinkActive, MatTooltipModule],
   templateUrl: './account-link.html',
   styleUrl: './account-link.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

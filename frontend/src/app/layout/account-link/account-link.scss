@@ -58,3 +58,9 @@
   padding: 0 16px;
   border-radius: 0;
 }
+
+// メニューの中で、アカウントの画面を開いているとき: 選択中の項目の背景 primary-container（07 の 2.1.1）。
+// 文字は primary のまま（2.1.2 の primary / primary-container 4.9:1）。ヘッダーでは変えない
+:host(.ct-account--menu) .ct-account-link--active {
+  background-color: var(--mat-sys-primary-container);
+}

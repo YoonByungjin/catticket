@@ -1,7 +1,8 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatTooltip } from '@angular/material/tooltip';
 import { By } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { LanguageService } from '../../core/i18n/language.service';
 import { BROWSER_STORAGE } from '../../core/storage/safe-storage';
 import { AccountLink, splitAroundName } from './account-link';
@@ -39,13 +40,17 @@ class FakeResizeObserver {
   }
 }
 
+/** /account へ移るためだけの空の画面 */
+@Component({ template: '' })
+class EmptyPage {}
+
 describe('AccountLink (CM-01 account link, 07 4.1.1)', () => {
   beforeEach(() => {
     FakeResizeObserver.instances = [];
     vi.stubGlobal('ResizeObserver', FakeResizeObserver);
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([]),
+        provideRouter([{ path: 'account', component: EmptyPage }]),
         // 保存できない扱いにして、言語の切り替えをその場で反映させる（読み込み直さない）
         { provide: BROWSER_STORAGE, useValue: null },
       ],
@@ -177,6 +182,20 @@ describe('AccountLink (CM-01 account link, 07 4.1.1)', () => {
     await fixture.whenStable();
     expect(link(fixture).textContent).toBe(`アカウント (${'あ'.repeat(12)})`);
     expect(tooltip(fixture).disabled).toBe(false);
+  });
+
+  it('menu: marks the link active while the account page is open (07 2.1.1 selected item)', async () => {
+    const fixture = TestBed.createComponent(AccountLink);
+    fixture.componentRef.setInput('nickname', 'Cat');
+    fixture.componentRef.setInput('place', 'menu');
+    await fixture.whenStable();
+    expect(fixture.nativeElement.classList.contains('ct-account--menu')).toBe(true);
+    expect(link(fixture).classList.contains('ct-account-link--active')).toBe(false);
+
+    await TestBed.inject(Router).navigateByUrl('/account');
+    await fixture.whenStable();
+    expect(link(fixture).classList.contains('ct-account-link--active')).toBe(true);
+    expect(link(fixture).getAttribute('aria-current')).toBe('page');
   });
 
   it('stops watching the width when destroyed', async () => {
