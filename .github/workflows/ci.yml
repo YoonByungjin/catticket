@@ -74,13 +74,18 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          # メジャーバージョンを frontend/.nvmrc に固定する（ローカルと CI をそろえる）
+          node-version-file: frontend/.nvmrc
           # npm の依存関係をキャッシュする
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
+
+      # 警告も失敗にする（maxWarnings: 0）。ESLint のキャッシュは使わない（ADR 0017 決定8）
+      - name: Lint
+        run: npm run lint
 
       # Vitest + jsdom でヘッドレスに1回だけ実行する
       - name: Unit test
