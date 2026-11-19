@@ -2,8 +2,9 @@
 
 - 状態: 基本設計: 承認（2026-11-06、Issue #15 コメント 6678921752）。詳細設計: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、指摘を反映済み。人間の承認待ち）。詳細は 7.（共通）・8.（API ごと）・9.（Issue #20 で決めること）に書いた
 - 担当: architect
-- 最終更新: 2026-11-11
-- 前提: [01. 要件定義書](01-requirements.md)（R-62〜R-66 を反映）、[02. 画面設計書](02-screens.md)、ADR 0006〜0016
+- 最終更新: 2026-11-19
+- 前提: [01. 要件定義書](01-requirements.md)（R-62〜R-66 を反映）、[02. 画面設計書](02-screens.md)、ADR 0006〜0018（翻訳は 0018。0007 は 0018 で置き換えた）
+- **Issue #39（2026-11-19）**: 翻訳を Google Cloud Translation に替えた（ADR 0018）。2. の `translation` の説明、1.2・5.1 の H-05・8. の API-04 の参照を 0018 に直し、7.2 の `LocalizedText` に `machineTranslated`（帰属の表示と HTML のマークアップのため。ADR 0018 決定8、02 の 3.4 の P-19）を足した
 - この設計書の 6. に、**要件 → 画面 → API → バッチの対応表**を置く（テーブルとの対応は 04）
 - `P-xx` は 02 の 8. の判断。P-01〜P-15 は人間が決定した（2026-11-05、Issue #15 コメント 6651238358）
 - 認証前の申込とニックネームの扱い（04 の Q-01）は人間が決定した（2026-11-06、Issue #15 コメント 6677710885。案 B: ニックネームは認証の完了のときに確定する）。4.7 に反映した
@@ -25,7 +26,7 @@
 
 - 外部データを返す GET の API は、クエリ `lang`（`ko` または `ja`。既定は `ko`）を受け取る（F-10, F-11）。
 - `lang=ja` のときは、翻訳した値と原文の両方を返す。翻訳がない項目は、翻訳がないことが分かる形で返す（画面の表示は 02 の 3.4、P-06）。
-- ジャンル・公演の状態・区は、コード（例: ジャンルの KOPIS コード、区の名前の原文）で返し、表示の文言は画面の辞書で訳す（ADR 0007）。
+- ジャンル・公演の状態・区は、コード（例: ジャンルの KOPIS コード、区の名前の原文）で返し、表示の文言は画面の辞書で訳す（ADR 0018 決定3）。
 
 ### 1.3 認証・認可（ADR 0013）
 
@@ -81,7 +82,7 @@
 | `favorite` | お気に入り | API-43〜45 |
 | `admin` | 管理者の公演の修正・非表示、レビューの削除 | API-50〜56 |
 | `collect` | KOPIS からの収集（日次の収集） | B-01 |
-| `translation` | 翻訳（Azure）と月の文字数の管理 | B-01 の S7 |
+| `translation` | 翻訳（Google Cloud Translation。ADR 0018）と1回・月の文字数の管理 | B-01 の S7 |
 | `mail` | メールの送信と1日の上限の管理 | API-33, 35, 37 から使う |
 | `summary` | 公演のカード（7.2 の `PerformanceSummary`）の組み立て（翻訳と評価をまとめて引く）。内部の部品（工程4 の 06 で追加。理由は 06 の 2.2） | API-01, 05, 20, 21, 43 から使う |
 | `common` | エラーの形、共通の設定 | — |
@@ -263,7 +264,7 @@
 | H-02 | 入力の上限と列の長さ | 8. の入力チェックの上限: メールアドレス 254、ニックネーム 20（NFKC に正規化し前後の空白を除いた後のコードポイント。7.1）、レビュー本文 1,000、管理者の修正: 公演名 200、出演者・チケット価格・公演時間の案内 2,000、上演時間・観覧年齢 100、予約サイトの名前 100・URL 2,000・最大 10 件 | 列の長さを上の上限以上にする（特に `booking_site.name`・`url` は `ADMIN` の行が入る）。`override_value` は TEXT のまま。公演 ID・会場 ID（`kopis_performance_id`・`kopis_venue_id`）の長さ（API はパスの形の確認にこの長さを使う。7.1） |
 | H-03 | 公演に結びつかない順位の行（D-01。決定） | 9.1: 順位を読むときに `performance` と結び（INNER JOIN）、結びつかない行と非表示の公演を除いて振り直す。同じ提供元の順位が複数あるときは公演 ID の順 | DB-04 のまま（外部キーなし）。`ranking_entry` の一意制約を (`ranking_collection_id`, `provider_rank`) にも付けるか（D-09）。付けない場合も 9.1 の順で並ぶ |
 | H-04 | B-04 と API-34 のロック（D-05） | 9.2: `app_user` → `auth_token` の順でロックする。API-34 は `SELECT ... FOR UPDATE` で行をロックしてから確かめる。B-04 は主キーで、条件（認証前・有効期限内の会員登録のトークンがない）を付けた1つの DELETE で消す | 分離レベルは MySQL の既定（REPEATABLE READ）のまま。9.2 の SQL で使うインデックス（04 の 6. の `auth_token` (`user_id`, `purpose`, `expires_at`)・`app_user` (`status`)）が足りるか |
-| H-05 | `station.line` の書き方（D-09） | API は路線を **1〜8 の整数**で返す（8. の API-04。表示の文言は画面の辞書。ADR 0007 決定3） | DB の持ち方（整数で持つか、`1호선` のような文字で持ち変換するか） |
+| H-05 | `station.line` の書き方（D-09） | API は路線を **1〜8 の整数**で返す（8. の API-04。表示の文言は画面の辞書。ADR 0018 決定3（0007 決定3 を引き継いだもの）） | DB の持ち方（整数で持つか、`1호선` のような文字で持ち変換するか） |
 | H-06 | セッションの確認（7.4） | 認証の必要なリクエストのたびに、ユーザーを主キーで読み、状態とパスワードのハッシュを確かめる | 新しい列は要らない（主キーで1行を読むだけ） |
 | H-07 | トークン（7.6） | 用途ごとに有効なトークンは最新の1つだけ（新しく作るとき、同じユーザー・用途の使っていないトークンの `used_at` を入れる）。トークンの文字列は 43 文字、保存するのは SHA-256 の16進 64 文字 | 04 の 4.13 のまま |
 | H-08 | 管理者の `nickname`（D-09） | API は管理者のニックネームを返さない（API-30 で `null`）。管理者の行は有効なので、そのニックネームは一般ユーザーが使えない（4.7。409） | 値（ニックネームのルール（4.6）を満たし、利用者が使いそうにない値） |
@@ -379,14 +380,17 @@
 | `value` | string | 不可 | 表示する文。`lang=ja` で翻訳があれば日本語の翻訳、それ以外は韓国語の原文 |
 | `original` | string | 不可 | 韓国語の原文 |
 | `translated` | boolean | 不可 | `value` が翻訳か。`lang=ko` ではいつも `false` |
+| `machineTranslated` | boolean | 不可 | `value` が機械翻訳（Google Cloud Translation。04 の `translation` から引いた値）か。`lang=ko`、翻訳がない、駅名の公式の日本語表記のときは `false`（Issue #39。ADR 0018 決定8） |
 
 ```json
-{ "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true }
+{ "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true, "machineTranslated": true }
 ```
 
 - 画面は、`lang=ja` で `translated = false` のとき「原文」と示す（P-06）。公演名・会場名・駅名は `translated = true` のとき `original` を併記する（F-11 ②）。それ以外は `value` だけを表示する（F-11 ③）。
+- 画面は、`machineTranslated = true` の `value` を表示するとき、Google の帰属の表示とマークアップ（`lang="ja-x-mtfrom-ko"`）を付ける（02 の 3.4 の P-19）。`translated = true` でも `machineTranslated = false`（駅名の公式の表記）のときは付けない。
 - 翻訳は、表示する原文（管理者の修正を反映した値）のハッシュで引く（04 の DB-05）。
-- 駅名は、`lang=ja` で公式の日本語表記（ADR 0009）があればそれを `value` にして `translated = true`。なければ翻訳、それもなければ原文。
+- 駅名は、`lang=ja` で公式の日本語表記（ADR 0009）があればそれを `value` にして `translated = true`・`machineTranslated = false`。なければ翻訳（`translated = true`・`machineTranslated = true`）、それもなければ原文。
+- `machineTranslated` は、どの表から値を引いたかで決まる（公式の表記は `station.name_ja`、機械翻訳は `translation`）。新しい列は要らない。
 - 会場の住所（API-03・04 の `venue.address`）も `LocalizedText` で、`lang=ja` では翻訳だけを表示する（原文は併記しない。02 の 3.4。決定: Issue #20 の確認2、2026-11-09）。翻訳は B-01 の S7 で作る（05 の 3.7）。英語の住所は KOPIS にないので使わない。管理者の API（API-51）は原文の文字列のまま。
 - 項目の値そのものがない（例: 出演者がない）ときは、`LocalizedText` ではなく `null`。
 
@@ -588,8 +592,8 @@
   "items": [
     {
       "performanceId": "PF270001",
-      "title": { "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true },
-      "venue": { "venueId": "FC001247", "name": { "value": "シャルロッテシアター", "original": "샤롯데씨어터", "translated": true } },
+      "title": { "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true, "machineTranslated": true },
+      "venue": { "venueId": "FC001247", "name": { "value": "シャルロッテシアター", "original": "샤롯데씨어터", "translated": true, "machineTranslated": true } },
       "startDate": "2026-09-01",
       "endDate": "2027-02-28",
       "genre": "GGGA",
@@ -621,7 +625,7 @@
 | `markers[].performanceCount` | integer | 不可 | 条件に合う公開中の公演の数（1 以上） |
 
 ```json
-{ "markers": [ { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false }, "latitude": 37.511044, "longitude": 127.099164, "performanceCount": 2 } ] }
+{ "markers": [ { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false, "machineTranslated": false }, "latitude": 37.511044, "longitude": 127.099164, "performanceCount": 2 } ] }
 ```
 
 **エラー**: 400 `VALIDATION_FAILED`。
@@ -678,14 +682,14 @@
 ```json
 {
   "performanceId": "PF270001",
-  "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false },
+  "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false, "machineTranslated": false },
   "status": "ONGOING", "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA",
-  "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false }, "address": { "value": "서울특별시 송파구 올림픽로 240", "original": "서울특별시 송파구 올림픽로 240", "translated": false }, "hasLocation": true },
-  "cast": { "value": "조승우, 최재림", "original": "조승우, 최재림", "translated": false },
-  "ticketPrice": { "value": "VIP석 190,000원", "original": "VIP석 190,000원", "translated": false },
-  "schedule": null, "runtime": { "value": "2시간 30분", "original": "2시간 30분", "translated": false }, "ageLimit": null,
+  "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false, "machineTranslated": false }, "address": { "value": "서울특별시 송파구 올림픽로 240", "original": "서울특별시 송파구 올림픽로 240", "translated": false, "machineTranslated": false }, "hasLocation": true },
+  "cast": { "value": "조승우, 최재림", "original": "조승우, 최재림", "translated": false, "machineTranslated": false },
+  "ticketPrice": { "value": "VIP석 190,000원", "original": "VIP석 190,000원", "translated": false, "machineTranslated": false },
+  "schedule": null, "runtime": { "value": "2시간 30분", "original": "2시간 30분", "translated": false, "machineTranslated": false }, "ageLimit": null,
   "posterUrl": null, "isOpenRun": false, "totalShowCount": 120, "hasAward": true,
-  "bookingSites": [ { "name": { "value": "인터파크", "original": "인터파크", "translated": false }, "url": "https://tickets.interpark.com/" }, { "name": null, "url": "https://ticket.example.com/" } ],
+  "bookingSites": [ { "name": { "value": "인터파크", "original": "인터파크", "translated": false, "machineTranslated": false }, "url": "https://tickets.interpark.com/" }, { "name": null, "url": "https://ticket.example.com/" } ],
   "rating": { "average": null, "count": 0 },
   "reviewOpen": true,
   "rankings": [ { "periodType": "WEEKLY", "genre": "ALL", "rank": 3, "period": { "start": "2026-10-26", "end": "2026-11-01" } } ],
@@ -724,7 +728,7 @@
 | 型 | 項目 | 型 | NULL | 内容 |
 |---|---|---|---|---|
 | StationItem | `name` | LocalizedText | 不可 | 駅名（7.2 の駅名の決まり） |
-| | `line` | integer | 不可 | 路線（1〜8。表示の文言は画面の辞書。ADR 0007 決定3） |
+| | `line` | integer | 不可 | 路線（1〜8。表示の文言は画面の辞書。ADR 0018 決定3） |
 | | `distanceMeters` | integer | 不可 | 距離（7.2） |
 | LockerItem | `stationName` | LocalizedText | 不可 | 属する駅の駅名 |
 | | `line` | integer | 不可 | 路線（1〜8） |
@@ -855,7 +859,7 @@
 
 ```json
 { "periodType": "WEEKLY", "genre": "ALL", "period": { "start": "2026-10-26", "end": "2026-11-01" },
-  "items": [ { "rank": 1, "performance": { "performanceId": "PF270001", "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false }, "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false } }, "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA", "status": "ONGOING", "posterUrl": null, "hasAward": true, "rating": null } } ] }
+  "items": [ { "rank": 1, "performance": { "performanceId": "PF270001", "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false, "machineTranslated": false }, "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false, "machineTranslated": false } }, "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA", "status": "ONGOING", "posterUrl": null, "hasAward": true, "rating": null } } ] }
 ```
 
 **エラー**: 400 `VALIDATION_FAILED`。
@@ -894,7 +898,7 @@
 { "periodType": "WEEKLY", "genre": "GGGA", "availability": "NO_RISE",
   "currentPeriod": { "start": "2026-10-26", "end": "2026-11-01" },
   "previousPeriod": { "start": "2026-10-19", "end": "2026-10-25" },
-  "items": [ { "rank": 1, "movement": "NONE", "rise": null, "performance": { "performanceId": "PF270001", "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false }, "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false } }, "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA", "status": "ONGOING", "posterUrl": null, "hasAward": true, "rating": null } } ] }
+  "items": [ { "rank": 1, "movement": "NONE", "rise": null, "performance": { "performanceId": "PF270001", "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false, "machineTranslated": false }, "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false, "machineTranslated": false } }, "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA", "status": "ONGOING", "posterUrl": null, "hasAward": true, "rating": null } } ] }
 ```
 
 **エラー**: 400 `VALIDATION_FAILED`。
@@ -1413,8 +1417,9 @@
 
 - 상태: 기본설계: 승인(2026-11-06, Issue #15 코멘트 6678921752). 상세설계: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 지적을 반영함. 사람의 승인 대기). 상세는 7.(공통)·8.(API별)·9.(Issue #20에서 정할 것)에 썼다
 - 담당: architect
-- 최종 갱신: 2026-11-11
-- 전제: [01. 요건정의서](01-requirements.md)(R-62~R-66 반영), [02. 화면 설계서](02-screens.md), ADR 0006~0016
+- 최종 갱신: 2026-11-19
+- 전제: [01. 요건정의서](01-requirements.md)(R-62~R-66 반영), [02. 화면 설계서](02-screens.md), ADR 0006~0018(번역은 0018. 0007은 0018로 대체했다)
+- **Issue #39(2026-11-19)**: 번역을 Google Cloud Translation으로 바꿨다(ADR 0018). 2.의 `translation` 설명, 1.2·5.1의 H-05·8.의 API-04의 참조를 0018로 고치고, 7.2의 `LocalizedText`에 `machineTranslated`(귀속 표시와 HTML 마크업을 위해. ADR 0018 결정 8, 02의 3.4의 P-19)를 더했다
 - 이 설계서의 6.에 **요건 → 화면 → API → 배치 대응표**를 둔다(테이블과의 대응은 04)
 - `P-xx`는 02의 8.의 판단. P-01~P-15는 사람이 결정했다(2026-11-05, Issue #15 코멘트 6651238358)
 - 인증 전 신청과 닉네임 처리(04의 Q-01)는 사람이 결정했다(2026-11-06, Issue #15 코멘트 6677710885. 안 B: 닉네임은 인증을 완료할 때 확정한다). 4.7에 반영했다
@@ -1436,7 +1441,7 @@
 
 - 외부 데이터를 돌려주는 GET API는 쿼리 `lang`(`ko` 또는 `ja`. 기본 `ko`)을 받는다(F-10, F-11).
 - `lang=ja`일 때는 번역한 값과 원문을 둘 다 돌려준다. 번역이 없는 항목은 번역이 없다는 것을 알 수 있는 형태로 돌려준다(화면 표시는 02의 3.4, P-06).
-- 장르·공연 상태·구는 코드(예: 장르의 KOPIS 코드, 구 이름 원문)로 돌려주고, 표시 문구는 화면 사전으로 옮긴다(ADR 0007).
+- 장르·공연 상태·구는 코드(예: 장르의 KOPIS 코드, 구 이름 원문)로 돌려주고, 표시 문구는 화면 사전으로 옮긴다(ADR 0018 결정 3).
 
 #### 1.3 인증·인가 (ADR 0013)
 
@@ -1492,7 +1497,7 @@
 | `favorite` | 즐겨찾기 | API-43~45 |
 | `admin` | 관리자의 공연 수정·숨김, 리뷰 삭제 | API-50~56 |
 | `collect` | KOPIS에서 수집(일간 수집) | B-01 |
-| `translation` | 번역(Azure)과 월 글자 수 관리 | B-01의 S7 |
+| `translation` | 번역(Google Cloud Translation. ADR 0018)과 1회·월 글자 수 관리 | B-01의 S7 |
 | `mail` | 메일 발송과 하루 상한 관리 | API-33, 35, 37에서 씀 |
 | `summary` | 공연 카드(7.2의 `PerformanceSummary`) 조립(번역과 평점을 모아서 조회). 내부 부품(공정 4의 06에서 추가. 이유는 06의 2.2) | API-01, 05, 20, 21, 43에서 씀 |
 | `common` | 오류 형태, 공통 설정 | — |
@@ -1674,7 +1679,7 @@
 | H-02 | 입력 상한과 열 길이 | 8.의 입력 검사 상한: 이메일 주소 254, 닉네임 20(NFKC로 정규화하고 앞뒤 공백을 제거한 뒤의 코드 포인트. 7.1), 리뷰 본문 1,000, 관리자 수정: 공연명 200, 출연진·티켓 가격·공연 시간 안내 2,000, 상연 시간·관람 연령 100, 예매처 이름 100·URL 2,000·최대 10건 | 열 길이를 위 상한 이상으로 한다(특히 `booking_site.name`·`url`은 `ADMIN` 행이 들어간다). `override_value`는 TEXT 그대로. 공연 ID·공연장 ID(`kopis_performance_id`·`kopis_venue_id`)의 길이(API는 경로 형태 확인에 이 길이를 쓴다. 7.1) |
 | H-03 | 공연과 연결되지 않는 순위 행(D-01. 결정) | 9.1: 순위를 읽을 때 `performance`와 조인(INNER JOIN)하고, 연결되지 않는 행과 숨긴 공연을 빼고 다시 매긴다. 같은 제공처 순위가 여럿이면 공연 ID 순 | DB-04 그대로(외래 키 없음). `ranking_entry`의 유일 제약을 (`ranking_collection_id`, `provider_rank`)에도 붙일지(D-09). 붙이지 않아도 9.1의 순서로 정렬된다 |
 | H-04 | B-04와 API-34의 잠금(D-05) | 9.2: `app_user` → `auth_token` 순으로 잠근다. API-34는 `SELECT ... FOR UPDATE`로 행을 잠근 뒤 확인한다. B-04는 기본 키로, 조건(인증 전·유효 기한 안의 회원가입 토큰 없음)을 붙인 DELETE 하나로 지운다 | 격리 수준은 MySQL 기본(REPEATABLE READ) 그대로. 9.2의 SQL에서 쓰는 인덱스(04의 6.의 `auth_token` (`user_id`, `purpose`, `expires_at`)·`app_user` (`status`))로 충분한지 |
-| H-05 | `station.line` 표기(D-09) | API는 노선을 **1~8의 정수**로 돌려준다(8.의 API-04. 표시 문구는 화면 사전. ADR 0007 결정 3) | DB에 갖는 방법(정수로 가질지, `1호선` 같은 문자로 가지고 변환할지) |
+| H-05 | `station.line` 표기(D-09) | API는 노선을 **1~8의 정수**로 돌려준다(8.의 API-04. 표시 문구는 화면 사전. ADR 0018 결정 3(0007 결정 3을 이어받은 것)) | DB에 갖는 방법(정수로 가질지, `1호선` 같은 문자로 가지고 변환할지) |
 | H-06 | 세션 확인(7.4) | 인증이 필요한 요청마다 사용자를 기본 키로 읽고 상태와 비밀번호 해시를 확인한다 | 새 열은 필요 없다(기본 키로 1행을 읽을 뿐) |
 | H-07 | 토큰(7.6) | 용도별로 유효한 토큰은 최신 1개뿐(새로 만들 때 같은 사용자·용도의 쓰지 않은 토큰의 `used_at`을 넣는다). 토큰 문자열은 43자, 저장하는 것은 SHA-256 16진 64자 | 04의 4.13 그대로 |
 | H-08 | 관리자 `nickname`(D-09) | API는 관리자 닉네임을 돌려주지 않는다(API-30에서 `null`). 관리자 행은 유효하므로 그 닉네임은 일반 사용자가 쓸 수 없다(4.7. 409) | 값(닉네임 규칙(4.6)을 충족하고, 이용자가 쓸 것 같지 않은 값) |
@@ -1790,14 +1795,17 @@
 | `value` | string | 불가 | 표시할 문장. `lang=ja`이고 번역이 있으면 일본어 번역, 그 밖에는 한국어 원문 |
 | `original` | string | 불가 | 한국어 원문 |
 | `translated` | boolean | 불가 | `value`가 번역인지. `lang=ko`에서는 항상 `false` |
+| `machineTranslated` | boolean | 불가 | `value`가 기계 번역(Google Cloud Translation. 04의 `translation`에서 찾은 값)인지. `lang=ko`, 번역이 없음, 역명의 공식 일본어 표기일 때는 `false`(Issue #39. ADR 0018 결정 8) |
 
 ```json
-{ "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true }
+{ "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true, "machineTranslated": true }
 ```
 
 - 화면은 `lang=ja`이고 `translated = false`일 때 "원문"으로 표시한다(P-06). 공연명·공연장명·역명은 `translated = true`일 때 `original`을 병기한다(F-11 ②). 그 밖에는 `value`만 표시한다(F-11 ③).
+- 화면은 `machineTranslated = true`인 `value`를 표시할 때 Google 귀속 표시와 마크업(`lang="ja-x-mtfrom-ko"`)을 붙인다(02의 3.4의 P-19). `translated = true`라도 `machineTranslated = false`(역명의 공식 표기)일 때는 붙이지 않는다.
 - 번역은 표시할 원문(관리자 수정을 반영한 값)의 해시로 찾는다(04의 DB-05).
-- 역명은 `lang=ja`이고 공식 일본어 표기(ADR 0009)가 있으면 그것을 `value`로 하고 `translated = true`. 없으면 번역, 그것도 없으면 원문.
+- 역명은 `lang=ja`이고 공식 일본어 표기(ADR 0009)가 있으면 그것을 `value`로 하고 `translated = true`·`machineTranslated = false`. 없으면 번역(`translated = true`·`machineTranslated = true`), 그것도 없으면 원문.
+- `machineTranslated`는 어느 표에서 값을 찾았는지로 정해진다(공식 표기는 `station.name_ja`, 기계 번역은 `translation`). 새 열은 필요 없다.
 - 공연장 주소(API-03·04의 `venue.address`)도 `LocalizedText`이며, `lang=ja`에서는 번역만 표시한다(원문은 병기하지 않는다. 02의 3.4. 결정: Issue #20 확인 2, 2026-11-09). 번역은 B-01의 S7에서 만든다(05의 3.7). 영어 주소는 KOPIS에 없으므로 쓰지 않는다. 관리자 API(API-51)는 원문 문자열 그대로.
 - 항목 값 자체가 없을 때(예: 출연진이 없음)는 `LocalizedText`가 아니라 `null`.
 
@@ -1999,8 +2007,8 @@
   "items": [
     {
       "performanceId": "PF270001",
-      "title": { "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true },
-      "venue": { "venueId": "FC001247", "name": { "value": "シャルロッテシアター", "original": "샤롯데씨어터", "translated": true } },
+      "title": { "value": "オペラ座の怪人", "original": "오페라의 유령", "translated": true, "machineTranslated": true },
+      "venue": { "venueId": "FC001247", "name": { "value": "シャルロッテシアター", "original": "샤롯데씨어터", "translated": true, "machineTranslated": true } },
       "startDate": "2026-09-01",
       "endDate": "2027-02-28",
       "genre": "GGGA",
@@ -2032,7 +2040,7 @@
 | `markers[].performanceCount` | integer | 불가 | 조건에 맞는 공개 중인 공연 수(1 이상) |
 
 ```json
-{ "markers": [ { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false }, "latitude": 37.511044, "longitude": 127.099164, "performanceCount": 2 } ] }
+{ "markers": [ { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false, "machineTranslated": false }, "latitude": 37.511044, "longitude": 127.099164, "performanceCount": 2 } ] }
 ```
 
 **오류**: 400 `VALIDATION_FAILED`.
@@ -2089,14 +2097,14 @@
 ```json
 {
   "performanceId": "PF270001",
-  "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false },
+  "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false, "machineTranslated": false },
   "status": "ONGOING", "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA",
-  "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false }, "address": { "value": "서울특별시 송파구 올림픽로 240", "original": "서울특별시 송파구 올림픽로 240", "translated": false }, "hasLocation": true },
-  "cast": { "value": "조승우, 최재림", "original": "조승우, 최재림", "translated": false },
-  "ticketPrice": { "value": "VIP석 190,000원", "original": "VIP석 190,000원", "translated": false },
-  "schedule": null, "runtime": { "value": "2시간 30분", "original": "2시간 30분", "translated": false }, "ageLimit": null,
+  "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false, "machineTranslated": false }, "address": { "value": "서울특별시 송파구 올림픽로 240", "original": "서울특별시 송파구 올림픽로 240", "translated": false, "machineTranslated": false }, "hasLocation": true },
+  "cast": { "value": "조승우, 최재림", "original": "조승우, 최재림", "translated": false, "machineTranslated": false },
+  "ticketPrice": { "value": "VIP석 190,000원", "original": "VIP석 190,000원", "translated": false, "machineTranslated": false },
+  "schedule": null, "runtime": { "value": "2시간 30분", "original": "2시간 30분", "translated": false, "machineTranslated": false }, "ageLimit": null,
   "posterUrl": null, "isOpenRun": false, "totalShowCount": 120, "hasAward": true,
-  "bookingSites": [ { "name": { "value": "인터파크", "original": "인터파크", "translated": false }, "url": "https://tickets.interpark.com/" }, { "name": null, "url": "https://ticket.example.com/" } ],
+  "bookingSites": [ { "name": { "value": "인터파크", "original": "인터파크", "translated": false, "machineTranslated": false }, "url": "https://tickets.interpark.com/" }, { "name": null, "url": "https://ticket.example.com/" } ],
   "rating": { "average": null, "count": 0 },
   "reviewOpen": true,
   "rankings": [ { "periodType": "WEEKLY", "genre": "ALL", "rank": 3, "period": { "start": "2026-10-26", "end": "2026-11-01" } } ],
@@ -2135,7 +2143,7 @@
 | 타입 | 항목 | 타입 | NULL | 내용 |
 |---|---|---|---|---|
 | StationItem | `name` | LocalizedText | 불가 | 역명(7.2의 역명 규칙) |
-| | `line` | integer | 불가 | 노선(1~8. 표시 문구는 화면 사전. ADR 0007 결정 3) |
+| | `line` | integer | 불가 | 노선(1~8. 표시 문구는 화면 사전. ADR 0018 결정 3) |
 | | `distanceMeters` | integer | 불가 | 거리(7.2) |
 | LockerItem | `stationName` | LocalizedText | 불가 | 속한 역의 역명 |
 | | `line` | integer | 불가 | 노선(1~8) |
@@ -2266,7 +2274,7 @@
 
 ```json
 { "periodType": "WEEKLY", "genre": "ALL", "period": { "start": "2026-10-26", "end": "2026-11-01" },
-  "items": [ { "rank": 1, "performance": { "performanceId": "PF270001", "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false }, "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false } }, "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA", "status": "ONGOING", "posterUrl": null, "hasAward": true, "rating": null } } ] }
+  "items": [ { "rank": 1, "performance": { "performanceId": "PF270001", "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false, "machineTranslated": false }, "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false, "machineTranslated": false } }, "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA", "status": "ONGOING", "posterUrl": null, "hasAward": true, "rating": null } } ] }
 ```
 
 **오류**: 400 `VALIDATION_FAILED`.
@@ -2305,7 +2313,7 @@
 { "periodType": "WEEKLY", "genre": "GGGA", "availability": "NO_RISE",
   "currentPeriod": { "start": "2026-10-26", "end": "2026-11-01" },
   "previousPeriod": { "start": "2026-10-19", "end": "2026-10-25" },
-  "items": [ { "rank": 1, "movement": "NONE", "rise": null, "performance": { "performanceId": "PF270001", "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false }, "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false } }, "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA", "status": "ONGOING", "posterUrl": null, "hasAward": true, "rating": null } } ] }
+  "items": [ { "rank": 1, "movement": "NONE", "rise": null, "performance": { "performanceId": "PF270001", "title": { "value": "오페라의 유령", "original": "오페라의 유령", "translated": false, "machineTranslated": false }, "venue": { "venueId": "FC001247", "name": { "value": "샤롯데씨어터", "original": "샤롯데씨어터", "translated": false, "machineTranslated": false } }, "startDate": "2026-09-01", "endDate": "2027-02-28", "genre": "GGGA", "status": "ONGOING", "posterUrl": null, "hasAward": true, "rating": null } } ] }
 ```
 
 **오류**: 400 `VALIDATION_FAILED`.
