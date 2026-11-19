@@ -1,0 +1,3 @@
+// スマホ表示と PC 表示の境目（02 の 1.、07 の 2.4。Issue #28 コメント 6759899229 の決定 No.8）。
+// 幅 960px 未満がスマホ表示。ViewportService の HANDSET_MEDIA_QUERY と同じ文字列にする（テストで一致を確かめる）
+$handset: '(max-width: 959.98px)';

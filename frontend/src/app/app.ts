@@ -17,6 +17,7 @@ import { filter } from 'rxjs';
 import { AuthMeResponse } from './core/api/api.types';
 import { TranslatePipe } from './core/i18n/translate.pipe';
 import { ViewportService } from './core/viewport/viewport.service';
+import { AccountLink } from './layout/account-link/account-link';
 import { Footer } from './layout/footer/footer';
 import { Header } from './layout/header/header';
 import { SIGNED_OUT, accountLinksFor, navLinksFor } from './layout/nav-items';
@@ -37,6 +38,7 @@ import { SIGNED_OUT, accountLinksFor, navLinksFor } from './layout/nav-items';
     TranslatePipe,
     Header,
     Footer,
+    AccountLink,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',

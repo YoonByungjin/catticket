@@ -1,4 +1,5 @@
 @use '@angular/material' as mat;
+@use '../../../theme/breakpoints' as bp;
 
 // 07 の 3.・4.1。部品の見た目は公式のテーマの API（*-overrides）だけで変える（ADR 0014 決定2）
 
@@ -13,16 +14,16 @@
       standard-height: 64px,
     )
   );
-}
 
-// スマホ表示は 56px。Toolbar の既定の切り替え幅と CDK の Handset がずれるため、自分で指定する
-.ct-header--handset {
-  gap: 4px;
-  @include mat.toolbar-overrides(
-    (
-      standard-height: 56px,
-    )
-  );
+  // スマホ表示は 56px。Toolbar の既定の切り替え幅（599px）は 02 の 1. の境目と違うため、同じ境目で指定する
+  @media #{bp.$handset} {
+    gap: 4px;
+    @include mat.toolbar-overrides(
+      (
+        standard-height: 56px,
+      )
+    );
+  }
 }
 
 .ct-brand {
@@ -45,8 +46,24 @@
   white-space: nowrap;
 }
 
-.ct-header--handset .ct-controls {
-  gap: 4px;
+// 狭いときに縮むのはアカウントのリンクのニックネームの部分だけ（07 の 4.1.1）。ほかの項目は縮めない
+.ct-brand,
+.ct-nav,
+.ct-controls,
+.ct-fixed {
+  flex-shrink: 0;
+}
+
+// ニックネームの <span> から右の項目のまとまりまでの祖先も縮めるようにする（07 の 4.1.1）
+.ct-actions {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.ct-controls {
+  @media #{bp.$handset} {
+    gap: 4px;
+  }
 }
 
 // 選択中の画面の文字だけ primary（07 の 3.）
