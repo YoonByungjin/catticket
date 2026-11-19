@@ -1,8 +1,8 @@
 # 06. クラス設計書
 
-- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10）。PR #32 の reviewer の判定は条件付き承認で、06 への指摘（U-01・U-04・U-06・U-07 の更新、4.5・7.2・8.1・3.2 の追記）を反映済み（2026-11-10。人間の確認待ち）。Issue #23 の決定 E-2・E-3（コメント 6783513546）を 3.3・11 に反映（2026-11-11）
+- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10）。PR #32 の reviewer の判定は条件付き承認で、06 への指摘（U-01・U-04・U-06・U-07 の更新、4.5・7.2・8.1・3.2 の追記）を反映済み（2026-11-10。人間の確認待ち）。Issue #23 の決定 E-2・E-3（コメント 6783513546）を 3.3・11 に反映（2026-11-11）。Issue #39 で翻訳を Google Cloud Translation に替えた（ADR 0018。0007 を置き換え。2026-11-19）: 1.3・2.1・3.1・3.5・4.10・6.1・6.4・7.1・7.2・8.1・8.2・10 を書き直し、8.3 を足した。**backend にすでにある ADR 0007 の翻訳の設定（`CatticketProperties`・`HttpClientConfig`・`application.yml`・`ApplicationConfigTest`・`.env.example`）は、Issue #38 でこの文書の新しい設定に置き換える**（8.3 に、いまの名前と変えた後の名前を書いた）
 - 担当: architect
-- 入力: `01-requirements.md`、`02-screens.md`、`03-api.md`（API 仕様の詳細）、`04-tables.md` と `backend/src/main/resources/db/migration/V1__create_schema.sql`、`05-batch.md`、ADR 0001〜0016。
+- 入力: `01-requirements.md`、`02-screens.md`、`03-api.md`（API 仕様の詳細）、`04-tables.md` と `backend/src/main/resources/db/migration/V1__create_schema.sql`、`05-batch.md`、ADR 0001〜0018（0007 は 0018 で置き換えた）。
 - 対象: バックエンド（`backend/`、Spring Boot）だけ。Angular のクラス設計は対象外（工程5で frontend-dev が `02`・`03`・`07` から作る）。
 - 04 の 11.7 で architect に残された A-02〜A-07 はこの文書の 9 で決めた。03・05 に関わる分は 03（8.5・8.8）と 05（3.2・3.3・4.3）にも反映した。
 - 外部サービス・Spring の仕様は公式ドキュメントで確認した（確認日 2026-11-09）。確認先は各節に書く。
@@ -32,7 +32,7 @@
 |---|---|---|---|
 | `spring-boot-starter-security` | 標準スターター | ADR 0013 | セッション認証、CSRF、パスワードのハッシュ（bcrypt） |
 | `spring-boot-starter-mail` | 標準スターター | ADR 0012 | Gmail SMTP の送信（`JavaMailSender`） |
-| `spring-boot-starter-restclient` | 標準スターター | ADR 0007・0011（Spring の HTTP クライアントで呼ぶと決めた）、ADR 0008（`RestClient` と明記） | KOPIS・Azure Translator・reCAPTCHA の呼び出し |
+| `spring-boot-starter-restclient` | 標準スターター | ADR 0018 決定7（0007 決定7 を引き継ぐ）・0011（Spring の HTTP クライアントで呼ぶと決めた）、ADR 0008（`RestClient` と明記） | KOPIS・Google Cloud Translation・reCAPTCHA の呼び出し（Google の SDK は入れない） |
 | `tools.jackson.dataformat:jackson-dataformat-xml`（バージョンは Spring Boot の管理に従い書かない） | Jackson のモジュール（Boot が管理） | ADR 0008（KOPIS の XML を Jackson で読む） | KOPIS の XML レスポンスの読み取り（`collect.client` の `XmlMapper` だけで使う。Spring MVC の XML のメッセージコンバーターは 3.1 の `WebMvcConfig` で外す） |
 | `spring-boot-starter-security-test`（testImplementation） | 標準スターター | ADR 0013 | `@WebMvcTest` での認証・CSRF のテスト |
 
@@ -56,7 +56,7 @@
 | `com.catticket.favorite` | お気に入り | API-43〜45 |
 | `com.catticket.admin` | 管理者の公演管理・レビュー管理 | API-50〜56 |
 | `com.catticket.collect` | KOPIS の収集（B-01 の S1〜S6）と B-01 全体の流れ | B-01 |
-| `com.catticket.translation` | Azure Translator の翻訳（B-01 の S7）と翻訳の参照 | B-01 S7、API の `lang=ja` |
+| `com.catticket.translation` | Google Cloud Translation での翻訳（B-01 の S7。ADR 0018）と翻訳の参照 | B-01 S7、API の `lang=ja` |
 | `com.catticket.mail` | メール送信と送信記録・上限 | API-33, 35, 37 |
 | `com.catticket.summary` | 公演のカード（`PerformanceSummary`）の組み立て。翻訳と評価をまとめて引く（3.5） | API-01, 05, 20, 21, 43 |
 | `com.catticket.common.*` | 共通（3） | 全体 |
@@ -105,7 +105,7 @@ flowchart LR
 
 | クラス | パッケージ | 役割 |
 |---|---|---|
-| `CatticketProperties` | `common.config` | `@ConfigurationProperties("catticket")` の `record`（入れ子の record: `Kopis`, `Azure`, `Recaptcha`, `Mail`, `Admin`, `Subway`, `Scheduler`, `publicBaseUrl`, `task`）。キーは 8 |
+| `CatticketProperties` | `common.config` | `@ConfigurationProperties("catticket")` の `record`（入れ子の record: `Kopis`, `GoogleTranslate`, `Recaptcha`, `Mail`, `Admin`, `Subway`, `Scheduler`, `publicBaseUrl`, `task`）。キーは 8。`GoogleTranslate` は既存の翻訳の record を置き換える（8.3）。`toString` で API キーを出さない（`Kopis`・`Recaptcha` と同じ） |
 | `ClockConfig` | `common.config` | `Clock` の Bean（`Clock.system(ZoneId.of("Asia/Seoul"))`） |
 | `HttpClientConfig` | `common.config` | 外部 API ごとの `RestClient`（`@Qualifier("kopisRestClient")` など。7） |
 | `JacksonConfig` | `common.config` | `JsonMapperBuilderCustomizer`（3.3 の型の厳しさ） |
@@ -250,7 +250,7 @@ flowchart LR
 
 | クラス | 内容 |
 |---|---|
-| `LocalizedText`（record） | `value`, `original`, `translated`（03 の 7.2） |
+| `LocalizedText`（record） | `value`, `original`, `translated`, `machineTranslated`（03 の 7.2。`machineTranslated` は ADR 0018 決定8 の帰属の表示のため。Issue #39） |
 | `Rating`（record） | `BigDecimal average`, `long count`。`Rating.of(long sum, long count)`: 0 件なら `average = null`、ほかは `sum / count` を小数第1位で `HALF_UP` |
 | `Period`（record） | `LocalDate start`, `LocalDate end` |
 | `PageResponse<T>`（record） | `items`, `page`, `size`, `totalElements`, `totalPages`。`PageResponse.of(List<T>, PageQuery, long total)`（`totalPages = ceil(total / size)`） |
@@ -259,7 +259,7 @@ flowchart LR
 | `PerformanceSummary`（record） | 03 の 7.2 の項目 |
 | `PerformanceSummaryRow`（record） | SQL の結果（`long id`（`performance.id`。内部の ID で API には出さない）、`performanceId`（KOPIS の公演 ID）、修正を反映した公演名・期間・ジャンル、会場 ID・名前、ポスター、受賞歴） |
 | `ReviewItem`（record） | 03 の 7.2 |
-| `LocalizedTextFactory` | `LocalizedText of(String original, Lang lang, Map<String, String> translations)`（`lang = ko` か翻訳がなければ `value = original`, `translated = false`）。駅名は `ofStation(String nameKo, String nameJa, Lang, Map)`（`name_ja` → 翻訳 → 原文。03 の 7.2） |
+| `LocalizedTextFactory` | `LocalizedText of(String original, Lang lang, Map<String, String> translations)`（`lang = ko` か翻訳がなければ `value = original`, `translated = false`, `machineTranslated = false`。翻訳があれば `translated = true`, `machineTranslated = true`）。駅名は `ofStation(String nameKo, String nameJa, Lang, Map)`（`name_ja` → 翻訳 → 原文。`name_ja` を使ったときは `translated = true`, `machineTranslated = false`。03 の 7.2） |
 
 **`com.catticket.summary.PerformanceSummaryAssembler`**（`@Component`）
 
@@ -605,17 +605,23 @@ flowchart LR
 
 **`TranslationLookupService`**（API 用、RO）: `Map<String, String> lookup(Collection<String> originals)` — 空・`null` を除き、`Hashes.sha256Hex` で `TranslationMapper.findByHashes` を1回呼ぶ。
 
-**`TranslationService.translatePending(LocalDateTime now)`** → `StepResult`（S7。メソッドには `@Transactional` を付けず、束ごとに `TranslationBatchWriter.save`（RW）を呼ぶ）
+**`TranslationService.translatePending(LocalDateTime now)`** → `StepResult`（S7。ADR 0018、05 の 3.7。メソッドには `@Transactional` を付けず、原文1つごとに `TranslationBatchWriter.save`（RW）を呼ぶ）
 
-1. 対象を種類の順に読む（`findUntranslatedTitles` → `findUntranslatedVenueNames` → `findUntranslatedStationNames` → `findUntranslatedOthers`。05 の 3.7 の対象。`performance` の自動収集の値と `performance_override` の修正の値の両方。同じ原文は1つにまとめる。名前が NULL の予約サイトは対象にしない）。
-2. 束にする: 1回 1 万文字（コードポイント）以内・1,000 要素以内（Azure の公式の制限は 1 回 5 万文字・1,000 要素。確認日 2026-11-09）。1つの原文が 1 万文字を超えるときは、その原文だけで1回にする（5 万文字以内。`TEXT` の文は長くても数千文字の見込み）。
-3. 送る前に `TranslationUsageMapper.findChars(month)` + 束の文字数 > 1,800,000 → 止める（結果は `SUCCESS`、内訳に「月の上限」。05 の 3.7）。
-4. `AzureTranslatorClient.translate(List<String>)` → 応答は入力と同じ順。
-5. `TranslationBatchWriter.save(pairs, chars, month, now)`（RW）: `insertTranslations`（`ON DUPLICATE KEY UPDATE id = id`。同じ原文がすでにあれば何もしない）→ `addUsage(month, chars)`（`INSERT … ON DUPLICATE KEY UPDATE char_count = char_count + …`）。
-6. 速さ: 1 分あたり 3 万文字以内になるよう、送った文字数 n のあとに `n / 30,000` 分（ミリ秒に直す）待つ（`Sleeper`）。
-7. 失敗: `403001` → その回の S7 を止めて `FAILURE`。429 → 60 秒待って最大 3 回。そのほか → 2・4・8 秒で最大 3 回。だめなら止めて `FAILURE`（05 の 3.7）。それまでに保存した翻訳は残る。
+1. 対象を種類の順に読む（`findUntranslatedTitles` → `findUntranslatedVenueNames` → `findUntranslatedStationNames` → `findUntranslatedOthers`。05 の 3.7 の対象。`performance` の自動収集の値と `performance_override` の修正の値の両方。同じ原文は1つにまとめる。名前が NULL の予約サイトは対象にしない）。前後の空白を除いて空の原文は送らない。
+2. 原文1つごとに文字数 `n = text.codePointCount(0, text.length())` を数える（Google の課金と同じくコードポイント。空白を含む）。
+3. `n > runLimitChars`（15,000）の原文は送らずに飛ばす（内訳 `skippedTooLong` に数える）。
+4. 送る前に `sentThisRun + n > runLimitChars` → 止める（結果は `SUCCESS`、内訳に「1回の上限」`stoppedRunLimit`）。`TranslationUsageMapper.findChars(month) + n > monthlyLimitChars`（450,000）→ 止める（結果は `SUCCESS`、内訳に「月の上限」`stoppedMonthlyLimit`）。`month` は `Clock`（Asia/Seoul）の今日の月の1日（P-09）。
+5. `GoogleTranslateClient.translate(String text)`（1回の要求で原文1つ。05 の 3.7）→ 翻訳の文。
+6. `TranslationBatchWriter.save(TranslationPair pair, long chars, LocalDate month, LocalDateTime now)`（RW）: `insertTranslations`（`ON DUPLICATE KEY UPDATE id = id`。同じ原文がすでにあれば何もしない）→ `addUsage(month, chars)`（`INSERT … ON DUPLICATE KEY UPDATE char_count = char_count + …`）。成功したら `sentThisRun += n`。
+7. 待ち時間は置かない（要求は1つずつ順に送る。05 の 3.7 の「速さ」）。
+8. 失敗（05 の 3.7）: `TranslatorQuotaExceededException`（403）・`TranslatorRequestException`（400 以外の 4xx）→ 再試行せず、その回の S7 を止めて `FAILURE`。`TranslatorBadRequestException`（400）→ その原文を飛ばし（内訳 `skippedBadRequest`）、次の原文へ。`TranslatorThrottledException`（429）→ 60 秒待って最大 3 回（`Retry` と `Sleeper`）。`TranslatorException`（5xx・通信のエラー・タイムアウト）→ 2・4・8 秒で最大 3 回。再試行の後もだめなら止めて `FAILURE`。それまでに保存した翻訳は残る。
 
-**`translation.client.AzureTranslatorClient`**: `List<String> translate(List<String> texts)`。`POST https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=ko&to=ja`、ヘッダー `Ocp-Apim-Subscription-Key`・`Ocp-Apim-Subscription-Region`（リソースが地域のとき）、本文 `[{"Text": "…"}]`。応答の `[i].translations[0].text`。エラーの本文の `error.code` が `403001` → `TranslatorQuotaExceededException`、HTTP 429 → `TranslatorThrottledException`、ほか → `TranslatorException`（確認先: Microsoft Learn「Translator v3.0 translate」「Service limits」、確認日 2026-11-09）。
+**`translation.client.GoogleTranslateClient`**（ADR 0018 決定1・6・7。新規。翻訳のクライアントのクラスはまだ実装されていない）: `String translate(String text)`。
+- 要求: `POST {catticket.google-translate.base-url}/language/translate/v2`（基底 URL `https://translation.googleapis.com`）、ヘッダー `x-goog-api-key: {api-key}`（クエリ `key` は使わない）・`Content-Type: application/json`、本文 `{"q": ["…"], "source": "ko", "target": "ja", "format": "text", "model": "nmt"}`（`q` は原文1つだけ。`format=text` は HTML として解釈させないため）。本文は Jackson で組み立てる（文字列の連結で JSON を作らない）。
+- 応答: `data.translations[0].translatedText`。`data.translations` の数が 1 でない・`translatedText` が空 → `TranslatorException`（保存しない）。
+- エラー: HTTP 403 → `TranslatorQuotaExceededException`（`Daily Limit Exceeded`・`User Rate Limit Exceeded`・キーの誤り・API の制限など。本文の `error.message` をログに出す。キーは出さない）、400 → `TranslatorBadRequestException`、429 → `TranslatorThrottledException`、ほかの 4xx → `TranslatorRequestException`、5xx・通信のエラー・タイムアウト → `TranslatorException`。例外はすべて `translation.client` に置き、`TranslatorException` を親にする。
+- API キーが空なら、要求を送らずに `TranslatorRequestException`（S7 は `FAILURE`。7.2 の「使う時点で空なら失敗」）。
+- 確認先（確認日 2026-11-19）: Cloud Translation「Method: translations.translate（v2）」https://docs.cloud.google.com/translate/docs/reference/rest/v2/translate 、「Quotas and limits」https://docs.cloud.google.com/translate/quotas 、「Authenticate to Cloud Translation」https://docs.cloud.google.com/translate/docs/authentication 、「Use API keys」https://docs.cloud.google.com/docs/authentication/api-keys-use 。
 
 **`TranslationMapper`**（`mapper/translation/TranslationMapper.xml`）: `List<TranslationRow> findByHashes(Collection<String> hashes)`、`List<String> findUntranslatedTitles(int limit)` などの種類ごとの読み（`LEFT JOIN translation t ON t.source_hash = SHA2(x, 256) WHERE t.id IS NULL`）、`void insertTranslations(List<TranslationInsert>)`。**`TranslationUsageMapper`**: `long findChars(LocalDate month)`、`void addUsage(LocalDate month, long chars, LocalDateTime now)`。
 
@@ -732,7 +738,7 @@ CatTicket の会員登録を完了するには、下のリンクを開いてく�
 - `@Transactional` は Service の public メソッドにだけ付ける（Controller・Mapper・クライアントに付けない）。参照だけのメソッドは `readOnly = true`。
 - 分離レベルは MySQL の既定（REPEATABLE READ）。変えない。
 - 同じクラスの中のメソッドの呼び出しでは `@Transactional` が効かない（Spring のプロキシ）。トランザクションを分けたいときは別のクラスにするか `TransactionTemplate` を使う（4.5 の `AuthUnlockService`・`AuthSignupService`）。
-- **外部の呼び出し（SMTP 以外）はトランザクションの外**で行う（KOPIS・Azure・reCAPTCHA の待ち時間の間、DB の接続と行ロックを持たない）。SMTP は 03 の 4.8（送信が失敗したら何も保存しない）のため、トランザクションの中で送る（SMTP の待ちは 8 のタイムアウトで最大およそ 25 秒）。
+- **外部の呼び出し（SMTP 以外）はトランザクションの外**で行う（KOPIS・Google Cloud Translation・reCAPTCHA の待ち時間の間、DB の接続と行ロックを持たない）。SMTP は 03 の 4.8（送信が失敗したら何も保存しない）のため、トランザクションの中で送る（SMTP の待ちは 8 のタイムアウトで最大およそ 25 秒）。
 - 行ロック（`FOR UPDATE`）の順番: **`app_user` → `auth_token`**（03 の 9.2）。公演の修正は **`performance` → `performance_override` → `booking_site`**。
 - `noRollbackFor`: `AuthLoginService.login` だけ（失敗回数・ロックの更新を、`LOGIN_FAILED`・`ACCOUNT_LOCKED` を投げても残すため）。
 
@@ -829,7 +835,7 @@ verify(token):
 | B-01 S3 | 1回の照会の結果（`markAwarded`） |
 | B-01 S5 | 公演1件 |
 | B-01 S6 | 集計期間1つ（`GenreTrendSaveService.replace`） |
-| B-01 S7 | 翻訳の束1つ（`TranslationBatchWriter.save`） |
+| B-01 S7 | 翻訳1つ（原文1つ。`TranslationBatchWriter.save`） |
 | B-02 | 全体で1つ（`SubwayImportWriter.replaceAll`） |
 | B-03 | 1つ（`AuthAdminService.createAdmin`） |
 | B-04 | 1つ（`AuthPurgeService.purgeExpiredSignups`） |
@@ -842,20 +848,20 @@ verify(token):
 | 外部サービス | クラス | 作り方 | タイムアウト | 失敗の扱い |
 |---|---|---|---|---|
 | KOPIS（ADR 0008） | `collect.client.KopisClient` | `RestClient`（`HttpClientConfig` の `@Qualifier("kopisRestClient")`。基底 URL `catticket.kopis.base-url`） | 接続 5 秒・読み込み 30 秒（05 の 3.5） | 4.9 |
-| Azure AI Translator（ADR 0007） | `translation.client.AzureTranslatorClient` | `RestClient`（`azureRestClient`） | 接続 5 秒・読み込み 30 秒 | 4.10 |
+| Google Cloud Translation（ADR 0018） | `translation.client.GoogleTranslateClient` | `RestClient`（`@Qualifier("googleTranslateRestClient")`。基底 URL `catticket.google-translate.base-url`。既存の翻訳用の `RestClient` の Bean を置き換える。8.3） | 接続 5 秒・読み込み 30 秒 | 4.10 |
 | reCAPTCHA Enterprise（ADR 0011） | `auth.client.RecaptchaClient` | `RestClient`（`recaptchaRestClient`） | 接続 3 秒・読み込み 5 秒 | 4.5（503 `RECAPTCHA_UNAVAILABLE`） |
 | Gmail SMTP（ADR 0012） | `MailService` が `JavaMailSender` を使う（Spring Boot の自動構成） | `spring.mail.*`（8） | 接続 5 秒・読み込み 10 秒・書き込み 10 秒 | 4.11（503 `MAIL_SEND_FAILED`、再試行しない） |
 | ソウル交通公社などのファイル（ADR 0009） | `surrounding.batch.SubwayFileReader` | クラスパスのファイル（`Resource`） | — | 5.4 |
 
 - `RestClient` は `RestClient.Builder`（Spring Boot が用意する Bean）から作り、`requestFactory` に `JdkClientHttpRequestFactory`（JDK の `HttpClient`。接続のタイムアウトは `HttpClient.Builder.connectTimeout`、読み込みは `setReadTimeout`）を渡す。新しい HTTP のライブラリは使わない。
-- タイムアウトの理由: reCAPTCHA は利用者が待つ API の中で呼ぶので短くする（5 秒で返らなければ 503 にして利用者にやり直してもらう）。Azure の読み込み 30 秒は、公式の「1 回の要求の最大の待ち時間は 15 秒」より長くし、混んでいるときの遅れを許すため（確認先: Microsoft Learn「Translator service limits」、確認日 2026-11-09）。SMTP の既定は無限に待つので必ず設定する（確認先: Spring Boot リファレンス「Sending Email」、確認日 2026-11-09）。値を合わせて最悪およそ 25 秒（API-33 の応答の遅れの上限）。
+- タイムアウトの理由: reCAPTCHA は利用者が待つ API の中で呼ぶので短くする（5 秒で返らなければ 503 にして利用者にやり直してもらう）。Google Cloud Translation の読み込み 30 秒は、公式に1回の要求の待ち時間の上限の記載がない（確認日 2026-11-19）ため、KOPIS と同じ値にした（バッチの中なので利用者を待たせない。1回の要求は原文1つ）。SMTP の既定は無限に待つので必ず設定する（確認先: Spring Boot リファレンス「Sending Email」、確認日 2026-11-09）。値を合わせて最悪およそ 25 秒（API-33 の応答の遅れの上限）。
 - API キー・パスワードはログに出さない。KOPIS のキーはクエリに入るので、`KopisClient` のログは URL からキーを除いて出す。
 
 ### 7.2 テストでの置き換え（`CLAUDE.md` の「テスト」）
 
 | 対象 | テストの種類 | 置き換え |
 |---|---|---|
-| `KopisClient`・`AzureTranslatorClient`・`RecaptchaClient` | 単体（Spring を起動しない） | `MockRestServiceServer.bindTo(RestClient.builder())` で作った `RestClient` を渡す（spring-test に含まれる。`spring-boot-starter-test` の範囲）。応答は `src/test/resources/external/{kopis,azure,recaptcha}/*.xml|json` のファイル |
+| `KopisClient`・`GoogleTranslateClient`・`RecaptchaClient` | 単体（Spring を起動しない） | `MockRestServiceServer.bindTo(RestClient.builder())` で作った `RestClient` を渡す（spring-test に含まれる。`spring-boot-starter-test` の範囲）。応答は `src/test/resources/external/{kopis,google-translate,recaptcha}/*.xml|json` のファイル。`google-translate` には成功（`translate-ok.json`）、403 の割り当て超過（`error-403-daily-limit.json`）、400（`error-400.json`）、429（`error-429.json`）、500（`error-500.json`）、翻訳の数が合わない応答（`translate-empty.json`）を置く（エラーの本文の形は公式に詳しい記載がないので、テストは HTTP のステータスで分ける。本文は `error.code`・`error.message` を持つ JSON にする） |
 | `MailService` | 単体 | `JavaMailSender` を Mockito のモックにする（送った `SimpleMailMessage` を確かめる。`MailSendException` を投げさせて 503 を確かめる） |
 | Service | 単体 | Mapper・クライアント・`Clock`（`Clock.fixed`）・`Sleeper`（待たない実装）を Mockito で替える |
 | Mapper | `@MybatisTest`（実際の MySQL の、`./gradlew test` が決めるテスト用 DB（`test_catticket*`。CLAUDE.md「テスト」）。`@AutoConfigureTestDatabase(replace = NONE)`） | Flyway が V1 を適用した DB。データは各テストで入れる |
@@ -911,13 +917,11 @@ catticket:
     base-url: http://www.kopis.or.kr/openApi/restful
     api-key: ${KOPIS_API_KEY:}          # 既存の kopis.api-key をここへ移す
     interval: 500ms
-  azure:
-    translator-endpoint: https://api.cognitive.microsofttranslator.com
-    translator-key: ${AZURE_TRANSLATOR_KEY:}
-    translator-region: ${AZURE_TRANSLATOR_REGION:}
-    request-max-chars: 10000
-    chars-per-minute: 30000
-    monthly-limit-chars: 1800000
+  google-translate:                     # 既存の翻訳のキーを置き換える（8.3。ADR 0018）
+    base-url: https://translation.googleapis.com
+    api-key: ${GOOGLE_TRANSLATE_API_KEY:}
+    run-limit-chars: 15000              # S7 の1回の上限（ADR 0018 決定4）
+    monthly-limit-chars: 450000         # 月の上限（無料の範囲 50 万文字の 90%）
   recaptcha:
     project-id: ${RECAPTCHA_PROJECT_ID:}
     api-key: ${RECAPTCHA_API_KEY:}
@@ -947,8 +951,7 @@ catticket:
 |---|---|---|---|
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | `spring.datasource` | 既存 | — |
 | `KOPIS_API_KEY` | `catticket.kopis.api-key` | 既存（キーの名前だけ移す） | — |
-| `AZURE_TRANSLATOR_KEY` | `catticket.azure.translator-key` | Azure Translator のキー | 新規 |
-| `AZURE_TRANSLATOR_REGION` | `catticket.azure.translator-region` | リソースの地域（グローバルのリソースなら空） | 新規 |
+| `GOOGLE_TRANSLATE_API_KEY` | `catticket.google-translate.api-key` | Cloud Translation の API キー（翻訳専用のプロジェクトで作り、API の制限を Cloud Translation API、アプリケーションの制限をサーバーの IP にする。ADR 0018 決定6）。サーバー用。フロントエンドに出さない | 新規（既存の翻訳の環境変数 2 つを置き換える。8.3） |
 | `RECAPTCHA_PROJECT_ID` | `catticket.recaptcha.project-id` | Google Cloud のプロジェクト ID | 新規 |
 | `RECAPTCHA_API_KEY` | `catticket.recaptcha.api-key` | `CreateAssessment` の API キー（サーバー用。フロントエンドに出さない） | 新規 |
 | `RECAPTCHA_SITE_KEY` | `catticket.recaptcha.site-key` | サイトキー（評価の本文に入れる。フロントエンドのビルドの設定にも同じ値を入れる。11 の U-08） | 新規 |
@@ -959,6 +962,21 @@ catticket:
 | `SESSION_COOKIE_SECURE` | `server.servlet.session.cookie.secure` | ローカルの http で `false`。本番は設定しない（既定 `true`） | 新規 |
 
 - `.env.example` への追加は実行 Claude の担当（11 の U-07）。
+
+### 8.3 既存の翻訳の設定（ADR 0007）の置き換え（Issue #39 → 実装は Issue #38）
+
+Issue #23（PR #32）で、ADR 0007 の翻訳サービスの設定がすでに backend に入っている。Issue #38 で次のとおり置き換える（この Issue #39 ではファイルを変えない）。下の表の「いまの内容」は、置き換える対象を特定するために、実装にある名前をそのまま書いた（ADR 0007 のサービス名を含む。置き換えの後は残らない）。
+
+| ファイル | いまの内容 | 変えた後 |
+|---|---|---|
+| `backend/src/main/java/com/catticket/common/config/CatticketProperties.java` | 入れ子の record `Azure(String translatorEndpoint, String translatorKey, String translatorRegion, int requestMaxChars, int charsPerMinute, long monthlyLimitChars)` と、キーを出さない `toString` | `Azure` を消し、`GoogleTranslate(String baseUrl, String apiKey, long runLimitChars, long monthlyLimitChars)` にする（最上位の record の成分も `azure` → `googleTranslate`）。`toString` は `apiKey` を出さない（`Azure` と同じ） |
+| `backend/src/main/java/com/catticket/common/config/HttpClientConfig.java` | `@Qualifier("azureRestClient") RestClient azureRestClient(...)`（基底 URL `props.azure().translatorEndpoint()`、接続 5 秒・読み込み 30 秒） | `@Qualifier("googleTranslateRestClient") RestClient googleTranslateRestClient(...)`（基底 URL `props.googleTranslate().baseUrl()`、接続 5 秒・読み込み 30 秒）。コメントの理由は 7.1 の「タイムアウトの理由」に合わせる |
+| `backend/src/main/resources/application.yml` | `catticket.azure.*`（`translator-endpoint`・`translator-key`・`translator-region`・`request-max-chars`・`chars-per-minute`・`monthly-limit-chars`） | `catticket.google-translate.*`（8.1） |
+| `backend/src/test/java/com/catticket/common/config/ApplicationConfigTest.java` | `azureRestClient` の Bean の確認、`props.azure().requestMaxChars()` = 10000、`charsPerMinute()` = 30000、`monthlyLimitChars()` = 1,800,000 | `googleTranslateRestClient` の Bean の確認、`props.googleTranslate().runLimitChars()` = 15,000、`monthlyLimitChars()` = 450,000、`baseUrl()` = `https://translation.googleapis.com` |
+| `.env.example`（実行 Claude の担当） | `# Azure AI Translator (ADR 0007). ...`、`AZURE_TRANSLATOR_KEY=`、`AZURE_TRANSLATOR_REGION=` | 3行を消し、`# Google Cloud Translation API key (ADR 0018). Server only; restrict to Cloud Translation API and the server IP.` と `GOOGLE_TRANSLATE_API_KEY=` にする |
+
+- 消すキー（`request-max-chars`・`chars-per-minute`）は、1回の要求で原文1つを送り待ち時間を置かない設計（05 の 3.7）で使わなくなる。
+- 本番・開発の `.env` の `AZURE_TRANSLATOR_*` は人間が消す（キーはリポジトリ・Issue・PR に書かない）。
 
 ## 9. 04 の 11.7 から渡された事項（A-02〜A-07）の決定
 
@@ -990,7 +1008,7 @@ catticket:
 | F-08 | SC-01, SC-02 | API-01〜03、B-01 | `performance`, `venue`, `booking_site`, `override`, `*_run` | `DailyCollectJob`、`PerformanceCollectStep`、`CollectWindows`、`BatchRunRecorder` |
 | F-09 | SC-01, SC-02, SC-03, SC-11 | API-01〜03, 05, 20, 43、B-01 | `performance`, `ranking_entry`, `favorite`, `review` | `SharedSql.publicCondition`、`PerformanceStatus`、`CollectMapper`（削除しない） |
 | F-10 | 全画面 | 全 API（`lang`） | — | `LangQuery`、`LocalizedTextFactory` |
-| F-11 | 全画面 | 全 API、B-01（S7）, B-02 | `translation`, `translation_usage`, `performance`, `override`, `booking_site`, `venue`, `station`, `coin_locker` | `TranslationLookupService`、`LocalizedTextFactory`、`TranslationService`・`AzureTranslatorClient` |
+| F-11 | 全画面 | 全 API、B-01（S7）, B-02 | `translation`, `translation_usage`, `performance`, `override`, `booking_site`, `venue`, `station`, `coin_locker` | `TranslationLookupService`、`LocalizedTextFactory`、`TranslationService`・`GoogleTranslateClient` |
 | F-12 | SC-04, SC-05, SC-06 | API-33, 34, 31、B-04 | `app_user`, `auth_token`, `mail_send_log`, `*_run` | `AuthController`、`AuthSignupService`、`AuthTokenService`、`MailService`、`PurgeExpiredSignupsJob`・`AuthPurgeService` |
 | F-13 | SC-04 | API-30, 31 | `app_user` | `AuthController.me`・`login`、`AuthLoginService`、`LoginSessionManager` |
 | F-14 | SC-04, SC-08, SC-09, SC-10 | API-31, 36, 37, 38 | `app_user`, `auth_token`, `mail_send_log` | `AuthLoginService`、`AuthUnlockService`・`RecaptchaClient`、`AuthPasswordResetService` |
@@ -1042,7 +1060,7 @@ catticket:
 | U-04 | 接続の `@@session.time_zone` が `Asia/Seoul` になること（A-05） | **解消**（2026-11-10、Issue #23・PR #32）。テスト `AuthMapperTest.sessionTimeZoneIsSeoul`（`@MybatisTest`。`SELECT @@session.time_zone` が `Asia/Seoul`） | 3.1 |
 | U-05 | API-01・50・B-04 の SQL の `EXPLAIN`（B-04 の DELETE が主キーでロックすること） | backend-dev（実装のとき） | 5.6、6.3 |
 | U-06 | Spring Security の `csrf.spa()` と共有の `CookieCsrfTokenRepository` の組み合わせで、`LoginSessionManager.establish` の Cookie の消去が期待どおりか | **解消**（2026-11-10、Issue #23・PR #32）。テスト `CsrfCookieWebMvcTest`: `establish` の後 `XSRF-TOKEN` が `Max-Age=0` で消え、新しいトークンで付け直されない（`establishClearsCsrfCookieAndCreatesSession`）。CSRF のヘッダーがない・違う POST は 403 `CSRF_INVALID`（`wrongOrMissingHeaderIsCsrfInvalid`）。未ログインの logout は 204 で `JSESSIONID`（と `XSRF-TOKEN`）を消す（`logoutWithoutLoginIs204AndClearsCookies`） | 3.4 |
-| U-07 | Dockerfile の `ENTRYPOINT` を exec 形式にすること、`.env.example` に 8.2 の新しい環境変数を足すこと、本番の MySQL を Asia/Seoul にすること | 残り: 本番の MySQL の TZ（工程7。実行 Claude）。Dockerfile・`.env.example` は Issue #23・PR #32 で済み | 5.1、8.2、A-05 |
+| U-07 | Dockerfile の `ENTRYPOINT` を exec 形式にすること、`.env.example` に 8.2 の新しい環境変数を足すこと、本番の MySQL を Asia/Seoul にすること | 残り: 本番の MySQL の TZ（工程7。実行 Claude）。Dockerfile・`.env.example` は Issue #23・PR #32 で済み。翻訳のキーの置き換え（ADR 0018）は 8.3 のとおり Issue #38 で行う | 5.1、8.2、8.3、A-05 |
 | U-08 | reCAPTCHA のサイトキーをフロントエンドのビルドの設定に入れる方法 | frontend-dev（工程5。フロントエンドのクラス設計は 06 の対象外） | API-37 の画面 |
 | U-09 | A-03（API-50 で公演 ID の大文字・小文字を無視）は管理者に見える変更。人間に伝える | **解消**（2026-11-09、人間が「無視する」で確定。9 の最後） | — |
 | U-10 | クエリの型の変換の失敗（`page=abc` など）は Spring MVC が結び付けのときにすぐ例外にするため、ほかの引数・項目の制約の誤りと一緒に返らない（3.3 の「クエリの record が 2 つ以上ある…」）。03 の 7.3 の「複数の項目が誤っていれば、`errors` にすべて入れる」の例外として 03 に書くか、すべてを返す作り（クエリを `String` で受けて自分で変換するなど）にするか | **解消**（03 の 7.3 に例外として記載。今の動き（型の誤りだけを返す）のまま。Issue #23 E-2、2026-11-11） | 3.3、03 の 7.3 |
@@ -1055,9 +1073,9 @@ catticket:
 
 ### 06. 클래스 설계서
 
-- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10). PR #32의 reviewer 판정은 조건부 승인이며, 06에 대한 지적(U-01·U-04·U-06·U-07 갱신, 4.5·7.2·8.1·3.2 추가 기술)을 반영함(2026-11-10. 사람의 확인 대기). Issue #23의 결정 E-2·E-3(코멘트 6783513546)을 3.3·11에 반영(2026-11-11)
+- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10). PR #32의 reviewer 판정은 조건부 승인이며, 06에 대한 지적(U-01·U-04·U-06·U-07 갱신, 4.5·7.2·8.1·3.2 추가 기술)을 반영함(2026-11-10. 사람의 확인 대기). Issue #23의 결정 E-2·E-3(코멘트 6783513546)을 3.3·11에 반영(2026-11-11). Issue #39에서 번역을 Google Cloud Translation으로 바꿨다(ADR 0018. 0007을 대체. 2026-11-19): 1.3·2.1·3.1·3.5·4.10·6.1·6.4·7.1·7.2·8.1·8.2·10을 고쳐 쓰고 8.3을 더했다. **backend에 이미 있는 ADR 0007의 번역 설정(`CatticketProperties`·`HttpClientConfig`·`application.yml`·`ApplicationConfigTest`·`.env.example`)은 Issue #38에서 이 문서의 새 설정으로 교체한다**(8.3에 지금 이름과 바꾼 뒤 이름을 썼다)
 - 담당: architect
-- 입력: `01-requirements.md`, `02-screens.md`, `03-api.md`(API 사양 상세), `04-tables.md`와 `backend/src/main/resources/db/migration/V1__create_schema.sql`, `05-batch.md`, ADR 0001~0016.
+- 입력: `01-requirements.md`, `02-screens.md`, `03-api.md`(API 사양 상세), `04-tables.md`와 `backend/src/main/resources/db/migration/V1__create_schema.sql`, `05-batch.md`, ADR 0001~0018(0007은 0018로 대체했다).
 - 대상: 백엔드(`backend/`, Spring Boot)만. Angular 클래스 설계는 대상 외(공정 5에서 frontend-dev가 `02`·`03`·`07`로 만든다).
 - 04의 11.7에서 architect에게 남겨진 A-02~A-07은 이 문서의 9에서 정했다. 03·05에 관련된 부분은 03(8.5·8.8)과 05(3.2·3.3·4.3)에도 반영했다.
 - 외부 서비스·Spring 사양은 공식 문서로 확인했다(확인일 2026-11-09). 확인처는 각 절에 쓴다.
@@ -1088,7 +1106,7 @@ catticket:
 |---|---|---|---|
 | `spring-boot-starter-security` | 표준 스타터 | ADR 0013 | 세션 인증, CSRF, 비밀번호 해시(bcrypt) |
 | `spring-boot-starter-mail` | 표준 스타터 | ADR 0012 | Gmail SMTP 발송(`JavaMailSender`) |
-| `spring-boot-starter-restclient` | 표준 스타터 | ADR 0007·0011(Spring HTTP 클라이언트로 호출하기로 정함), ADR 0008(`RestClient`라고 명시) | KOPIS·Azure Translator·reCAPTCHA 호출 |
+| `spring-boot-starter-restclient` | 표준 스타터 | ADR 0018 결정 7(0007 결정 7을 이어받음)·0011(Spring HTTP 클라이언트로 호출하기로 정함), ADR 0008(`RestClient`라고 명시) | KOPIS·Google Cloud Translation·reCAPTCHA 호출(Google SDK는 넣지 않음) |
 | `tools.jackson.dataformat:jackson-dataformat-xml`(버전은 Spring Boot 관리를 따르며 쓰지 않음) | Jackson 모듈(Boot가 관리) | ADR 0008(KOPIS XML을 Jackson으로 읽음) | KOPIS XML 응답 읽기(`collect.client`의 `XmlMapper`에서만 씀. Spring MVC의 XML 메시지 컨버터는 3.1의 `WebMvcConfig`에서 뺀다) |
 | `spring-boot-starter-security-test`(testImplementation) | 표준 스타터 | ADR 0013 | `@WebMvcTest`에서 인증·CSRF 테스트 |
 
@@ -1112,7 +1130,7 @@ catticket:
 | `com.catticket.favorite` | 즐겨찾기 | API-43~45 |
 | `com.catticket.admin` | 관리자의 공연 관리·리뷰 관리 | API-50~56 |
 | `com.catticket.collect` | KOPIS 수집(B-01의 S1~S6)과 B-01 전체 흐름 | B-01 |
-| `com.catticket.translation` | Azure Translator 번역(B-01의 S7)과 번역 조회 | B-01 S7, API의 `lang=ja` |
+| `com.catticket.translation` | Google Cloud Translation 번역(B-01의 S7. ADR 0018)과 번역 조회 | B-01 S7, API의 `lang=ja` |
 | `com.catticket.mail` | 메일 발송과 발송 기록·상한 | API-33, 35, 37 |
 | `com.catticket.summary` | 공연 카드(`PerformanceSummary`) 조립. 번역과 평점을 한 번에 조회(3.5) | API-01, 05, 20, 21, 43 |
 | `com.catticket.common.*` | 공통(3) | 전체 |
@@ -1142,7 +1160,7 @@ catticket:
 
 | 클래스 | 패키지 | 역할 |
 |---|---|---|
-| `CatticketProperties` | `common.config` | `@ConfigurationProperties("catticket")` `record`(중첩 record: `Kopis`, `Azure`, `Recaptcha`, `Mail`, `Admin`, `Subway`, `Scheduler`, `publicBaseUrl`, `task`). 키는 8 |
+| `CatticketProperties` | `common.config` | `@ConfigurationProperties("catticket")` `record`(중첩 record: `Kopis`, `GoogleTranslate`, `Recaptcha`, `Mail`, `Admin`, `Subway`, `Scheduler`, `publicBaseUrl`, `task`). 키는 8. `GoogleTranslate`는 기존 번역 record를 교체한다(8.3). `toString`에서 API 키를 내지 않는다(`Kopis`·`Recaptcha`와 같음) |
 | `ClockConfig` | `common.config` | `Clock` Bean(`Clock.system(ZoneId.of("Asia/Seoul"))`) |
 | `HttpClientConfig` | `common.config` | 외부 API별 `RestClient`(`@Qualifier("kopisRestClient")` 등. 7) |
 | `JacksonConfig` | `common.config` | `JsonMapperBuilderCustomizer`(3.3의 타입 엄격함) |
@@ -1287,7 +1305,7 @@ Cookie(8의 `application.yml`): 세션 유효 시간 30분, `http-only: true`, `
 
 | 클래스 | 내용 |
 |---|---|
-| `LocalizedText`(record) | `value`, `original`, `translated`(03의 7.2) |
+| `LocalizedText`(record) | `value`, `original`, `translated`, `machineTranslated`(03의 7.2. `machineTranslated`는 ADR 0018 결정 8의 귀속 표시를 위해. Issue #39) |
 | `Rating`(record) | `BigDecimal average`, `long count`. `Rating.of(long sum, long count)`: 0건이면 `average = null`, 그 밖은 `sum / count`를 소수 첫째 자리로 `HALF_UP` |
 | `Period`(record) | `LocalDate start`, `LocalDate end` |
 | `PageResponse<T>`(record) | `items`, `page`, `size`, `totalElements`, `totalPages`. `PageResponse.of(List<T>, PageQuery, long total)`(`totalPages = ceil(total / size)`) |
@@ -1296,7 +1314,7 @@ Cookie(8의 `application.yml`): 세션 유효 시간 30분, `http-only: true`, `
 | `PerformanceSummary`(record) | 03의 7.2 항목 |
 | `PerformanceSummaryRow`(record) | SQL 결과(`long id`(`performance.id`. 내부 ID로 API에는 내지 않음), `performanceId`(KOPIS 공연 ID), 수정을 반영한 공연명·기간·장르, 공연장 ID·이름, 포스터, 수상 이력) |
 | `ReviewItem`(record) | 03의 7.2 |
-| `LocalizedTextFactory` | `LocalizedText of(String original, Lang lang, Map<String, String> translations)`(`lang = ko`이거나 번역이 없으면 `value = original`, `translated = false`). 역명은 `ofStation(String nameKo, String nameJa, Lang, Map)`(`name_ja` → 번역 → 원문. 03의 7.2) |
+| `LocalizedTextFactory` | `LocalizedText of(String original, Lang lang, Map<String, String> translations)`(`lang = ko`이거나 번역이 없으면 `value = original`, `translated = false`, `machineTranslated = false`. 번역이 있으면 `translated = true`, `machineTranslated = true`). 역명은 `ofStation(String nameKo, String nameJa, Lang, Map)`(`name_ja` → 번역 → 원문. `name_ja`를 썼을 때는 `translated = true`, `machineTranslated = false`. 03의 7.2) |
 
 `com.catticket.summary.PerformanceSummaryAssembler`(`@Component`)
 
@@ -1642,17 +1660,23 @@ Service
 
 `TranslationLookupService`(API용, RO): `Map<String, String> lookup(Collection<String> originals)` — 빈 값·`null`을 빼고 `Hashes.sha256Hex`로 `TranslationMapper.findByHashes`를 1번 부른다.
 
-`TranslationService.translatePending(LocalDateTime now)` → `StepResult`(S7. 메서드에는 `@Transactional`을 붙이지 않고 묶음마다 `TranslationBatchWriter.save`(RW)를 부른다)
+`TranslationService.translatePending(LocalDateTime now)` → `StepResult`(S7. ADR 0018, 05의 3.7. 메서드에는 `@Transactional`을 붙이지 않고 원문 하나마다 `TranslationBatchWriter.save`(RW)를 부른다)
 
-1. 대상을 종류 순으로 읽는다(`findUntranslatedTitles` → `findUntranslatedVenueNames` → `findUntranslatedStationNames` → `findUntranslatedOthers`. 05의 3.7의 대상. `performance`의 자동 수집 값과 `performance_override`의 수정 값 둘 다. 같은 원문은 하나로 합친다. 이름이 NULL인 예매처는 대상 외).
-2. 묶는다: 1회 1만 자(코드 포인트) 이내·1,000요소 이내(Azure 공식 제한은 1회 5만 자·1,000요소. 확인일 2026-11-09). 원문 하나가 1만 자를 넘으면 그 원문만으로 1회(5만 자 이내. `TEXT` 문장은 길어도 수천 자로 예상).
-3. 보내기 전에 `TranslationUsageMapper.findChars(month)` + 묶음 글자 수 > 1,800,000 → 멈춘다(결과는 `SUCCESS`, 내역에 "월 상한". 05의 3.7).
-4. `AzureTranslatorClient.translate(List<String>)` → 응답은 입력과 같은 순서.
-5. `TranslationBatchWriter.save(pairs, chars, month, now)`(RW): `insertTranslations`(`ON DUPLICATE KEY UPDATE id = id`. 같은 원문이 이미 있으면 아무것도 안 함) → `addUsage(month, chars)`(`INSERT … ON DUPLICATE KEY UPDATE char_count = char_count + …`).
-6. 속도: 분당 3만 자 이내가 되도록, 보낸 글자 수 n 뒤에 `n / 30,000`분(밀리초로 환산) 기다린다(`Sleeper`).
-7. 실패: `403001` → 그 회의 S7을 멈추고 `FAILURE`. 429 → 60초 기다려 최대 3번. 그 밖 → 2·4·8초로 최대 3번. 안 되면 멈추고 `FAILURE`(05의 3.7). 그때까지 저장한 번역은 남는다.
+1. 대상을 종류 순으로 읽는다(`findUntranslatedTitles` → `findUntranslatedVenueNames` → `findUntranslatedStationNames` → `findUntranslatedOthers`. 05의 3.7의 대상. `performance`의 자동 수집 값과 `performance_override`의 수정 값 둘 다. 같은 원문은 하나로 합친다. 이름이 NULL인 예매처는 대상 외). 앞뒤 공백을 빼고 빈 원문은 보내지 않는다.
+2. 원문 하나마다 글자 수 `n = text.codePointCount(0, text.length())`를 센다(Google 과금과 같이 코드 포인트. 공백 포함).
+3. `n > runLimitChars`(15,000)인 원문은 보내지 않고 건너뛴다(내역 `skippedTooLong`에 센다).
+4. 보내기 전에 `sentThisRun + n > runLimitChars` → 멈춘다(결과는 `SUCCESS`, 내역에 "1회 상한" `stoppedRunLimit`). `TranslationUsageMapper.findChars(month) + n > monthlyLimitChars`(450,000) → 멈춘다(결과는 `SUCCESS`, 내역에 "월 상한" `stoppedMonthlyLimit`). `month`는 `Clock`(Asia/Seoul)의 오늘이 속한 달의 1일(P-09).
+5. `GoogleTranslateClient.translate(String text)`(요청 1회에 원문 하나. 05의 3.7) → 번역문.
+6. `TranslationBatchWriter.save(TranslationPair pair, long chars, LocalDate month, LocalDateTime now)`(RW): `insertTranslations`(`ON DUPLICATE KEY UPDATE id = id`. 같은 원문이 이미 있으면 아무것도 안 함) → `addUsage(month, chars)`(`INSERT … ON DUPLICATE KEY UPDATE char_count = char_count + …`). 성공하면 `sentThisRun += n`.
+7. 대기 시간은 두지 않는다(요청은 하나씩 차례로 보낸다. 05의 3.7의 "속도").
+8. 실패(05의 3.7): `TranslatorQuotaExceededException`(403)·`TranslatorRequestException`(400 외의 4xx) → 재시도하지 않고 그 회의 S7을 멈추고 `FAILURE`. `TranslatorBadRequestException`(400) → 그 원문을 건너뛰고(내역 `skippedBadRequest`) 다음 원문으로. `TranslatorThrottledException`(429) → 60초 기다려 최대 3번(`Retry`와 `Sleeper`). `TranslatorException`(5xx·통신 오류·타임아웃) → 2·4·8초로 최대 3번. 재시도 후에도 안 되면 멈추고 `FAILURE`. 그때까지 저장한 번역은 남는다.
 
-`translation.client.AzureTranslatorClient`: `List<String> translate(List<String> texts)`. `POST https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=ko&to=ja`, 헤더 `Ocp-Apim-Subscription-Key`·`Ocp-Apim-Subscription-Region`(리소스가 지역일 때), 본문 `[{"Text": "…"}]`. 응답의 `[i].translations[0].text`. 오류 본문의 `error.code`가 `403001` → `TranslatorQuotaExceededException`, HTTP 429 → `TranslatorThrottledException`, 그 밖 → `TranslatorException`(확인처: Microsoft Learn "Translator v3.0 translate" "Service limits", 확인일 2026-11-09).
+`translation.client.GoogleTranslateClient`(ADR 0018 결정 1·6·7. 신규. 번역 클라이언트 클래스는 아직 구현되지 않았다): `String translate(String text)`.
+- 요청: `POST {catticket.google-translate.base-url}/language/translate/v2`(기본 URL `https://translation.googleapis.com`), 헤더 `x-goog-api-key: {api-key}`(쿼리 `key`는 쓰지 않음)·`Content-Type: application/json`, 본문 `{"q": ["…"], "source": "ko", "target": "ja", "format": "text", "model": "nmt"}`(`q`는 원문 하나만. `format=text`는 HTML로 해석시키지 않기 위해). 본문은 Jackson으로 만든다(문자열 연결로 JSON을 만들지 않음).
+- 응답: `data.translations[0].translatedText`. `data.translations`의 개수가 1이 아니거나 `translatedText`가 비어 있으면 → `TranslatorException`(저장하지 않음).
+- 오류: HTTP 403 → `TranslatorQuotaExceededException`(`Daily Limit Exceeded`·`User Rate Limit Exceeded`·키 오류·API 제한 등. 본문의 `error.message`를 로그에 낸다. 키는 내지 않음), 400 → `TranslatorBadRequestException`, 429 → `TranslatorThrottledException`, 그 밖의 4xx → `TranslatorRequestException`, 5xx·통신 오류·타임아웃 → `TranslatorException`. 예외는 모두 `translation.client`에 두고 `TranslatorException`을 부모로 한다.
+- API 키가 비어 있으면 요청을 보내지 않고 `TranslatorRequestException`(S7은 `FAILURE`. 7.2의 "쓰는 시점에 비어 있으면 실패").
+- 확인처(확인일 2026-11-19): Cloud Translation "Method: translations.translate(v2)" https://docs.cloud.google.com/translate/docs/reference/rest/v2/translate , "Quotas and limits" https://docs.cloud.google.com/translate/quotas , "Authenticate to Cloud Translation" https://docs.cloud.google.com/translate/docs/authentication , "Use API keys" https://docs.cloud.google.com/docs/authentication/api-keys-use .
 
 `TranslationMapper`(`mapper/translation/TranslationMapper.xml`): `List<TranslationRow> findByHashes(Collection<String> hashes)`, `List<String> findUntranslatedTitles(int limit)` 등 종류별 조회(`LEFT JOIN translation t ON t.source_hash = SHA2(x, 256) WHERE t.id IS NULL`), `void insertTranslations(List<TranslationInsert>)`. `TranslationUsageMapper`: `long findChars(LocalDate month)`, `void addUsage(LocalDate month, long chars, LocalDateTime now)`.
 
@@ -1746,7 +1770,7 @@ Service
 - `@Transactional`은 Service의 public 메서드에만 붙인다(Controller·Mapper·클라이언트에 붙이지 않음). 조회만 하는 메서드는 `readOnly = true`.
 - 격리 수준은 MySQL 기본(REPEATABLE READ). 바꾸지 않는다.
 - 같은 클래스 안의 메서드 호출에서는 `@Transactional`이 듣지 않는다(Spring 프록시). 트랜잭션을 나누려면 다른 클래스로 하거나 `TransactionTemplate`을 쓴다(4.5의 `AuthUnlockService`·`AuthSignupService`).
-- **외부 호출(SMTP 외)은 트랜잭션 밖**에서 한다(KOPIS·Azure·reCAPTCHA 대기 동안 DB 접속과 행 잠금을 갖지 않음). SMTP는 03의 4.8(발송이 실패하면 아무것도 저장하지 않음) 때문에 트랜잭션 안에서 보낸다(SMTP 대기는 8의 타임아웃으로 최대 약 25초).
+- **외부 호출(SMTP 외)은 트랜잭션 밖**에서 한다(KOPIS·Google Cloud Translation·reCAPTCHA 대기 동안 DB 접속과 행 잠금을 갖지 않음). SMTP는 03의 4.8(발송이 실패하면 아무것도 저장하지 않음) 때문에 트랜잭션 안에서 보낸다(SMTP 대기는 8의 타임아웃으로 최대 약 25초).
 - 행 잠금(`FOR UPDATE`) 순서: **`app_user` → `auth_token`**(03의 9.2). 공연 수정은 **`performance` → `performance_override` → `booking_site`**.
 - `noRollbackFor`: `AuthLoginService.login`만(`LOGIN_FAILED`·`ACCOUNT_LOCKED`를 던져도 실패 횟수·잠금 갱신을 남기기 위해).
 
@@ -1793,7 +1817,7 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 | B-01 S3 | 1회 조회 결과(`markAwarded`) |
 | B-01 S5 | 공연 1건 |
 | B-01 S6 | 집계 기간 1개(`GenreTrendSaveService.replace`) |
-| B-01 S7 | 번역 묶음 1개(`TranslationBatchWriter.save`) |
+| B-01 S7 | 번역 1개(원문 하나. `TranslationBatchWriter.save`) |
 | B-02 | 전체 1개(`SubwayImportWriter.replaceAll`) |
 | B-03 | 1개(`AuthAdminService.createAdmin`) |
 | B-04 | 1개(`AuthPurgeService.purgeExpiredSignups`) |
@@ -1806,20 +1830,20 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 | 외부 서비스 | 클래스 | 만드는 법 | 타임아웃 | 실패 처리 |
 |---|---|---|---|---|
 | KOPIS(ADR 0008) | `collect.client.KopisClient` | `RestClient`(`HttpClientConfig`의 `@Qualifier("kopisRestClient")`. 기본 URL `catticket.kopis.base-url`) | 접속 5초·읽기 30초(05의 3.5) | 4.9 |
-| Azure AI Translator(ADR 0007) | `translation.client.AzureTranslatorClient` | `RestClient`(`azureRestClient`) | 접속 5초·읽기 30초 | 4.10 |
+| Google Cloud Translation(ADR 0018) | `translation.client.GoogleTranslateClient` | `RestClient`(`@Qualifier("googleTranslateRestClient")`. 기본 URL `catticket.google-translate.base-url`. 기존 번역용 `RestClient` Bean을 교체한다. 8.3) | 접속 5초·읽기 30초 | 4.10 |
 | reCAPTCHA Enterprise(ADR 0011) | `auth.client.RecaptchaClient` | `RestClient`(`recaptchaRestClient`) | 접속 3초·읽기 5초 | 4.5(503 `RECAPTCHA_UNAVAILABLE`) |
 | Gmail SMTP(ADR 0012) | `MailService`가 `JavaMailSender`를 쓴다(Spring Boot 자동 구성) | `spring.mail.*`(8) | 접속 5초·읽기 10초·쓰기 10초 | 4.11(503 `MAIL_SEND_FAILED`, 재시도 안 함) |
 | 서울교통공사 등의 파일(ADR 0009) | `surrounding.batch.SubwayFileReader` | 클래스패스 파일(`Resource`) | — | 5.4 |
 
 - `RestClient`는 `RestClient.Builder`(Spring Boot가 준비하는 Bean)로 만들고, `requestFactory`에 `JdkClientHttpRequestFactory`(JDK `HttpClient`. 접속 타임아웃은 `HttpClient.Builder.connectTimeout`, 읽기는 `setReadTimeout`)를 넘긴다. 새 HTTP 라이브러리는 쓰지 않는다.
-- 타임아웃의 이유: reCAPTCHA는 이용자가 기다리는 API 안에서 부르므로 짧게 한다(5초 안에 돌아오지 않으면 503으로 하고 이용자가 다시 시도). Azure 읽기 30초는 공식 "1회 요청의 최대 대기 시간 15초"보다 길게 해 혼잡할 때의 지연을 허용하기 위해(확인처: Microsoft Learn "Translator service limits", 확인일 2026-11-09). SMTP 기본값은 무한 대기이므로 반드시 설정한다(확인처: Spring Boot 레퍼런스 "Sending Email", 확인일 2026-11-09). 값을 합쳐 최악 약 25초(API-33 응답 지연의 상한).
+- 타임아웃의 이유: reCAPTCHA는 이용자가 기다리는 API 안에서 부르므로 짧게 한다(5초 안에 돌아오지 않으면 503으로 하고 이용자가 다시 시도). Google Cloud Translation 읽기 30초는 공식에 요청 1회의 대기 시간 상한 기재가 없으므로(확인일 2026-11-19) KOPIS와 같은 값으로 했다(배치 안이라 이용자를 기다리게 하지 않음. 요청 1회는 원문 하나). SMTP 기본값은 무한 대기이므로 반드시 설정한다(확인처: Spring Boot 레퍼런스 "Sending Email", 확인일 2026-11-09). 값을 합쳐 최악 약 25초(API-33 응답 지연의 상한).
 - API 키·비밀번호는 로그에 내지 않는다. KOPIS 키는 쿼리에 들어가므로 `KopisClient` 로그는 URL에서 키를 빼고 낸다.
 
 **7.2 테스트에서의 대체(`CLAUDE.md`의 "테스트")**
 
 | 대상 | 테스트 종류 | 대체 |
 |---|---|---|
-| `KopisClient`·`AzureTranslatorClient`·`RecaptchaClient` | 단위(Spring 기동 안 함) | `MockRestServiceServer.bindTo(RestClient.builder())`로 만든 `RestClient`를 넘긴다(spring-test에 포함. `spring-boot-starter-test` 범위). 응답은 `src/test/resources/external/{kopis,azure,recaptcha}/*.xml|json` 파일 |
+| `KopisClient`·`GoogleTranslateClient`·`RecaptchaClient` | 단위(Spring 기동 안 함) | `MockRestServiceServer.bindTo(RestClient.builder())`로 만든 `RestClient`를 넘긴다(spring-test에 포함. `spring-boot-starter-test` 범위). 응답은 `src/test/resources/external/{kopis,google-translate,recaptcha}/*.xml|json` 파일. `google-translate`에는 성공(`translate-ok.json`), 403 할당량 초과(`error-403-daily-limit.json`), 400(`error-400.json`), 429(`error-429.json`), 500(`error-500.json`), 번역 개수가 맞지 않는 응답(`translate-empty.json`)을 둔다(오류 본문 형태는 공식에 자세한 기재가 없으므로 테스트는 HTTP 상태로 나눈다. 본문은 `error.code`·`error.message`를 가진 JSON으로 한다) |
 | `MailService` | 단위 | `JavaMailSender`를 Mockito 목으로(보낸 `SimpleMailMessage` 확인. `MailSendException`을 던지게 해 503 확인) |
 | Service | 단위 | Mapper·클라이언트·`Clock`(`Clock.fixed`)·`Sleeper`(기다리지 않는 구현)를 Mockito로 바꾼다 |
 | Mapper | `@MybatisTest`(실제 MySQL에서 `./gradlew test`가 정하는 테스트용 DB(`test_catticket*`. CLAUDE.md "테스트"). `@AutoConfigureTestDatabase(replace = NONE)`) | Flyway가 V1을 적용한 DB. 데이터는 각 테스트에서 넣는다 |
@@ -1831,7 +1855,7 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 
 #### 8. 설정
 
-**8.1 `application.yml` 키**: YAML 블록은 일본어 부분 8.1과 같다. 요점: `spring.datasource.url`에 기존 값(`createDatabaseIfNotExist=true`)과 A-05의 `connectionTimeZone=Asia/Seoul&forceConnectionTimeZoneToSession=true`, `spring.jackson.deserialization.accept-float-as-int: false`, `spring.mail.*`(smtp.gmail.com:587, STARTTLS 필수, UTF-8, 타임아웃 5000/10000/10000 ms), `server.forward-headers-strategy: native`, `server.servlet.session.timeout: 30m`과 Cookie(`http-only`, `secure: ${SESSION_COOKIE_SECURE:true}`, `same-site: lax`), `mybatis`(기존), `catticket.*`(`public-base-url`, `scheduler.enabled`, `kopis.*`(기본 URL·키·간격 500ms), `azure.*`(엔드포인트·키·지역·1회 10000자·분당 30000자·월 1800000자), `recaptcha.*`, `mail.from`·`daily-limit: 400`, `admin.*`, `subway.*`(파일 경로·문자 코드. 파일명은 받은 뒤 정함. U-03)). `catticket.subway.*`는 U-03에서 파일명이 정해질 때까지 `application.yml`에 두지 않는다(`{파일명}` 그대로는 기동 설정으로 쓸 수 없기 때문. B-02를 만들 때 추가한다).
+**8.1 `application.yml` 키**: YAML 블록은 일본어 부분 8.1과 같다. 요점: `spring.datasource.url`에 기존 값(`createDatabaseIfNotExist=true`)과 A-05의 `connectionTimeZone=Asia/Seoul&forceConnectionTimeZoneToSession=true`, `spring.jackson.deserialization.accept-float-as-int: false`, `spring.mail.*`(smtp.gmail.com:587, STARTTLS 필수, UTF-8, 타임아웃 5000/10000/10000 ms), `server.forward-headers-strategy: native`, `server.servlet.session.timeout: 30m`과 Cookie(`http-only`, `secure: ${SESSION_COOKIE_SECURE:true}`, `same-site: lax`), `mybatis`(기존), `catticket.*`(`public-base-url`, `scheduler.enabled`, `kopis.*`(기본 URL·키·간격 500ms), `google-translate.*`(기본 URL `https://translation.googleapis.com`·키 `${GOOGLE_TRANSLATE_API_KEY:}`·1회 상한 `run-limit-chars: 15000`·월 상한 `monthly-limit-chars: 450000`. 기존 번역 키를 교체한다. 8.3. ADR 0018), `recaptcha.*`, `mail.from`·`daily-limit: 400`, `admin.*`, `subway.*`(파일 경로·문자 코드. 파일명은 받은 뒤 정함. U-03)). `catticket.subway.*`는 U-03에서 파일명이 정해질 때까지 `application.yml`에 두지 않는다(`{파일명}` 그대로는 기동 설정으로 쓸 수 없기 때문. B-02를 만들 때 추가한다).
 
 - 기존 설정(`spring.application.name`, `spring.config.import`(`.env` 읽기), `spring.datasource.username`·`password`, `mybatis`)은 남긴다. 위는 이 문서에서 더하거나 바꾸는 키(`mybatis`는 확인을 위해 기존 값을 다시 실음). 기존 최상위 `kopis.api-key`는 `catticket.kopis.api-key`로 옮기고 지운다.
 - 비밀 값(키·비밀번호)은 기본값을 비우고 `.env` → 환경 변수로 넘긴다(`CLAUDE.md`의 "보안"). 파일에 값을 쓰지 않는다.
@@ -1843,8 +1867,7 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 |---|---|---|---|
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | `spring.datasource` | 기존 | — |
 | `KOPIS_API_KEY` | `catticket.kopis.api-key` | 기존(키 이름만 옮김) | — |
-| `AZURE_TRANSLATOR_KEY` | `catticket.azure.translator-key` | Azure Translator 키 | 신규 |
-| `AZURE_TRANSLATOR_REGION` | `catticket.azure.translator-region` | 리소스 지역(글로벌 리소스면 빈 값) | 신규 |
+| `GOOGLE_TRANSLATE_API_KEY` | `catticket.google-translate.api-key` | Cloud Translation API 키(번역 전용 프로젝트에서 만들고, API 제한을 Cloud Translation API, 애플리케이션 제한을 서버 IP로 한다. ADR 0018 결정 6). 서버용. 프론트엔드에 내지 않는다 | 신규(기존 번역 환경변수 2개를 교체한다. 8.3) |
 | `RECAPTCHA_PROJECT_ID` | `catticket.recaptcha.project-id` | Google Cloud 프로젝트 ID | 신규 |
 | `RECAPTCHA_API_KEY` | `catticket.recaptcha.api-key` | `CreateAssessment`의 API 키(서버용. 프론트엔드에 내지 않음) | 신규 |
 | `RECAPTCHA_SITE_KEY` | `catticket.recaptcha.site-key` | 사이트 키(평가 본문에 넣는다. 프론트엔드 빌드 설정에도 같은 값. 11의 U-08) | 신규 |
@@ -1855,6 +1878,21 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 | `SESSION_COOKIE_SECURE` | `server.servlet.session.cookie.secure` | 로컬 http에서 `false`. 운영은 설정하지 않음(기본 `true`) | 신규 |
 
 - `.env.example`에 추가하는 것은 실행 Claude 담당(11의 U-07).
+
+**8.3 기존 번역 설정(ADR 0007)의 교체(Issue #39 → 구현은 Issue #38)**
+
+Issue #23(PR #32)에서 ADR 0007의 번역 서비스 설정이 이미 backend에 들어가 있다. Issue #38에서 다음과 같이 교체한다(이 Issue #39에서는 파일을 바꾸지 않는다). 아래 표의 "지금 내용"은 교체할 대상을 특정하기 위해 구현에 있는 이름을 그대로 썼다(ADR 0007의 서비스명을 포함한다. 교체 뒤에는 남지 않는다).
+
+| 파일 | 지금 내용 | 바꾼 뒤 |
+|---|---|---|
+| `backend/src/main/java/com/catticket/common/config/CatticketProperties.java` | 중첩 record `Azure(String translatorEndpoint, String translatorKey, String translatorRegion, int requestMaxChars, int charsPerMinute, long monthlyLimitChars)`와 키를 내지 않는 `toString` | `Azure`를 지우고 `GoogleTranslate(String baseUrl, String apiKey, long runLimitChars, long monthlyLimitChars)`로 한다(최상위 record의 구성 요소도 `azure` → `googleTranslate`). `toString`은 `apiKey`를 내지 않는다(`Azure`와 같음) |
+| `backend/src/main/java/com/catticket/common/config/HttpClientConfig.java` | `@Qualifier("azureRestClient") RestClient azureRestClient(...)`(기본 URL `props.azure().translatorEndpoint()`, 접속 5초·읽기 30초) | `@Qualifier("googleTranslateRestClient") RestClient googleTranslateRestClient(...)`(기본 URL `props.googleTranslate().baseUrl()`, 접속 5초·읽기 30초). 주석의 이유는 7.1의 "타임아웃의 이유"에 맞춘다 |
+| `backend/src/main/resources/application.yml` | `catticket.azure.*`(`translator-endpoint`·`translator-key`·`translator-region`·`request-max-chars`·`chars-per-minute`·`monthly-limit-chars`) | `catticket.google-translate.*`(8.1) |
+| `backend/src/test/java/com/catticket/common/config/ApplicationConfigTest.java` | `azureRestClient` Bean 확인, `props.azure().requestMaxChars()` = 10000, `charsPerMinute()` = 30000, `monthlyLimitChars()` = 1,800,000 | `googleTranslateRestClient` Bean 확인, `props.googleTranslate().runLimitChars()` = 15,000, `monthlyLimitChars()` = 450,000, `baseUrl()` = `https://translation.googleapis.com` |
+| `.env.example`(실행 Claude 담당) | `# Azure AI Translator (ADR 0007). ...`, `AZURE_TRANSLATOR_KEY=`, `AZURE_TRANSLATOR_REGION=` | 3줄을 지우고 `# Google Cloud Translation API key (ADR 0018). Server only; restrict to Cloud Translation API and the server IP.`와 `GOOGLE_TRANSLATE_API_KEY=`로 한다 |
+
+- 지우는 키(`request-max-chars`·`chars-per-minute`)는 요청 1회에 원문 하나를 보내고 대기 시간을 두지 않는 설계(05의 3.7)에서 쓰지 않게 된다.
+- 운영·개발의 `.env`에 있는 `AZURE_TRANSLATOR_*`는 사람이 지운다(키는 저장소·Issue·PR에 쓰지 않는다).
 
 #### 9. 04의 11.7에서 넘겨받은 사항(A-02~A-07) 결정
 
@@ -1886,7 +1924,7 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 | F-08 | SC-01, SC-02 | API-01~03, B-01 | `performance`, `venue`, `booking_site`, `override`, `*_run` | `DailyCollectJob`, `PerformanceCollectStep`, `CollectWindows`, `BatchRunRecorder` |
 | F-09 | SC-01, SC-02, SC-03, SC-11 | API-01~03, 05, 20, 43, B-01 | `performance`, `ranking_entry`, `favorite`, `review` | `SharedSql.publicCondition`, `PerformanceStatus`, `CollectMapper`(삭제하지 않음) |
 | F-10 | 전 화면 | 전 API(`lang`) | — | `LangQuery`, `LocalizedTextFactory` |
-| F-11 | 전 화면 | 전 API, B-01(S7), B-02 | `translation`, `translation_usage`, `performance`, `override`, `booking_site`, `venue`, `station`, `coin_locker` | `TranslationLookupService`, `LocalizedTextFactory`, `TranslationService`·`AzureTranslatorClient` |
+| F-11 | 전 화면 | 전 API, B-01(S7), B-02 | `translation`, `translation_usage`, `performance`, `override`, `booking_site`, `venue`, `station`, `coin_locker` | `TranslationLookupService`, `LocalizedTextFactory`, `TranslationService`·`GoogleTranslateClient` |
 | F-12 | SC-04, SC-05, SC-06 | API-33, 34, 31, B-04 | `app_user`, `auth_token`, `mail_send_log`, `*_run` | `AuthController`, `AuthSignupService`, `AuthTokenService`, `MailService`, `PurgeExpiredSignupsJob`·`AuthPurgeService` |
 | F-13 | SC-04 | API-30, 31 | `app_user` | `AuthController.me`·`login`, `AuthLoginService`, `LoginSessionManager` |
 | F-14 | SC-04, SC-08, SC-09, SC-10 | API-31, 36, 37, 38 | `app_user`, `auth_token`, `mail_send_log` | `AuthLoginService`, `AuthUnlockService`·`RecaptchaClient`, `AuthPasswordResetService` |
@@ -1938,7 +1976,7 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 | U-04 | 접속의 `@@session.time_zone`이 `Asia/Seoul`이 되는지(A-05) | **해소**(2026-11-10, Issue #23·PR #32). 테스트 `AuthMapperTest.sessionTimeZoneIsSeoul`(`@MybatisTest`. `SELECT @@session.time_zone`이 `Asia/Seoul`) | 3.1 |
 | U-05 | API-01·50·B-04 SQL의 `EXPLAIN`(B-04의 DELETE가 기본 키로 잠그는지) | backend-dev(구현 때) | 5.6, 6.3 |
 | U-06 | Spring Security `csrf.spa()`와 공유 `CookieCsrfTokenRepository` 조합에서 `LoginSessionManager.establish`의 Cookie 삭제가 기대대로인지 | **해소**(2026-11-10, Issue #23·PR #32). 테스트 `CsrfCookieWebMvcTest`: `establish` 후 `XSRF-TOKEN`이 `Max-Age=0`으로 지워지고 새 토큰으로 다시 붙지 않는다(`establishClearsCsrfCookieAndCreatesSession`). CSRF 헤더가 없거나 틀린 POST는 403 `CSRF_INVALID`(`wrongOrMissingHeaderIsCsrfInvalid`). 미로그인 logout은 204이고 `JSESSIONID`(와 `XSRF-TOKEN`)를 지운다(`logoutWithoutLoginIs204AndClearsCookies`) | 3.4 |
-| U-07 | Dockerfile `ENTRYPOINT`를 exec 형식으로, `.env.example`에 8.2의 새 환경 변수 추가, 운영 MySQL을 Asia/Seoul로 | 남은 것: 운영 MySQL의 TZ(공정 7. 실행 Claude). Dockerfile·`.env.example`은 Issue #23·PR #32에서 완료 | 5.1, 8.2, A-05 |
+| U-07 | Dockerfile `ENTRYPOINT`를 exec 형식으로, `.env.example`에 8.2의 새 환경 변수 추가, 운영 MySQL을 Asia/Seoul로 | 남은 것: 운영 MySQL의 TZ(공정 7. 실행 Claude). Dockerfile·`.env.example`은 Issue #23·PR #32에서 완료. 번역 키의 교체(ADR 0018)는 8.3대로 Issue #38에서 한다 | 5.1, 8.2, 8.3, A-05 |
 | U-08 | reCAPTCHA 사이트 키를 프론트엔드 빌드 설정에 넣는 방법 | frontend-dev(공정 5. 프론트엔드 클래스 설계는 06 대상 외) | API-37 화면 |
 | U-09 | A-03(API-50에서 공연 ID 대소문자 무시)은 관리자에게 보이는 변경. 사람에게 전한다 | **해소**(2026-11-09, 사람이 "무시"로 확정. 9의 끝) | — |
 | U-10 | 쿼리의 타입 변환 실패(`page=abc` 등)는 Spring MVC가 바인딩 때 바로 예외로 하므로 다른 인자·항목의 제약 오류와 함께 반환되지 않는다(3.3의 "쿼리 record가 2개 이상인…"). 03의 7.3 "여러 항목이 틀렸으면 `errors`에 모두 넣는다"의 예외로 03에 쓸지, 모두 반환하는 구조(쿼리를 `String`으로 받아 직접 변환하는 등)로 할지 | **해소**(03의 7.3에 예외로 기재. 지금 동작(타입 오류만 반환) 그대로. Issue #23 E-2, 2026-11-11) | 3.3, 03의 7.3 |
