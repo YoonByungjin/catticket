@@ -1,6 +1,6 @@
 # 06. クラス設計書
 
-- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10）。PR #32 の reviewer の判定は条件付き承認で、06 への指摘（U-01・U-04・U-06・U-07 の更新、4.5・7.2・8.1・3.2 の追記）を反映済み（2026-11-10。人間の確認待ち）。Issue #23 の決定 E-2・E-3（コメント 6783513546）を 3.3・11 に反映（2026-11-11）。Issue #36 で駅・コインロッカーのファイルの確認の結果と人間の決定（2026-11-19、Issue #36 のコメント）を 4.9・5.2・5.4・8.1・9 の A-07・11 の U-03 に反映（2026-11-19）、reviewer の確認待ち
+- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10）。PR #32 の reviewer の判定は条件付き承認で、06 への指摘（U-01・U-04・U-06・U-07 の更新、4.5・7.2・8.1・3.2 の追記）を反映済み（2026-11-10。人間の確認待ち）。Issue #23 の決定 E-2・E-3（コメント 6783513546）を 3.3・11 に反映（2026-11-11）。Issue #36 で駅・コインロッカーのファイルの確認の結果と人間の決定（2026-11-19、Issue #36 のコメント）を 4.9・5.2・5.4・8.1・9 の A-07・11 の U-03 に反映（2026-11-19）。同じ Issue の実装（コミット 061e657・9f8ea15）で分かったこと（引用符の中の改行、手での実行の起動の方法・devtools・`SecurityConfig`、`StepSummary` の JSON、`error_message` の整え方、`JobLock` のテスト用のメソッド、U-11）を 3.4・5.1・5.2・5.4・11 に反映（2026-11-19）、reviewer の確認待ち
 - 担当: architect
 - 入力: `01-requirements.md`、`02-screens.md`、`03-api.md`（API 仕様の詳細）、`04-tables.md` と `backend/src/main/resources/db/migration/V1__create_schema.sql`、`05-batch.md`、ADR 0001〜0016。
 - 対象: バックエンド（`backend/`、Spring Boot）だけ。Angular のクラス設計は対象外（工程5で frontend-dev が `02`・`03`・`07` から作る）。
@@ -205,7 +205,7 @@ flowchart LR
 
 | クラス | 役割 |
 |---|---|
-| `SecurityConfig` | `SecurityFilterChain` の Bean と、下の Bean |
+| `SecurityConfig` | `SecurityFilterChain` の Bean と、下の Bean。`securityFilterChain` は `@ConditionalOnWebApplication(type = SERVLET)` を付け、サーブレットの Web アプリのときだけ作る（手での実行（5.1）は `WebApplicationType.NONE` で `HttpSecurity` の Bean がないため。2026-11-19、Issue #36 の実装で判明）。`PasswordEncoder` などほかの Bean は条件を付けない（B-03 が使う） |
 | `SessionPrincipal`（record、`Serializable`） | セッションに保存するもの: `long userId`, `String passwordHash` |
 | `SessionUser`（record） | リクエストごとの利用者: `long userId`, `Role role`, `String nickname`（管理者は `null`）。Controller は `@AuthenticationPrincipal SessionUser user` で受ける（未ログインは `null`） |
 | `Role`（enum） | `USER`, `ADMIN`（`ROLE_USER`・`ROLE_ADMIN` の権限にする） |
@@ -670,7 +670,10 @@ CatTicket の会員登録を完了するには、下のリンクを開いてく�
   - `@Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")` → `PurgeExpiredSignupsJob.run()`（B-04）
   - Spring の既定のスケジューラーは1スレッドなので、B-01 の実行中は B-04 が待つ（時刻が離れているので通常は起きない。二重起動は 5.2 のロックが防ぐ）。
 - **手での実行**: `--catticket.task={名前}` を付けてアプリを起動する。`TaskName`（enum）: `daily-collect`（B-01）、`import-subway`（B-02）、`create-admin`（B-03）、`purge-expired-signups`（B-04）。
-  - `CatticketApplication.main`: 引数に `--catticket.task=` があれば `SpringApplication.setWebApplicationType(WebApplicationType.NONE)` と既定のプロパティ `catticket.scheduler.enabled=false` を設定して起動し、`System.exit(SpringApplication.exit(context))` で終わる。なければ通常の Web アプリとして起動する。
+  - `CatticketApplication.main`: 引数に `--catticket.task=` があれば `SpringApplication.setWebApplicationType(WebApplicationType.NONE)` にし、**コマンドの引数に `--catticket.scheduler.enabled=false` を足して**（すでにあれば足さない）起動し、`System.exit(SpringApplication.exit(context))` で終わる。起動そのものが例外で失敗したとき（設定の誤りなど）は終了コード 1。なければ通常の Web アプリとして起動する。
+    - 既定のプロパティ（`setDefaultProperties`）にしない理由: 既定のプロパティは `application.yml` の `catticket.scheduler.enabled: true` より優先度が低く、効かない（2026-11-19、Issue #36 の実装で判明）。コマンドの引数は `application.yml` より優先される。
+    - **手での実行では devtools の再起動を切る**（起動の前に `System.setProperty("spring.devtools.restart.enabled", "false")`）。`bootRun` では devtools が `main` を別のスレッドで呼び直すため、引数が二重になり、起動に失敗しても終了コードが 0 になる（2026-11-19、Issue #36 の実装で判明）。本番の jar には devtools が入らないので影響しない。
+    - `WebApplicationType.NONE` では `HttpSecurity` がないので、`SecurityConfig.securityFilterChain` は Web アプリのときだけ作る（3.4）。
   - `common.batch.TaskRunner`（`ApplicationRunner`, `ExitCodeGenerator`、`@ConditionalOnProperty("catticket.task")`）: 名前から `BatchJob` を選んで実行し、終了コードを返す。0 = 成功、1 = 失敗、2 = 一部失敗、3 = ロックが取れなかった（同じバッチが実行中）、64 = 知らない名前。
   - ローカル: `cd backend && ./gradlew bootRun --args='--catticket.task=import-subway'`
   - サーバー: `docker compose --profile app run --rm app --catticket.task=import-subway`（Dockerfile の `ENTRYPOINT` が exec 形式（`["java", "-jar", "app.jar"]`）で、後ろの引数がアプリに渡ること。Dockerfile は実行 Claude の担当。11 の U-07）。手順は `docs/ops/`。
@@ -682,17 +685,18 @@ CatTicket の会員登録を完了するには、下のリンクを開いてく�
 | `BatchJob`（interface） | `TaskName name()`、`JobResult run()` |
 | `BatchJobRunner` | `JobResult execute(TaskName, Function<BatchContext, JobResult> body)`: ① `JobLock.tryAcquire(name)`（取れなければ `JobResult.LOCKED`、記録は作らずログに WARN）→ ② `BatchRunRecorder.start` → ③ 本体 → ④ `finish` → ⑤ ロックを外す（`finally`） |
 | `BatchContext`（record） | `jobRunId`, `now`（ジョブの開始時刻。全ステップで同じ）, `today` |
-| `JobLock` | `GET_LOCK('catticket-{task}', 0)`。MyBatis の `SqlSessionFactory.openSession()` で専用の接続を開き、ジョブの終わりまで持ち続けて `RELEASE_LOCK` してから閉じる（名前付きロックは接続（セッション）に付き、コミット・ロールバックでは外れないため。MySQL 8.4 リファレンス「Locking Functions」、確認日 2026-11-09）。`1` = 取れた、`0`・`NULL` = 取れない |
+| `JobLock` | `GET_LOCK('catticket-{task}', 0)`。MyBatis の `SqlSessionFactory.openSession()` で専用の接続を開き、ジョブの終わりまで持ち続けて `RELEASE_LOCK` してから閉じる（名前付きロックは接続（セッション）に付き、コミット・ロールバックでは外れないため。MySQL 8.4 リファレンス「Locking Functions」、確認日 2026-11-09）。`1` = 取れた、`0`・`NULL` = 取れない。`Optional<Held> tryAcquire(TaskName)`（`Held` は `AutoCloseable`。`close` で外す）。テスト用に、ロック名を直接受ける package-private の `tryAcquire(String name)` を置く（ほかのチェックアウトのテストと同じ名前のロックでぶつからないように。テストの名前は `catticket-test-` で始めるなど本番の名前と重ならないものにする）。トランザクションの中で呼ばない |
 | `JobLockMapper` | `Integer getLock(String name)`（`SELECT GET_LOCK(#{name}, 0)`）、`Integer releaseLock(String name)` |
-| `BatchRunRecorder` | `long start(TaskName, LocalDateTime)`、`StepRun startStep(long jobRunId, String stepName, LocalDateTime)`、`finishStep(StepRun, StepResult, LocalDateTime)`、`finish(long jobRunId, JobResult, String errorMessage, LocalDateTime)`。すべて `REQUIRES_NEW`（ステップの失敗のロールバックで記録が消えないように） |
+| `BatchRunRecorder` | `long start(TaskName, LocalDateTime)`、`StepRun startStep(long jobRunId, String stepName, LocalDateTime)`、`finishStep(StepRun, StepResult, LocalDateTime)`、`finish(long jobRunId, JobResult, String errorMessage, LocalDateTime)`。すべて `REQUIRES_NEW`（ステップの失敗のロールバックで記録が消えないように）。`error_message` は書く前に整える（下の「`error_message` の整え方」）。`static String describe(Throwable)`: 例外を「クラスの単純名: メッセージ」（メッセージがなければクラス名だけ）にする |
 | `BatchRunMapper` | `insertJobRun`、`updateJobRun`、`insertStepRun`、`updateStepRun`、`Optional<LastS1> findLastSuccessfulS1()`（`step_name = 'S1' AND result = 'SUCCESS' ORDER BY started_at DESC LIMIT 1` で、成功した日と `window_end_date`） |
-| `StepResult`（record） | `success`, `processedCount`, `StepSummary summary`, `errorMessage` |
-| `StepSummary`（final クラス。ステップの中で数えるので可変） | 件数 `Map<String, Long> counts`（`LinkedHashMap`。足した順を保つ）と内容 `Map<String, List<String>> details`（B-02 の「件数と内容」用。名前ごとに最大 50 件、それより多い分は入れない（件数は `counts` にある））。メソッド: `increment(String name)`、`add(String name, long n)`、`addDetail(String name, String value)`、`long get(String name)`（ないときは 0）。JSON: `counts` を最上位のキーに展開し（`@JsonAnyGetter`）、`details` は空でなければ `"details"` の下に置く（例: `{"saved":120,"skippedGenre":2}`、`{"lockerUnmatched":1,"details":{"lockerUnmatched":["7|이수|…"]}}`） |
+| `StepResult`（record） | `success`, `processedCount`, `StepSummary summary`, `errorMessage`（今は `window_end_date` の値を持たない。S1 の分は 11 の U-11） |
+| `StepSummary`（final クラス。ステップの中で数えるので可変） | 件数 `Map<String, Long> counts`（`LinkedHashMap`。足した順を保つ）と内容 `Map<String, List<String>> details`（B-02 の「件数と内容」用。名前ごとに最大 50 件、それより多い分は入れない（件数は `counts` にある））。メソッド: `increment(String name)`、`add(String name, long n)`、`addDetail(String name, String value)`、`long get(String name)`（ないときは 0）。JSON: `counts` を最上位のキーに足した順で並べ、`details` は空でなければ最後に `"details"` の下に置く（`@JsonValue` で `LinkedHashMap` を作って返す。Jackson 3 の `@JsonAnyGetter` では展開したキーがほかの項目の後ろに並び、`details` が先になるため使わない。2026-11-19、Issue #36 の実装で判明）（例: `{"saved":120,"skippedGenre":2}`、`{"lockerUnmatched":1,"details":{"lockerUnmatched":["7|이수|…"]}}`） |
 | `JobResult`（enum） | `SUCCESS`, `PARTIAL_FAILURE`, `FAILURE`, `LOCKED` |
 | `Retry` | `<T> T call(Supplier<T>, List<Duration> waits, Predicate<Exception> retryable)`（2・4・8 秒など） |
 | `Sleeper`（interface）・`ThreadSleeper` | 待ち時間。テストでは記録だけする実装に替える |
 
 - ステップの記録の `summary` は `StepSummary` を Jackson で JSON の文字列にしたもの（例: `{"saved":120,"skippedGenre":2,"truncated":1}`）。`error_message` にはスタックトレースを入れない（例外のクラス名とメッセージの1行。API キーを含めない）。
+- **`error_message` の整え方**（`BatchRunRecorder` が `finishStep`・`finish` で書く前に行う。2026-11-19、Issue #36 の実装に合わせて記載）: ① 改行（前後の空白を含む）を空白1つにして1行にし、strip ② 秘密の設定値を `***` に置き換える。対象は `catticket.kopis.api-key`、`catticket.azure.translator-key`、`catticket.recaptcha.api-key`、`catticket.admin.password`、`spring.mail.password`、`spring.datasource.password` の値（`Environment` から起動時に読む。4 文字未満の値は普通の文字まで消してしまうので対象にしない）③ 2000 コードポイントで切り詰める（`Texts.truncateCodePoints`。列は `TEXT` で、人が読める長さにする）。秘密の値を例外のメッセージに入れないのは呼ぶ側の責任で、② は漏れたときの保険。
 - `catticket-{task}` のロック名は最長 31 文字（`catticket-purge-expired-signups`。MySQL の上限 64 文字以内）。
 - ステップの名前（`batch_step_run.step_name`）: B-01 は `S1`〜`S7`。B-02〜B-04 は1つのステップとして記録し（04 の `batch_step_run.step_name`）、名前は処理の名前と同じ（`import-subway`、`create-admin`、`purge-expired-signups`）。B-04 は消した件数を `processed_count` に入れる。
 - 「前回 S1 が成功した日」は `findLastSuccessfulS1` の `started_at` の日付（04 の DB-10）。
@@ -709,13 +713,14 @@ CatTicket の会員登録を完了するには、下のリンクを開いてく�
 規則の正は 05 の 4.2・4.3（ファイル・列・結びつけ・正規化・今の版の見込みの件数）。ここではクラスと、実装で迷いやすい細部を決める。クラスはすべて `com.catticket.surrounding.batch`。
 
 - `run()`: `BatchJobRunner.execute(IMPORT_SUBWAY, ctx -> subwayImportService.importAll(ctx))`。結果は `SUCCESS` か `FAILURE`。
-- `SubwayFileException`（`RuntimeException`）: ファイルの誤り。メッセージは1行で、ファイルの用途・行番号（見出しを 1 行目とする）・列の名前・理由を入れる（例: `locker 12行目 보관함명: 空`、`station-address 역번호 150 が重複`）。値そのものは理由に必要なときだけ入れる（秘密の値はない）。`error_message` にはこのメッセージを入れる（5.2）。
+- `SubwayFileException`（`RuntimeException`）: ファイルの誤り。メッセージは1行で、ファイルの用途・行番号（下の `SubwayFileReader` の行番号。見出しを 1 行目とする）・列の名前・理由を入れる（例: `locker 12行目 보관함명: 空`、`station-address 역번호 150 が重複`）。値そのものは理由に必要なときだけ入れる（秘密の値はない）。`error_message` にはこのメッセージを入れる（5.2）。
 - `SubwayColumns`（定数）: 05 の 4.2 の表の列の名前（例: `LOCATION_CODE = "고유역번호(외부역코드)"`）。
-- `SubwayFileReader`（JDK だけ。`BufferedReader` + 自前の CSV の分割（引用符 `"` と `""` に対応））: `List<CsvRow> read(Resource resource, Charset charset, String label, List<String> requiredColumns)`。`CsvRow`（record）: `int lineNumber`, `Map<String, String> values`（値は strip 済み）。
+- `SubwayFileReader`（JDK だけ。`BufferedReader` + 自前の CSV の分割。**RFC 4180 のとおり**、引用符 `"`・`""`・**引用符の中の改行**に対応）: `List<CsvRow> read(Resource resource, Charset charset, String label, List<String> requiredColumns)`。`CsvRow`（record）: `int lineNumber`, `Map<String, String> values`（値は strip 済み）。
   - ファイルがない・読めない → `SubwayFileException`（`label` を入れる）。
-  - 1行目が見出し。先頭の U+FEFF（BOM）は除く（今の版は BOM なしだが、UTF-8 の版に替わっても読めるように）。見出しの名前も strip する。**名前が空の列は無視**する（多言語表記の末尾のカンマ）。`requiredColumns` のどれかが見出しにない → `SubwayFileException`。
-  - 空の行（空白だけの行を含む）は読み飛ばす。値の数が見出しより多いときは、多い分がすべて空なら無視し、空でなければ `SubwayFileException`。少ないときも `SubwayFileException`。閉じていない `"` も `SubwayFileException`。
-  - 値の中の改行（引用符の中の改行）は今の版にないので扱わない（あれば値の数が合わずに失敗になる）。
+  - **行（レコード）の区切り**: 引用符の外の改行（`\r\n`・`\n`・`\r`）で1行が終わる。引用符の中の改行は値の一部で、1行が複数の物理的な行にまたがってよい（多言語表記の8列目の注記: 연번 96 `당고개` は改行1つ、259 `암사역사공원` は改行2つ。2026-11-19、Issue #36 の実装で判明）。値の中の改行はそのまま残す（strip で両端の改行だけ消える）。
+  - **行番号**（`CsvRow.lineNumber` とエラーのメッセージ）: その行が**始まる物理的な行の番号**（1 から。見出しが 1）。テキストエディタで開いたときの行と同じにして、人がファイルを直しやすくするため。引用符の中の改行の後の行も物理的な行として数える。
+  - 1行目が見出し。先頭の U+FEFF（BOM）は除く（今の版は BOM なしだが、UTF-8 の版に替わっても読めるように）。見出しの名前も strip する。**名前が空の列は無視**する（値が入っていても捨てる。多言語表記の8列目）。`requiredColumns` のどれかが見出しにない → `SubwayFileException`。
+  - 空の行（引用符の外で、空白だけの行を含む）は読み飛ばす。値の数が見出しより多いときは、多い分がすべて空なら無視し、空でなければ `SubwayFileException`。少ないときも `SubwayFileException`。ファイルの終わりまで閉じない `"` は、その行が始まる行番号で `SubwayFileException`。
 - `SubwayFiles`（record）: `locations`, `addresses`, `lockers`, `names`（それぞれ `List<CsvRow>`）。
 - `StationInsert`（record）: `externalStationCode`, `int line`, `nameKo`, `nameJa`（null 可）, `BigDecimal latitude`, `BigDecimal longitude`。`LockerInsert`（record）: `stationExternalCode`（属する駅の外部の駅コード）, `name`, `locationText`。`SubwayImportPlan`（record）: `List<StationInsert> stations`, `List<LockerInsert> lockers`, `StepSummary summary`。
 - `SubwayRowConverter`（Spring に依存しない。`final`、static でなくてよい）: `SubwayImportPlan convert(SubwayFiles files)`。誤りは `SubwayFileException`。中で使う規則は単体テストのために package-private の static メソッドにする:
@@ -742,7 +747,7 @@ CatTicket の会員登録を完了するには、下のリンクを開いてく�
 - `SubwayImportMapper`（`mapper/surrounding/SubwayImportMapper.xml`）: `deleteAllLockers()`、`deleteAllStations()`、`insertStations(List<StationInsert> stations, LocalDateTime now)`（複数行の `INSERT … VALUES`。`created_at`・`updated_at` は `now`。A-05）、`insertLockers(List<LockerInsert> lockers, LocalDateTime now)`（`station_id` は値の中の副問い合わせ `(SELECT id FROM station WHERE external_station_code = #{l.stationExternalCode})` で求める。生成されたキーを `StationInsert` に戻す（`useGeneratedKeys`）方法は record に書き戻せないので使わない）。件数は駅約 270・コインロッカー約 320 なので、1 回の文で入れる。
 - テスト（7.2）:
   - `SubwayRowConverterTest`（単体）: `parseLine`（`1`・`01`・`1호선`・`01호선`・` 2호선(지선) ` → 期待の整数、`9`・`9호선`・`식물원`・`경의중앙선`・空 → 空）、`normalizeName`（`청량리(서울시립대입구)` → `청량리`、`서울역` → `서울`、`교대(법원, 검찰청)` → `교대`）、`normalizeLockerName`（`서울역1~22` → `서울`、`충정로(1~15)` → `충정로`、`충정로B` → `충정로`、`제기동` → `제기동`）、`cleanJapanese`（`ワンシムニ(ソンドン??)` → `OK(ワンシムニ)`、`クロ?デジタルダンジ` → `GARBLED`、空 → `BLANK`）、`isSeoul`、住所のコード・名前での結びつけ（까치산 の形）、福井駅の形（ソウルの住所 → 保存）、長さの超過 → 例外、件数の式。
-  - `SubwayFileReaderTest`（単体）: `"` と `""`、値の中のカンマ、末尾のカンマ（名前のない列）、列の不足 → 例外、CP949 のファイル。
+  - `SubwayFileReaderTest`（単体）: `"` と `""`、値の中のカンマ、**引用符の中の改行（1つ・2つ。`\n` と `\r\n`）と、その後の行の行番号（物理的な行）**、名前のない列に値がある行、末尾のカンマ、列の不足 → 例外、閉じない `"` → 例外（始まりの行番号）、CP949 のファイル。
   - `SubwayImportServiceTest`: `src/test/resources/data/subway-sample/` の小さな4ファイル（CP949。各数行で、上の形をそれぞれ1つ以上含む）で `convert` までを通し、`SubwayImportWriter` はモック。
   - `SubwayImportMapperTest`（`@MybatisTest`）: 入れ替え・副問い合わせでの `station_id`・2 回目でも同じ行数。
 
@@ -1084,6 +1089,7 @@ catticket:
 | U-08 | reCAPTCHA のサイトキーをフロントエンドのビルドの設定に入れる方法 | frontend-dev（工程5。フロントエンドのクラス設計は 06 の対象外） | API-37 の画面 |
 | U-09 | A-03（API-50 で公演 ID の大文字・小文字を無視）は管理者に見える変更。人間に伝える | **解消**（2026-11-09、人間が「無視する」で確定。9 の最後） | — |
 | U-10 | クエリの型の変換の失敗（`page=abc` など）は Spring MVC が結び付けのときにすぐ例外にするため、ほかの引数・項目の制約の誤りと一緒に返らない（3.3 の「クエリの record が 2 つ以上ある…」）。03 の 7.3 の「複数の項目が誤っていれば、`errors` にすべて入れる」の例外として 03 に書くか、すべてを返す作り（クエリを `String` で受けて自分で変換するなど）にするか | **解消**（03 の 7.3 に例外として記載。今の動き（型の誤りだけを返す）のまま。Issue #23 E-2、2026-11-11） | 3.3、03 の 7.3 |
+| U-11 | `batch_step_run.window_end_date`（S1 の「今回の窓の末日」。05 の 3.3 の 3.(b)、04 の DB-10）を書く方法。Issue #36 の共通部品では `StepResult` にこの値がなく、`updateStepRun` はこの列を書かない（B-02〜B-04 は使わない） | backend-dev（W1-a、B-01 を作るとき）。方針（architect）: `StepResult` に `LocalDate windowEndDate`（S1 以外は `null`）を足し、`updateStepRun` がこの列も書く（`null` なら `NULL`）。`findLastSuccessfulS1` はこの列を読む（5.2）。ほかの方法にするなら先に 06 を直す | 5.2、5.3、4.9 |
 
 - db-designer に渡すもの: なし（新しいテーブル・列・インデックスは要らない。U-05 の `EXPLAIN` でインデックスが要るとわかったら db-designer に渡す）。
 
@@ -1093,7 +1099,7 @@ catticket:
 
 ### 06. 클래스 설계서
 
-- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10). PR #32의 reviewer 판정은 조건부 승인이며, 06에 대한 지적(U-01·U-04·U-06·U-07 갱신, 4.5·7.2·8.1·3.2 추가 기술)을 반영함(2026-11-10. 사람의 확인 대기). Issue #23의 결정 E-2·E-3(코멘트 6783513546)을 3.3·11에 반영(2026-11-11). Issue #36에서 역·물품보관함 파일 확인 결과와 사람의 결정(2026-11-19, Issue #36 코멘트)을 4.9·5.2·5.4·8.1·9의 A-07·11의 U-03에 반영(2026-11-19), reviewer 확인 대기
+- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10). PR #32의 reviewer 판정은 조건부 승인이며, 06에 대한 지적(U-01·U-04·U-06·U-07 갱신, 4.5·7.2·8.1·3.2 추가 기술)을 반영함(2026-11-10. 사람의 확인 대기). Issue #23의 결정 E-2·E-3(코멘트 6783513546)을 3.3·11에 반영(2026-11-11). Issue #36에서 역·물품보관함 파일 확인 결과와 사람의 결정(2026-11-19, Issue #36 코멘트)을 4.9·5.2·5.4·8.1·9의 A-07·11의 U-03에 반영(2026-11-19). 같은 Issue의 구현(커밋 061e657·9f8ea15)에서 알게 된 것(따옴표 안의 줄바꿈, 수동 실행의 기동 방법·devtools·`SecurityConfig`, `StepSummary`의 JSON, `error_message` 다듬기, `JobLock` 테스트용 메서드, U-11)을 3.4·5.1·5.2·5.4·11에 반영(2026-11-19), reviewer 확인 대기
 - 담당: architect
 - 입력: `01-requirements.md`, `02-screens.md`, `03-api.md`(API 사양 상세), `04-tables.md`와 `backend/src/main/resources/db/migration/V1__create_schema.sql`, `05-batch.md`, ADR 0001~0016.
 - 대상: 백엔드(`backend/`, Spring Boot)만. Angular 클래스 설계는 대상 외(공정 5에서 frontend-dev가 `02`·`03`·`07`로 만든다).
@@ -1280,7 +1286,7 @@ catticket:
 
 | 클래스 | 역할 |
 |---|---|
-| `SecurityConfig` | `SecurityFilterChain` Bean과 아래 Bean |
+| `SecurityConfig` | `SecurityFilterChain` Bean과 아래 Bean. `securityFilterChain`에는 `@ConditionalOnWebApplication(type = SERVLET)`을 붙여 서블릿 웹 앱일 때만 만든다(수동 실행(5.1)은 `WebApplicationType.NONE`이라 `HttpSecurity` Bean이 없으므로. 2026-11-19, Issue #36 구현에서 판명). `PasswordEncoder` 등 다른 Bean에는 조건을 붙이지 않는다(B-03이 쓴다) |
 | `SessionPrincipal`(record, `Serializable`) | 세션에 저장하는 것: `long userId`, `String passwordHash` |
 | `SessionUser`(record) | 요청마다의 이용자: `long userId`, `Role role`, `String nickname`(관리자는 `null`). Controller는 `@AuthenticationPrincipal SessionUser user`로 받는다(미로그인은 `null`) |
 | `Role`(enum) | `USER`, `ADMIN`(`ROLE_USER`·`ROLE_ADMIN` 권한으로) |
@@ -1722,7 +1728,10 @@ Service
   - `@Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")` → `PurgeExpiredSignupsJob.run()`(B-04)
   - Spring 기본 스케줄러는 스레드 1개이므로 B-01 실행 중에는 B-04가 기다린다(시각이 떨어져 있어 보통은 일어나지 않음. 이중 기동은 5.2의 잠금이 막는다).
 - **수동 실행**: `--catticket.task={이름}`을 붙여 앱을 기동한다. `TaskName`(enum): `daily-collect`(B-01), `import-subway`(B-02), `create-admin`(B-03), `purge-expired-signups`(B-04).
-  - `CatticketApplication.main`: 인자에 `--catticket.task=`가 있으면 `SpringApplication.setWebApplicationType(WebApplicationType.NONE)`과 기본 프로퍼티 `catticket.scheduler.enabled=false`를 설정해 기동하고 `System.exit(SpringApplication.exit(context))`로 끝난다. 없으면 보통의 웹 앱으로 기동한다.
+  - `CatticketApplication.main`: 인자에 `--catticket.task=`가 있으면 `SpringApplication.setWebApplicationType(WebApplicationType.NONE)`으로 하고, **명령 인자에 `--catticket.scheduler.enabled=false`를 더해**(이미 있으면 더하지 않음) 기동하고 `System.exit(SpringApplication.exit(context))`로 끝난다. 기동 자체가 예외로 실패하면(설정 오류 등) 종료 코드 1. 없으면 보통의 웹 앱으로 기동한다.
+    - 기본 프로퍼티(`setDefaultProperties`)로 하지 않는 이유: 기본 프로퍼티는 `application.yml`의 `catticket.scheduler.enabled: true`보다 우선순위가 낮아 효과가 없다(2026-11-19, Issue #36 구현에서 판명). 명령 인자는 `application.yml`보다 우선한다.
+    - **수동 실행에서는 devtools 재시작을 끈다**(기동 전에 `System.setProperty("spring.devtools.restart.enabled", "false")`). `bootRun`에서는 devtools가 `main`을 다른 스레드에서 다시 부르므로 인자가 두 번 들어가고, 기동에 실패해도 종료 코드가 0이 된다(2026-11-19, Issue #36 구현에서 판명). 운영 jar에는 devtools가 들어가지 않으므로 영향이 없다.
+    - `WebApplicationType.NONE`에서는 `HttpSecurity`가 없으므로 `SecurityConfig.securityFilterChain`은 웹 앱일 때만 만든다(3.4).
   - `common.batch.TaskRunner`(`ApplicationRunner`, `ExitCodeGenerator`, `@ConditionalOnProperty("catticket.task")`): 이름으로 `BatchJob`을 골라 실행하고 종료 코드를 반환한다. 0 = 성공, 1 = 실패, 2 = 일부 실패, 3 = 잠금을 얻지 못함(같은 배치 실행 중), 64 = 모르는 이름.
   - 로컬: `cd backend && ./gradlew bootRun --args='--catticket.task=import-subway'`
   - 서버: `docker compose --profile app run --rm app --catticket.task=import-subway`(Dockerfile의 `ENTRYPOINT`가 exec 형식(`["java", "-jar", "app.jar"]`)이어서 뒤의 인자가 앱에 전달될 것. Dockerfile은 실행 Claude 담당. 11의 U-07). 절차는 `docs/ops/`.
@@ -1734,17 +1743,18 @@ Service
 | `BatchJob`(interface) | `TaskName name()`, `JobResult run()` |
 | `BatchJobRunner` | `JobResult execute(TaskName, Function<BatchContext, JobResult> body)`: ① `JobLock.tryAcquire(name)`(얻지 못하면 `JobResult.LOCKED`, 기록은 만들지 않고 로그 WARN) → ② `BatchRunRecorder.start` → ③ 본체 → ④ `finish` → ⑤ 잠금 해제(`finally`) |
 | `BatchContext`(record) | `jobRunId`, `now`(잡 시작 시각. 모든 스텝에서 같음), `today` |
-| `JobLock` | `GET_LOCK('catticket-{task}', 0)`. MyBatis `SqlSessionFactory.openSession()`으로 전용 접속을 열어 잡이 끝날 때까지 유지하고 `RELEASE_LOCK` 후 닫는다(이름 잠금은 접속(세션)에 붙고 커밋·롤백으로 풀리지 않으므로. MySQL 8.4 레퍼런스 "Locking Functions", 확인일 2026-11-09). `1` = 얻음, `0`·`NULL` = 못 얻음 |
+| `JobLock` | `GET_LOCK('catticket-{task}', 0)`. MyBatis `SqlSessionFactory.openSession()`으로 전용 접속을 열어 잡이 끝날 때까지 유지하고 `RELEASE_LOCK` 후 닫는다(이름 잠금은 접속(세션)에 붙고 커밋·롤백으로 풀리지 않으므로. MySQL 8.4 레퍼런스 "Locking Functions", 확인일 2026-11-09). `1` = 얻음, `0`·`NULL` = 못 얻음. `Optional<Held> tryAcquire(TaskName)`(`Held`는 `AutoCloseable`. `close`로 푼다). 테스트용으로 잠금 이름을 직접 받는 package-private `tryAcquire(String name)`을 둔다(다른 체크아웃의 테스트와 같은 이름의 잠금으로 부딪치지 않게. 테스트의 이름은 `catticket-test-`로 시작하는 등 운영 이름과 겹치지 않는 것으로 한다). 트랜잭션 안에서 부르지 않는다 |
 | `JobLockMapper` | `Integer getLock(String name)`(`SELECT GET_LOCK(#{name}, 0)`), `Integer releaseLock(String name)` |
-| `BatchRunRecorder` | `long start(TaskName, LocalDateTime)`, `StepRun startStep(long jobRunId, String stepName, LocalDateTime)`, `finishStep(StepRun, StepResult, LocalDateTime)`, `finish(long jobRunId, JobResult, String errorMessage, LocalDateTime)`. 모두 `REQUIRES_NEW`(스텝 실패의 롤백으로 기록이 사라지지 않도록) |
+| `BatchRunRecorder` | `long start(TaskName, LocalDateTime)`, `StepRun startStep(long jobRunId, String stepName, LocalDateTime)`, `finishStep(StepRun, StepResult, LocalDateTime)`, `finish(long jobRunId, JobResult, String errorMessage, LocalDateTime)`. 모두 `REQUIRES_NEW`(스텝 실패의 롤백으로 기록이 사라지지 않도록). `error_message`는 쓰기 전에 다듬는다(아래 "`error_message` 다듬기"). `static String describe(Throwable)`: 예외를 "클래스 단순 이름: 메시지"(메시지가 없으면 클래스 이름만)로 한다 |
 | `BatchRunMapper` | `insertJobRun`, `updateJobRun`, `insertStepRun`, `updateStepRun`, `Optional<LastS1> findLastSuccessfulS1()`(`step_name = 'S1' AND result = 'SUCCESS' ORDER BY started_at DESC LIMIT 1`로 성공한 날과 `window_end_date`) |
-| `StepResult`(record) | `success`, `processedCount`, `StepSummary summary`, `errorMessage` |
-| `StepSummary`(final 클래스. 스텝 안에서 세므로 가변) | 건수 `Map<String, Long> counts`(`LinkedHashMap`. 더한 순서를 유지)와 내용 `Map<String, List<String>> details`(B-02의 "건수와 내용"용. 이름마다 최대 50건, 그보다 많은 것은 넣지 않음(건수는 `counts`에 있음)). 메서드: `increment(String name)`, `add(String name, long n)`, `addDetail(String name, String value)`, `long get(String name)`(없으면 0). JSON: `counts`를 최상위 키로 펼치고(`@JsonAnyGetter`), `details`는 비어 있지 않으면 `"details"` 아래에 둔다(예: `{"saved":120,"skippedGenre":2}`, `{"lockerUnmatched":1,"details":{"lockerUnmatched":["7|이수|…"]}}`) |
+| `StepResult`(record) | `success`, `processedCount`, `StepSummary summary`, `errorMessage`(지금은 `window_end_date` 값을 갖지 않는다. S1의 것은 11의 U-11) |
+| `StepSummary`(final 클래스. 스텝 안에서 세므로 가변) | 건수 `Map<String, Long> counts`(`LinkedHashMap`. 더한 순서를 유지)와 내용 `Map<String, List<String>> details`(B-02의 "건수와 내용"용. 이름마다 최대 50건, 그보다 많은 것은 넣지 않음(건수는 `counts`에 있음)). 메서드: `increment(String name)`, `add(String name, long n)`, `addDetail(String name, String value)`, `long get(String name)`(없으면 0). JSON: `counts`를 최상위 키에 더한 순서로 늘어놓고, `details`는 비어 있지 않으면 마지막에 `"details"` 아래에 둔다(`@JsonValue`로 `LinkedHashMap`을 만들어 반환. Jackson 3의 `@JsonAnyGetter`로는 펼친 키가 다른 항목 뒤에 놓여 `details`가 앞에 오므로 쓰지 않는다. 2026-11-19, Issue #36 구현에서 판명)(예: `{"saved":120,"skippedGenre":2}`, `{"lockerUnmatched":1,"details":{"lockerUnmatched":["7|이수|…"]}}`) |
 | `JobResult`(enum) | `SUCCESS`, `PARTIAL_FAILURE`, `FAILURE`, `LOCKED` |
 | `Retry` | `<T> T call(Supplier<T>, List<Duration> waits, Predicate<Exception> retryable)`(2·4·8초 등) |
 | `Sleeper`(interface)·`ThreadSleeper` | 대기 시간. 테스트에서는 기록만 하는 구현으로 바꾼다 |
 
 - 스텝 기록의 `summary`는 `StepSummary`를 Jackson으로 JSON 문자열로 한 것(예: `{"saved":120,"skippedGenre":2,"truncated":1}`). `error_message`에는 스택 트레이스를 넣지 않는다(예외 클래스명과 메시지 한 줄. API 키를 포함하지 않음).
+- **`error_message` 다듬기**(`BatchRunRecorder`가 `finishStep`·`finish`에서 쓰기 전에 한다. 2026-11-19, Issue #36 구현에 맞춰 기재): ① 줄바꿈(앞뒤 공백 포함)을 공백 하나로 해서 한 줄로 하고 strip ② 비밀 설정값을 `***`로 바꾼다. 대상은 `catticket.kopis.api-key`, `catticket.azure.translator-key`, `catticket.recaptcha.api-key`, `catticket.admin.password`, `spring.mail.password`, `spring.datasource.password`의 값(`Environment`에서 기동 때 읽는다. 4자 미만의 값은 보통 글자까지 지워 버리므로 대상으로 하지 않는다) ③ 2000 코드 포인트로 자른다(`Texts.truncateCodePoints`. 열은 `TEXT`이고 사람이 읽을 수 있는 길이로 한다). 비밀 값을 예외 메시지에 넣지 않는 것은 부르는 쪽의 책임이고, ②는 새어 나왔을 때의 보험이다.
 - `catticket-{task}` 잠금 이름은 최장 31자(`catticket-purge-expired-signups`. MySQL 상한 64자 이내).
 - 스텝 이름(`batch_step_run.step_name`): B-01은 `S1`~`S7`. B-02~B-04는 스텝 하나로 기록하고(04의 `batch_step_run.step_name`), 이름은 처리 이름과 같다(`import-subway`, `create-admin`, `purge-expired-signups`). B-04는 삭제 건수를 `processed_count`에 넣는다.
 - "지난번 S1이 성공한 날"은 `findLastSuccessfulS1`의 `started_at` 날짜(04의 DB-10).
@@ -1761,13 +1771,14 @@ Service
 규칙의 기준은 05의 4.2·4.3(파일·열·연결·정규화·지금 판의 예상 건수). 여기서는 클래스와, 구현에서 헷갈리기 쉬운 세부를 정한다. 클래스는 모두 `com.catticket.surrounding.batch`.
 
 - `run()`: `BatchJobRunner.execute(IMPORT_SUBWAY, ctx -> subwayImportService.importAll(ctx))`. 결과는 `SUCCESS` 또는 `FAILURE`.
-- `SubwayFileException`(`RuntimeException`): 파일 오류. 메시지는 한 줄이고, 파일 용도·행 번호(머리글을 1행으로 함)·열 이름·이유를 넣는다(예: `locker 12행 보관함명: 빈 값`, `station-address 역번호 150 중복`). 값 자체는 이유에 필요할 때만 넣는다(비밀 값은 없다). `error_message`에는 이 메시지를 넣는다(5.2).
+- `SubwayFileException`(`RuntimeException`): 파일 오류. 메시지는 한 줄이고, 파일 용도·행 번호(아래 `SubwayFileReader`의 행 번호. 머리글을 1행으로 함)·열 이름·이유를 넣는다(예: `locker 12행 보관함명: 빈 값`, `station-address 역번호 150 중복`). 값 자체는 이유에 필요할 때만 넣는다(비밀 값은 없다). `error_message`에는 이 메시지를 넣는다(5.2).
 - `SubwayColumns`(상수): 05의 4.2 표의 열 이름(예: `LOCATION_CODE = "고유역번호(외부역코드)"`).
-- `SubwayFileReader`(JDK만. `BufferedReader` + 자체 CSV 분할(따옴표 `"`와 `""` 대응)): `List<CsvRow> read(Resource resource, Charset charset, String label, List<String> requiredColumns)`. `CsvRow`(record): `int lineNumber`, `Map<String, String> values`(값은 strip 완료).
+- `SubwayFileReader`(JDK만. `BufferedReader` + 자체 CSV 분할. **RFC 4180대로** 따옴표 `"`·`""`·**따옴표 안의 줄바꿈**에 대응): `List<CsvRow> read(Resource resource, Charset charset, String label, List<String> requiredColumns)`. `CsvRow`(record): `int lineNumber`, `Map<String, String> values`(값은 strip 완료).
   - 파일이 없거나 읽을 수 없음 → `SubwayFileException`(`label`을 넣음).
-  - 1행이 머리글. 맨 앞의 U+FEFF(BOM)는 뺀다(지금 판은 BOM이 없지만 UTF-8 판으로 바뀌어도 읽을 수 있게). 머리글 이름도 strip한다. **이름이 빈 열은 무시**한다(다국어 표기 끝의 쉼표). `requiredColumns` 중 하나라도 머리글에 없으면 → `SubwayFileException`.
-  - 빈 행(공백뿐인 행 포함)은 건너뛴다. 값의 수가 머리글보다 많을 때는 많은 부분이 모두 비었으면 무시하고, 비어 있지 않으면 `SubwayFileException`. 적을 때도 `SubwayFileException`. 닫히지 않은 `"`도 `SubwayFileException`.
-  - 값 안의 줄바꿈(따옴표 안의 줄바꿈)은 지금 판에 없으므로 다루지 않는다(있으면 값의 수가 맞지 않아 실패한다).
+  - **행(레코드)의 구분**: 따옴표 밖의 줄바꿈(`\r\n`·`\n`·`\r`)에서 한 행이 끝난다. 따옴표 안의 줄바꿈은 값의 일부이고, 한 행이 여러 물리적인 줄에 걸쳐도 된다(다국어 표기 8번째 열의 주석: 연번 96 `당고개`는 줄바꿈 1개, 259 `암사역사공원`은 줄바꿈 2개. 2026-11-19, Issue #36 구현에서 판명). 값 안의 줄바꿈은 그대로 둔다(strip으로 양 끝의 줄바꿈만 사라진다).
+  - **행 번호**(`CsvRow.lineNumber`와 오류 메시지): 그 행이 **시작하는 물리적인 줄의 번호**(1부터. 머리글이 1). 텍스트 편집기로 열었을 때의 줄과 같게 해서 사람이 파일을 고치기 쉽게 하기 위해서다. 따옴표 안 줄바꿈 뒤의 줄도 물리적인 줄로 센다.
+  - 1행이 머리글. 맨 앞의 U+FEFF(BOM)는 뺀다(지금 판은 BOM이 없지만 UTF-8 판으로 바뀌어도 읽을 수 있게). 머리글 이름도 strip한다. **이름이 빈 열은 무시**한다(값이 있어도 버린다. 다국어 표기의 8번째 열). `requiredColumns` 중 하나라도 머리글에 없으면 → `SubwayFileException`.
+  - 빈 행(따옴표 밖에서 공백뿐인 행 포함)은 건너뛴다. 값의 수가 머리글보다 많을 때는 많은 부분이 모두 비었으면 무시하고, 비어 있지 않으면 `SubwayFileException`. 적을 때도 `SubwayFileException`. 파일 끝까지 닫히지 않는 `"`는 그 행이 시작하는 행 번호로 `SubwayFileException`.
 - `SubwayFiles`(record): `locations`, `addresses`, `lockers`, `names`(각각 `List<CsvRow>`).
 - `StationInsert`(record): `externalStationCode`, `int line`, `nameKo`, `nameJa`(null 가능), `BigDecimal latitude`, `BigDecimal longitude`. `LockerInsert`(record): `stationExternalCode`(속한 역의 외부 역 코드), `name`, `locationText`. `SubwayImportPlan`(record): `List<StationInsert> stations`, `List<LockerInsert> lockers`, `StepSummary summary`.
 - `SubwayRowConverter`(Spring 비의존. `final`, static이 아니어도 됨): `SubwayImportPlan convert(SubwayFiles files)`. 오류는 `SubwayFileException`. 안에서 쓰는 규칙은 단위 테스트를 위해 package-private static 메서드로 한다:
@@ -1794,7 +1805,7 @@ Service
 - `SubwayImportMapper`(`mapper/surrounding/SubwayImportMapper.xml`): `deleteAllLockers()`, `deleteAllStations()`, `insertStations(List<StationInsert> stations, LocalDateTime now)`(여러 행 `INSERT … VALUES`. `created_at`·`updated_at`은 `now`. A-05), `insertLockers(List<LockerInsert> lockers, LocalDateTime now)`(`station_id`는 값 안의 서브쿼리 `(SELECT id FROM station WHERE external_station_code = #{l.stationExternalCode})`로 구한다. 생성된 키를 `StationInsert`에 돌려주는(`useGeneratedKeys`) 방법은 record에 다시 쓸 수 없어서 쓰지 않는다). 건수는 역 약 270·물품보관함 약 320이므로 한 번의 문으로 넣는다.
 - 테스트(7.2):
   - `SubwayRowConverterTest`(단위): `parseLine`(`1`·`01`·`1호선`·`01호선`·` 2호선(지선) ` → 기대 정수, `9`·`9호선`·`식물원`·`경의중앙선`·빈 값 → 빈 값), `normalizeName`(`청량리(서울시립대입구)` → `청량리`, `서울역` → `서울`, `교대(법원, 검찰청)` → `교대`), `normalizeLockerName`(`서울역1~22` → `서울`, `충정로(1~15)` → `충정로`, `충정로B` → `충정로`, `제기동` → `제기동`), `cleanJapanese`(`ワンシムニ(ソンドン??)` → `OK(ワンシムニ)`, `クロ?デジタルダンジ` → `GARBLED`, 빈 값 → `BLANK`), `isSeoul`, 주소의 코드·이름 연결(까치산 형태), 복정역 형태(서울 주소 → 저장), 길이 초과 → 예외, 건수 식.
-  - `SubwayFileReaderTest`(단위): `"`와 `""`, 값 안의 쉼표, 끝의 쉼표(이름 없는 열), 열 부족 → 예외, CP949 파일.
+  - `SubwayFileReaderTest`(단위): `"`와 `""`, 값 안의 쉼표, **따옴표 안의 줄바꿈(1개·2개. `\n`과 `\r\n`)과 그 뒤 행의 행 번호(물리적인 줄)**, 이름 없는 열에 값이 있는 행, 끝의 쉼표, 열 부족 → 예외, 닫히지 않는 `"` → 예외(시작 행 번호), CP949 파일.
   - `SubwayImportServiceTest`: `src/test/resources/data/subway-sample/`의 작은 파일 4개(CP949. 각 몇 행이고 위 형태를 하나 이상씩 포함)로 `convert`까지 통과시키고, `SubwayImportWriter`는 목.
   - `SubwayImportMapperTest`(`@MybatisTest`): 교체·서브쿼리로 구한 `station_id`·두 번째에도 같은 행 수.
 
@@ -2019,5 +2030,6 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 | U-08 | reCAPTCHA 사이트 키를 프론트엔드 빌드 설정에 넣는 방법 | frontend-dev(공정 5. 프론트엔드 클래스 설계는 06 대상 외) | API-37 화면 |
 | U-09 | A-03(API-50에서 공연 ID 대소문자 무시)은 관리자에게 보이는 변경. 사람에게 전한다 | **해소**(2026-11-09, 사람이 "무시"로 확정. 9의 끝) | — |
 | U-10 | 쿼리의 타입 변환 실패(`page=abc` 등)는 Spring MVC가 바인딩 때 바로 예외로 하므로 다른 인자·항목의 제약 오류와 함께 반환되지 않는다(3.3의 "쿼리 record가 2개 이상인…"). 03의 7.3 "여러 항목이 틀렸으면 `errors`에 모두 넣는다"의 예외로 03에 쓸지, 모두 반환하는 구조(쿼리를 `String`으로 받아 직접 변환하는 등)로 할지 | **해소**(03의 7.3에 예외로 기재. 지금 동작(타입 오류만 반환) 그대로. Issue #23 E-2, 2026-11-11) | 3.3, 03의 7.3 |
+| U-11 | `batch_step_run.window_end_date`(S1의 "이번 창의 마지막 날". 05의 3.3의 3.(b), 04의 DB-10)를 쓰는 방법. Issue #36의 공통 부품에서는 `StepResult`에 이 값이 없고 `updateStepRun`은 이 열을 쓰지 않는다(B-02~B-04는 쓰지 않음) | backend-dev(W1-a, B-01을 만들 때). 방침(architect): `StepResult`에 `LocalDate windowEndDate`(S1 외에는 `null`)를 더하고 `updateStepRun`이 이 열도 쓴다(`null`이면 `NULL`). `findLastSuccessfulS1`은 이 열을 읽는다(5.2). 다른 방법으로 하려면 먼저 06을 고친다 | 5.2, 5.3, 4.9 |
 
 - db-designer에게 넘길 것: 없음(새 테이블·열·인덱스 불필요. U-05의 `EXPLAIN`에서 인덱스가 필요하다고 판명되면 db-designer에게 넘긴다).
