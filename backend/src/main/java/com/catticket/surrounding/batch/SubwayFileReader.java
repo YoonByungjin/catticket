@@ -3,6 +3,7 @@ package com.catticket.surrounding.batch;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -13,12 +14,17 @@ import org.springframework.core.io.Resource;
 
 /**
  * 駅・コインロッカーの CSV を読む（06 の 5.4）。CSV のライブラリは使わず JDK だけで読む（06 の 1.3）。
- * 区切りはカンマ。{@code "} で囲んだ値はカンマを含んでよく、中の {@code ""} は {@code "} 1つ。
- * 引用符の中の改行は扱わない（06 の 5.4。閉じていない {@code "} として失敗になる）。
+ * RFC 4180 のとおり: 区切りはカンマ。{@code "} で囲んだ値はカンマ・改行を含んでよく、中の {@code ""} は {@code "} 1つ。
+ * 行（レコード）は引用符の外の改行（{@code \r\n}・{@code \n}・{@code \r}）で終わる。
+ * 行番号はその行が始まる物理的な行の番号（テキストエディタの行と同じにして、人がファイルを直しやすくする）。
  */
 public class SubwayFileReader {
 
 	private static final char BOM = '﻿';
+
+	/** 物理的な行番号つきの1行（レコード）の値 */
+	record Record(int lineNumber, List<String> values) {
+	}
 
 	/**
 	 * @param label           記録・メッセージに出すファイルの用途（例: {@code locker}）
@@ -38,31 +44,28 @@ public class SubwayFileReader {
 		}
 	}
 
-	List<CsvRow> parse(BufferedReader reader, String label, List<String> requiredColumns) throws IOException {
-		String headerLine = reader.readLine();
-		if (headerLine == null) {
+	List<CsvRow> parse(Reader reader, String label, List<String> requiredColumns) throws IOException {
+		List<Record> records = records(reader, label);
+		if (records.isEmpty()) {
 			throw new SubwayFileException(label + ": 空のファイル");
 		}
+		Record headerRecord = records.get(0);
+		List<String> header = new ArrayList<>(headerRecord.values().stream().map(String::strip).toList());
 		// UTF-8 の版に替わっても読めるように BOM を除く
-		if (!headerLine.isEmpty() && headerLine.charAt(0) == BOM) {
-			headerLine = headerLine.substring(1);
+		if (!header.get(0).isEmpty() && header.get(0).charAt(0) == BOM) {
+			header.set(0, header.get(0).substring(1).strip());
 		}
-		List<String> header = split(headerLine, label, 1).stream().map(String::strip).toList();
 		for (String column : requiredColumns) {
 			if (!header.contains(column)) {
-				throw new SubwayFileException(label + " 1行目 " + column + ": 見出しにない");
+				throw new SubwayFileException(
+						label + " " + headerRecord.lineNumber() + "行目 " + column + ": 見出しにない");
 			}
 		}
 
 		List<CsvRow> rows = new ArrayList<>();
-		int lineNumber = 1;
-		String line;
-		while ((line = reader.readLine()) != null) {
-			lineNumber++;
-			if (line.isBlank()) {
-				continue;
-			}
-			List<String> values = split(line, label, lineNumber);
+		for (Record record : records.subList(1, records.size())) {
+			int lineNumber = record.lineNumber();
+			List<String> values = record.values();
 			if (values.size() < header.size()) {
 				throw new SubwayFileException(label + " " + lineNumber + "行目: 値の数が見出しより少ない（" + values.size()
 						+ " < " + header.size() + "）");
@@ -75,7 +78,7 @@ public class SubwayFileReader {
 			}
 			Map<String, String> map = new LinkedHashMap<>();
 			for (int i = 0; i < header.size(); i++) {
-				// 名前のない列（多言語表記の末尾のカンマ）は無視する
+				// 名前のない列（多言語表記の末尾のカンマ）は、値が入っていても捨てる
 				if (!header.get(i).isEmpty()) {
 					map.put(header.get(i), values.get(i).strip());
 				}
@@ -85,47 +88,82 @@ public class SubwayFileReader {
 		return rows;
 	}
 
-	/** 1行をカンマで分ける。引用符の中のカンマは値の一部、{@code ""} は {@code "} */
-	static List<String> split(String line, String label, int lineNumber) {
+	/**
+	 * 行（レコード）に分ける。空の行（引用符の外で空白だけの行を含む）は除く。
+	 * ファイルの終わりまで閉じない {@code "} は、その行が始まる行番号で失敗にする
+	 */
+	static List<Record> records(Reader reader, String label) throws IOException {
+		List<Record> records = new ArrayList<>();
 		List<String> values = new ArrayList<>();
 		StringBuilder current = new StringBuilder();
 		boolean quoted = false;
 		boolean fieldStart = true;
-		for (int i = 0; i < line.length(); i++) {
-			char c = line.charAt(i);
+		int physicalLine = 1;
+		int recordStart = 1;
+		int c = reader.read();
+		while (c != -1) {
+			int next = reader.read();
+			char ch = (char) c;
 			if (quoted) {
-				if (c == '"') {
-					if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
+				if (ch == '"') {
+					if (next == '"') {
 						current.append('"');
-						i++;
+						next = reader.read();
 					}
 					else {
 						quoted = false;
 					}
 				}
 				else {
-					current.append(c);
+					// 値の中の改行はそのまま残す。物理的な行は数える
+					if (ch == '\n' || (ch == '\r' && next != '\n')) {
+						physicalLine++;
+					}
+					current.append(ch);
 				}
+				fieldStart = false;
 			}
-			else if (c == ',') {
+			else if (ch == ',') {
 				values.add(current.toString());
 				current.setLength(0);
 				fieldStart = true;
-				continue;
 			}
-			else if (c == '"' && fieldStart) {
+			else if (ch == '\r' || ch == '\n') {
+				if (ch == '\r' && next == '\n') {
+					next = reader.read();
+				}
+				values.add(current.toString());
+				addRecord(records, recordStart, values);
+				values = new ArrayList<>();
+				current.setLength(0);
+				fieldStart = true;
+				physicalLine++;
+				recordStart = physicalLine;
+			}
+			else if (ch == '"' && fieldStart) {
 				quoted = true;
+				fieldStart = false;
 			}
 			else {
-				current.append(c);
+				current.append(ch);
+				fieldStart = false;
 			}
-			fieldStart = false;
+			c = next;
 		}
 		if (quoted) {
-			throw new SubwayFileException(label + " " + lineNumber + "行目: 閉じていない \"");
+			throw new SubwayFileException(label + " " + recordStart + "行目: 閉じていない \"");
 		}
 		values.add(current.toString());
-		return values;
+		addRecord(records, recordStart, values);
+		return records;
+	}
+
+	private static void addRecord(List<Record> records, int lineNumber, List<String> values) {
+		// 空の行・空白だけの行（引用符もカンマもない）は読み飛ばす
+		boolean blank = values.size() == 1 && values.get(0).isBlank();
+		if (!blank) {
+			records.add(new Record(lineNumber, List.copyOf(values)));
+		}
 	}
 
 	private static String describe(Resource resource) {

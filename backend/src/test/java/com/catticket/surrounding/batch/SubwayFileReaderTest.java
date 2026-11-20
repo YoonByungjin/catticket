@@ -95,12 +95,63 @@ class SubwayFileReaderTest {
 	}
 
 	@Test
-	void unclosedQuoteFails() {
-		// 引用符の中の改行は扱わない（06 の 5.4）
-		assertThatThrownBy(() -> read("연번,호선,보관함명,상세위치\n1,1,시청,\"대합실\n옆\"\n", MS949,
+	void unclosedQuoteFailsWithStartLine() {
+		// ファイルの終わりまで閉じない " は、その行が始まる物理的な行番号で失敗（06 の 5.4）
+		assertThatThrownBy(() -> read("연번,호선,보관함명,상세위치\n1,1,시청,대합실\n2,1,종각,\"대합실\n옆\n", MS949,
 				SubwayColumns.LOCKER_REQUIRED))
 			.isInstanceOf(SubwayFileException.class)
-			.hasMessage("test 2行目: 閉じていない \"");
+			.hasMessage("test 3行目: 閉じていない \"");
+	}
+
+	@Test
+	void newlinesInsideQuotesAreKeptAndLineNumbersArePhysical() {
+		// 多言語表記の8列目の注記の形（改行1つ・2つ）。名前のない列の値は捨てる
+		List<CsvRow> rows = read("연번,호선,한글,한자,영문,중국어,일본어,\n"
+				+ "96,4호선,당고개,,Danggogae,堂?,タンゴゲ,\"※진접선 제외\n남양주도시공사 관할\"\n"
+				+ "97,4호선,상계,上溪,Sanggye,上溪,サンゲ,\n"
+				+ "259,8호선,암사역사공원,-,Amsa,-,アムサ,\"※별내선 5개역\n(장자호수공원) 제외\n구리도시공사관할\"\n"
+				+ "260,8호선,천호,千戶,Cheonho,千戶,チョノ,\n", MS949, SubwayColumns.NAME_REQUIRED);
+
+		assertThat(rows).extracting(r -> r.get(SubwayColumns.NAME_KO)).containsExactly("당고개", "상계", "암사역사공원", "천호");
+		// その行が始まる物理的な行の番号
+		assertThat(rows).extracting(CsvRow::lineNumber).containsExactly(2, 4, 5, 8);
+		assertThat(rows.get(0).values()).containsOnlyKeys(SubwayColumns.NAME_REQUIRED);
+	}
+
+	@Test
+	void crlfNewlineInsideQuotesIsPartOfValue() {
+		List<CsvRow> rows = read("연번,호선,보관함명,상세위치\r\n1,1,시청,\"대합실\r\n옆\"\r\n2,1,종각,대합실\r\n", MS949,
+				SubwayColumns.LOCKER_REQUIRED);
+
+		assertThat(rows).hasSize(2);
+		assertThat(rows.get(0).get(SubwayColumns.LOCKER_LOCATION)).isEqualTo("대합실\r\n옆");
+		assertThat(rows).extracting(CsvRow::lineNumber).containsExactly(2, 4);
+	}
+
+	@Test
+	void errorAfterMultilineRowUsesPhysicalLine() {
+		assertThatThrownBy(() -> read("연번,호선,보관함명,상세위치\n1,1,시청,\"대합실\n옆\"\n2,1,종각\n", MS949,
+				SubwayColumns.LOCKER_REQUIRED))
+			.isInstanceOf(SubwayFileException.class)
+			.hasMessageStartingWith("test 4行目: 値の数が見出しより少ない");
+	}
+
+	@Test
+	void readsRealMultilingualFile() {
+		// 置いてある版（05 の 4.2）: 290 行。8列目に改行を含む行（연번 96・259）がある
+		List<CsvRow> rows = reader.read(new ClassPathResource("data/subway/서울교통공사_역명다국어표기_20241101.csv"), MS949,
+				"station-name-ja", SubwayColumns.NAME_REQUIRED);
+		assertThat(rows).hasSize(290);
+		assertThat(rows).filteredOn(r -> r.get(SubwayColumns.SEQ).equals("97"))
+			.extracting(CsvRow::lineNumber)
+			.containsExactly(99);
+	}
+
+	@Test
+	void crOnlyLineEndingsEndRows() {
+		List<CsvRow> rows = read("연번,호선,보관함명,상세위치\r1,1,시청,대합실\r2,1,종각,대합실", MS949,
+				SubwayColumns.LOCKER_REQUIRED);
+		assertThat(rows).extracting(CsvRow::lineNumber).containsExactly(2, 3);
 	}
 
 	@Test
