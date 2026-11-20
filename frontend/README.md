@@ -24,7 +24,7 @@ Node.js は LTS（Angular 22 の対応: `^22.22.3 || ^24.15.0 || >=26.0.0`）。
 | `src/app/core/i18n/` | 画面の文言の辞書（`messages.ko.ts` が正、`messages.ja.ts` は同じキーを型で強制）、`LanguageService`、`translate` パイプ |
 | `src/app/core/theme/` | `ThemeService`（ライト・ダーク表示） |
 | `src/app/core/notification/` | CM-03 通知（`MatSnackBar`） |
-| `src/app/layout/` | CM-01 ヘッダー、CM-02 フッター |
+| `src/app/layout/` | CM-01 ヘッダー、CM-02 フッター。出典の2行（`attribution/`）は SC-01 のスマホ表示の出典のダイアログでも使う |
 | `src/app/pages/` | SC-99 エラー、まだ中身のない画面の仮の画面 |
 | `src/app/app.routes.ts` | 02 の画面一覧の URL |
 
@@ -60,7 +60,7 @@ Node.js는 LTS(Angular 22 지원: `^22.22.3 || ^24.15.0 || >=26.0.0`).
 | `src/app/core/i18n/` | 화면 문구 사전(`messages.ko.ts`가 기준, `messages.ja.ts`는 같은 키를 타입으로 강제), `LanguageService`, `translate` 파이프 |
 | `src/app/core/theme/` | `ThemeService`(라이트·다크 표시) |
 | `src/app/core/notification/` | CM-03 알림(`MatSnackBar`) |
-| `src/app/layout/` | CM-01 헤더, CM-02 푸터 |
+| `src/app/layout/` | CM-01 헤더, CM-02 푸터. 출처 2줄(`attribution/`)은 SC-01 스마트폰 표시의 출처 다이얼로그에서도 쓴다 |
 | `src/app/pages/` | SC-99 오류, 아직 내용이 없는 화면의 임시 화면 |
 | `src/app/app.routes.ts` | 02 화면 목록의 URL |
 
