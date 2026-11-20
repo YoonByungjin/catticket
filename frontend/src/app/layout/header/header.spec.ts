@@ -5,7 +5,7 @@ import { AuthMeResponse } from '../../core/api/api.types';
 import { LanguageService, RELOAD_PAGE } from '../../core/i18n/language.service';
 import { BROWSER_STORAGE } from '../../core/storage/safe-storage';
 import { ThemeService } from '../../core/theme/theme.service';
-import { ViewportService } from '../../core/viewport/viewport.service';
+import { HANDSET_MEDIA_QUERY, ViewportService } from '../../core/viewport/viewport.service';
 import { Header } from './header';
 
 describe('Header (CM-01)', () => {
@@ -76,6 +76,32 @@ describe('Header (CM-01)', () => {
     expect(account.querySelector('a')?.getAttribute('aria-label')).toBe(`계정 (${nickname})`);
     // 縮めない項目には自作のクラスで flex-shrink: 0 を付ける
     expect(el.querySelector('.ct-actions > button')?.classList.contains('ct-fixed')).toBe(true);
+  });
+
+  it('side padding is set by our own class: PC 24px (07 2.4)', async () => {
+    const el = (await render()).nativeElement as HTMLElement;
+    const toolbar = el.querySelector('mat-toolbar') as HTMLElement;
+    expect(toolbar.classList.contains('ct-header')).toBe(true);
+    const style = getComputedStyle(toolbar);
+    expect(style.paddingLeft).toBe('24px');
+    expect(style.paddingRight).toBe('24px');
+  });
+
+  it('side padding on handset is 16px at the shared breakpoint (07 2.4)', async () => {
+    await render();
+    // jsdom はメディアクエリを評価しないため、境目の @media の中の .ct-header の規則を読む
+    const rules = Array.from(document.styleSheets)
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .filter((rule): rule is CSSMediaRule => rule instanceof CSSMediaRule)
+      .filter((rule) => rule.media.mediaText === HANDSET_MEDIA_QUERY)
+      .flatMap((rule) => Array.from(rule.cssRules))
+      .filter(
+        (rule): rule is CSSStyleRule =>
+          rule instanceof CSSStyleRule && /^\.ct-header(\[|$)/.test(rule.selectorText),
+      );
+    expect(rules.length).toBe(1);
+    expect(rules[0].style.paddingLeft).toBe('16px');
+    expect(rules[0].style.paddingRight).toBe('16px');
   });
 
   it('PC, signed out: login and signup do not shrink', async () => {
