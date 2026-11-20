@@ -303,7 +303,7 @@ erDiagram
 | カラム | 型（予定） | NULL | 既定 | 制約 | 説明 |
 |---|---|---|---|---|---|
 | `external_station_code` | VARCHAR | 不可 | — | UNIQUE | 外部の駅コード（座標のファイルの「고유역번호(외부역코드)」。乗り換え駅は路線ごとに別のコード） |
-| `line` | VARCHAR | 不可 | — | UNIQUE（`line`, `name_ko`） | 路線（例: `1호선`。書き方はファイルを取得して工程4で決める） |
+| `line` | TINYINT | 不可 | — | UNIQUE（`line`, `name_ko`）、CHECK（1〜8） | 路線（1〜8。11.5 の D-09） |
 | `name_ko` | VARCHAR | 不可 | — | 同上 | 駅名（韓国語） |
 | `name_ja` | VARCHAR | 可 | NULL | — | 駅名（日本語の公式表記。ADR 0009）。ない駅は `translation` の機械翻訳を使う |
 | `latitude` | DECIMAL(9,6) | 不可 | — | — | 緯度 |
@@ -1518,7 +1518,7 @@ erDiagram
 | 컬럼 | 타입(예정) | NULL | 기본값 | 제약 | 설명 |
 |---|---|---|---|---|---|
 | `external_station_code` | VARCHAR | 불가 | — | UNIQUE | 외부 역 코드(좌표 파일의 "고유역번호(외부역코드)". 환승역은 노선마다 다른 코드) |
-| `line` | VARCHAR | 불가 | — | UNIQUE(`line`, `name_ko`) | 노선(예: `1호선`. 표기는 파일을 받아 공정 4에서 정한다) |
+| `line` | TINYINT | 불가 | — | UNIQUE(`line`, `name_ko`), CHECK(1~8) | 노선(1~8. 11.5의 D-09) |
 | `name_ko` | VARCHAR | 불가 | — | 위와 같음 | 역명(한국어) |
 | `name_ja` | VARCHAR | 가능 | NULL | — | 역명(일본어 공식 표기. ADR 0009). 없는 역은 `translation`의 기계 번역을 쓴다 |
 | `latitude` | DECIMAL(9,6) | 불가 | — | — | 위도 |
