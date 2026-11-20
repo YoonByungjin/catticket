@@ -1,3 +1,5 @@
 /gradlew text eol=lf
 *.bat text eol=crlf
 *.jar binary
+# 提供元のファイル（CP949・CRLF）をダウンロードしたまま保つ。改行を LF にしない（data/subway/README.md）
+src/main/resources/data/subway/*.csv -text

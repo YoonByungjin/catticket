@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.catticket.common.batch.JobLockMapper">
+
+  <!-- 待たない（0 秒）。同じバッチが動いていればすぐ 0 を返す（05 の 1.1） -->
+  <select id="getLock" resultType="java.lang.Integer" useCache="false" flushCache="true">
+    SELECT GET_LOCK(#{name}, 0)
+  </select>
+
+  <select id="releaseLock" resultType="java.lang.Integer" useCache="false" flushCache="true">
+    SELECT RELEASE_LOCK(#{name})
+  </select>
+
+</mapper>
