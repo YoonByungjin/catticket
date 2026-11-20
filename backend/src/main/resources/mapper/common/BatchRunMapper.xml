@@ -49,4 +49,20 @@
     LIMIT 1
   </select>
 
+  <resultMap id="failedStep" type="com.catticket.common.batch.FailedStep">
+    <constructor>
+      <arg column="step_name" name="stepName" javaType="java.lang.String"/>
+      <arg column="error_message" name="errorMessage" javaType="java.lang.String"/>
+    </constructor>
+  </resultMap>
+
+  <!-- ステップは始めるときに行を入れるので id の順が始めた順。started_at はジョブの開始時刻と同じことがあるので使わない -->
+  <select id="findFirstFailedStep" resultMap="failedStep">
+    SELECT step_name, error_message
+    FROM batch_step_run
+    WHERE job_run_id = #{jobRunId} AND result = 'FAILURE'
+    ORDER BY id
+    LIMIT 1
+  </select>
+
 </mapper>

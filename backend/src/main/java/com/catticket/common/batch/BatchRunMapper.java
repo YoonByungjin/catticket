@@ -25,4 +25,7 @@ public interface BatchRunMapper {
 	/** step_name = 'S1' AND result = 'SUCCESS' の最も新しい行（04 の DB-10） */
 	Optional<LastS1> findLastSuccessfulS1();
 
+	/** result = 'FAILURE' のステップのうち id が最も小さい行（始めた順。06 の 5.2） */
+	Optional<FailedStep> findFirstFailedStep(long jobRunId);
+
 }

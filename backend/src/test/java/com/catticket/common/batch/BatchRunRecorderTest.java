@@ -4,11 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,6 +92,71 @@ class BatchRunRecorderTest {
 	void finishWritesResultAndSanitizedMessage() {
 		recorder.finish(11L, JobResult.FAILURE, "SQLException: Access denied (db-password-xyz)", NOW);
 		verify(mapper).updateJobRun(11L, NOW, "FAILURE", "SQLException: Access denied (***)");
+	}
+
+	@Test
+	void partialFailureWithoutMessageWritesFirstFailedStep() {
+		when(mapper.findFirstFailedStep(11L)).thenReturn(Optional.of(new FailedStep("S3", "X: y")));
+
+		recorder.finish(11L, JobResult.PARTIAL_FAILURE, null, NOW);
+
+		verify(mapper).updateJobRun(11L, NOW, "PARTIAL_FAILURE", "S3: X: y");
+	}
+
+	@Test
+	void failureWithoutMessageWritesFirstFailedStep() {
+		when(mapper.findFirstFailedStep(11L)).thenReturn(Optional.of(new FailedStep("import-subway",
+				"SubwayFileException: locker 12行目 보관함명: 空")));
+
+		recorder.finish(11L, JobResult.FAILURE, null, NOW);
+
+		verify(mapper).updateJobRun(11L, NOW, "FAILURE", "import-subway: SubwayFileException: locker 12行目 보관함명: 空");
+	}
+
+	@Test
+	void bodyExceptionMessageIsPreferredOverFailedStep() {
+		recorder.finish(11L, JobResult.FAILURE, "IllegalStateException: broken", NOW);
+
+		verify(mapper).updateJobRun(11L, NOW, "FAILURE", "IllegalStateException: broken");
+		verify(mapper, never()).findFirstFailedStep(anyLong());
+	}
+
+	@Test
+	void successKeepsNullAndDoesNotLookUpSteps() {
+		recorder.finish(11L, JobResult.SUCCESS, null, NOW);
+
+		verify(mapper).updateJobRun(11L, NOW, "SUCCESS", null);
+		verify(mapper, never()).findFirstFailedStep(anyLong());
+	}
+
+	@Test
+	void noFailedStepWritesNull() {
+		when(mapper.findFirstFailedStep(11L)).thenReturn(Optional.empty());
+
+		recorder.finish(11L, JobResult.PARTIAL_FAILURE, null, NOW);
+
+		verify(mapper).updateJobRun(11L, NOW, "PARTIAL_FAILURE", null);
+	}
+
+	@Test
+	void failedStepWithoutMessageWritesStepNameOnly() {
+		when(mapper.findFirstFailedStep(11L)).thenReturn(Optional.of(new FailedStep("S7", null)));
+
+		recorder.finish(11L, JobResult.PARTIAL_FAILURE, null, NOW);
+
+		verify(mapper).updateJobRun(11L, NOW, "PARTIAL_FAILURE", "S7");
+	}
+
+	@Test
+	void failedStepMessageIsSanitizedAgainAfterAddingStepName() {
+		// ステップ側で 2000 に切り詰め済みでも、名前を付けると超えるので再び切り詰める
+		String stepMessage = "x".repeat(BatchRunRecorder.MAX_ERROR_MESSAGE);
+		when(mapper.findFirstFailedStep(11L)).thenReturn(Optional.of(new FailedStep("S1", stepMessage)));
+
+		recorder.finish(11L, JobResult.PARTIAL_FAILURE, null, NOW);
+
+		String expected = ("S1: " + stepMessage).substring(0, BatchRunRecorder.MAX_ERROR_MESSAGE);
+		verify(mapper).updateJobRun(11L, NOW, "PARTIAL_FAILURE", expected);
 	}
 
 	@Test

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -115,6 +116,44 @@ class BatchRunMapperTest {
 
 		assertThat(mapper.findLastSuccessfulS1())
 			.contains(new LastS1(LocalDate.of(2026, 11, 18), LocalDate.of(2027, 5, 17)));
+	}
+
+	@Test
+	void findFirstFailedStepReturnsSmallestIdFailure() {
+		long jobId = insertJob("daily-collect", T0);
+		// started_at はジョブの開始時刻と同じ値にする（id の順で決まること）
+		long s1 = insertStep(jobId, "S1", T0);
+		mapper.updateStepRun(s1, T0.plusMinutes(1), "SUCCESS", 10L, null, null);
+		long s2 = insertStep(jobId, "S2", T0);
+		mapper.updateStepRun(s2, T0.plusMinutes(2), "FAILURE", 0L, null, "KopisFatalException: 02");
+		long s3 = insertStep(jobId, "S3", T0);
+		mapper.updateStepRun(s3, T0.plusMinutes(3), "FAILURE", 0L, null, "X: y");
+
+		assertThat(mapper.findFirstFailedStep(jobId)).contains(new FailedStep("S2", "KopisFatalException: 02"));
+	}
+
+	@Test
+	void findFirstFailedStepIgnoresSuccessUnfinishedAndOtherJobs() {
+		long other = insertJob("daily-collect", T0.minusDays(1));
+		long otherStep = insertStep(other, "S1", T0.minusDays(1));
+		mapper.updateStepRun(otherStep, T0.minusDays(1).plusMinutes(1), "FAILURE", 0L, null, "other job");
+
+		long jobId = insertJob("daily-collect", T0);
+		long s1 = insertStep(jobId, "S1", T0);
+		mapper.updateStepRun(s1, T0.plusMinutes(1), "SUCCESS", 10L, null, null);
+		// 始めたが終わりを記録できなかった（result が NULL）
+		insertStep(jobId, "S2", T0);
+
+		assertThat(mapper.findFirstFailedStep(jobId)).isEmpty();
+	}
+
+	@Test
+	void findFirstFailedStepKeepsNullMessage() {
+		long jobId = insertJob("daily-collect", T0);
+		long s7 = insertStep(jobId, "S7", T0);
+		mapper.updateStepRun(s7, T0.plusMinutes(1), "FAILURE", 0L, null, null);
+
+		assertThat(mapper.findFirstFailedStep(jobId)).isEqualTo(Optional.of(new FailedStep("S7", null)));
 	}
 
 }
