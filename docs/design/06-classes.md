@@ -1,6 +1,6 @@
 # 06. クラス設計書
 
-- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10）。PR #32 の reviewer の判定は条件付き承認で、06 への指摘（U-01・U-04・U-06・U-07 の更新、4.5・7.2・8.1・3.2 の追記）を反映済み（2026-11-10。人間の確認待ち）。Issue #23 の決定 E-2・E-3（コメント 6783513546）を 3.3・11 に反映（2026-11-11）。Issue #36 で駅・コインロッカーのファイルの確認の結果と人間の決定（2026-11-19、Issue #36 のコメント）を 4.9・5.2・5.4・8.1・9 の A-07・11 の U-03 に反映（2026-11-19）。同じ Issue の実装（コミット 061e657・9f8ea15）で分かったこと（引用符の中の改行、手での実行の起動の方法・devtools・`SecurityConfig`、`StepSummary` の JSON、`error_message` の整え方、`JobLock` のテスト用のメソッド、U-11）を 3.4・5.1・5.2・5.4・11 に反映（2026-11-19）、reviewer の確認待ち。Issue #38 で、`JobLock` の `RELEASE_LOCK` の戻り値の扱いと失敗した接続の捨て方、ジョブの `error_message` に最初に失敗したステップの理由を書くことを 5.2 に追記（2026-11-20。決定の根拠は Issue #36 のコメント 7031400502）、reviewer の確認待ち。Issue #38 で KOPIS の実際の呼び出しの確認の結果（05 の 3.1〜3.6・7）を 3.6 の `Genre`・4.9・5.3・6.4・7.1・11 の U-02 に反映（2026-11-20。ジャンルの一覧、結果コードと XML の読み方、S2 の未集計の期間、S6 の予約数。**S5 の `showCount` は人間の決定待ち**）、reviewer の確認待ち
+- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10）。PR #32 の reviewer の判定は条件付き承認で、06 への指摘（U-01・U-04・U-06・U-07 の更新、4.5・7.2・8.1・3.2 の追記）を反映済み（2026-11-10。人間の確認待ち）。Issue #23 の決定 E-2・E-3（コメント 6783513546）を 3.3・11 に反映（2026-11-11）。Issue #36 で駅・コインロッカーのファイルの確認の結果と人間の決定（2026-11-19、Issue #36 のコメント）を 4.9・5.2・5.4・8.1・9 の A-07・11 の U-03 に反映（2026-11-19）。同じ Issue の実装（コミット 061e657・9f8ea15）で分かったこと（引用符の中の改行、手での実行の起動の方法・devtools・`SecurityConfig`、`StepSummary` の JSON、`error_message` の整え方、`JobLock` のテスト用のメソッド、U-11）を 3.4・5.1・5.2・5.4・11 に反映（2026-11-19）、reviewer の確認待ち。Issue #38 で、`JobLock` の `RELEASE_LOCK` の戻り値の扱いと失敗した接続の捨て方、ジョブの `error_message` に最初に失敗したステップの理由を書くことを 5.2 に追記（2026-11-20。決定の根拠は Issue #36 のコメント 7031400502）、reviewer の確認待ち。Issue #38 で KOPIS の実際の呼び出しの確認の結果（05 の 3.1〜3.6・7）を 3.6 の `Genre`・4.9・5.3・6.4・7.1・11 の U-02 に反映（2026-11-20。ジャンルの一覧、結果コードと XML の読み方、S2 の未集計の期間、S6 の予約数）、reviewer の確認待ち。Issue #38 の人間の決定1・2（2026-11-20、コメント 7032205139。01 の R-69・X-30）で S5（上演回数）をなくし、`showCount`・`ShowCountStep`・`totalShowCount`・S5 用の Mapper のメソッドを外した（4.8・4.9・5.2・5.3・6.4・7.1・10・11 の U-02。S5 は欠番で、ステップの名前は振り直さない。05 の 3.6）、reviewer の確認待ち
 - 担当: architect
 - 入力: `01-requirements.md`、`02-screens.md`、`03-api.md`（API 仕様の詳細）、`04-tables.md` と `backend/src/main/resources/db/migration/V1__create_schema.sql`、`05-batch.md`、ADR 0001〜0016。
 - 対象: バックエンド（`backend/`、Spring Boot）だけ。Angular のクラス設計は対象外（工程5で frontend-dev が `02`・`03`・`07` から作る）。
@@ -55,7 +55,7 @@
 | `com.catticket.account` | ニックネーム・パスワード変更、退会 | API-40〜42 |
 | `com.catticket.favorite` | お気に入り | API-43〜45 |
 | `com.catticket.admin` | 管理者の公演管理・レビュー管理 | API-50〜56 |
-| `com.catticket.collect` | KOPIS の収集（B-01 の S1〜S6）と B-01 全体の流れ | B-01 |
+| `com.catticket.collect` | KOPIS の収集（B-01 の S1〜S4・S6。S5 は欠番）と B-01 全体の流れ | B-01 |
 | `com.catticket.translation` | Azure Translator の翻訳（B-01 の S7）と翻訳の参照 | B-01 S7、API の `lang=ja` |
 | `com.catticket.mail` | メール送信と送信記録・上限 | API-33, 35, 37 |
 | `com.catticket.summary` | 公演のカード（`PerformanceSummary`）の組み立て。翻訳と評価をまとめて引く（3.5） | API-01, 05, 20, 21, 43 |
@@ -557,7 +557,7 @@ flowchart LR
 | メソッド | SQL の役割 |
 |---|---|
 | `List<AdminPerformanceListRow> search(AdminSearchCondition)`・`long count(…)` | `performance_effective` + 会場（1.6 の公開の条件を使わない）。キーワードは `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`（A-03）。`hasOverride` は `EXISTS (SELECT 1 FROM performance_override …)`。`ORDER BY pe.start_date DESC, pe.kopis_performance_id`。`AdminPerformanceListRow`（record）: `String kopisPerformanceId`, `String title`, `String venueName`, `LocalDate startDate`, `LocalDate endDate`, `boolean isHidden`, `boolean hasOverride`（`title`・期間は修正を反映した値。Service が `AdminPerformanceItem`（03 の API-50 のレスポンス）に変える: `kopisPerformanceId` → `performanceId`、ほかは同じ名前、`status` は `PerformanceStatus.of(startDate, endDate, today)` で足す） |
-| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | `performance p JOIN venue v`。**自動収集の値だけ**（ビューを使わない。04 の 11.3）。ロックしない。`AdminPerformanceRow`: `long id`, `kopisPerformanceId`, `isHidden`, 修正できる 10 項目の自動収集の値（`title`, `startDate`, `endDate`, `genreCode`, `castText`, `ticketPrice`, `scheduleText`, `runtime`, `ageLimit`, `isOpenRun`。予約サイトは `findBookingSites`）、会場（`kopisVenueId`, `name`, `address`）、`posterUrl`, `hasAward`, `totalShowCount` |
+| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | `performance p JOIN venue v`。**自動収集の値だけ**（ビューを使わない。04 の 11.3）。ロックしない。`AdminPerformanceRow`: `long id`, `kopisPerformanceId`, `isHidden`, 修正できる 10 項目の自動収集の値（`title`, `startDate`, `endDate`, `genreCode`, `castText`, `ticketPrice`, `scheduleText`, `runtime`, `ageLimit`, `isOpenRun`。予約サイトは `findBookingSites`）、会場（`kopisVenueId`, `name`, `address`）、`posterUrl`, `hasAward` |
 | `Optional<Long> findPerformanceId(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = …`（API-55 の存在の確認。ロックしない） |
 | `Optional<Long> findPerformanceIdForUpdate(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = #{kopisPerformanceId} FOR UPDATE`（ほかの表を結ばない。4.8 の「ロックと読み」） |
 | `List<OverrideRow> findOverrides(long performanceId)` | `performance_override`（`OverrideRow(fieldName, overrideValue, updatedAt)`。`booking_sites` の行も含む） |
@@ -567,7 +567,7 @@ flowchart LR
 | `int deleteBookingSites(long performanceId, String source)`・`void insertBookingSites(long performanceId, String source, List<BookingSiteInput>, LocalDateTime now)` | `ADMIN` の行（並び順は配列の順 1, 2, …） |
 | `int updateHidden(String kopisPerformanceId, boolean hidden, LocalDateTime now)` | `performance.is_hidden` |
 
-### 4.9 収集（`collect`、B-01 の S1〜S6）
+### 4.9 収集（`collect`、B-01 の S1〜S4・S6）
 
 **`collect.client.KopisClient`**（ADR 0008、`docs/kopis-api.md` は参考）
 
@@ -578,7 +578,6 @@ flowchart LR
 | `Optional<KopisVenueDetail> getVenue(String mt10id)` | `prfplc/{mt10id}`。`04` → `Optional.empty()` |
 | `List<KopisBoxOfficeItem> boxOffice(Period period, Optional<Genre> genre)` | `boxoffice`（`stdate`・`eddate`・`area=11`、ジャンルがあれば `catecode` = `Genre.code()`。`cpage`・`rows` は送らない）。最大 50 行・ページなし（05 の 3.4）。空の応答 → 空のリスト。期間の種類は `stdate`〜`eddate` で決まるので引数に持たない（集計の期間の種類は呼ぶ側の `collectionKey` が持つ） |
 | `KopisPage<KopisAwardItem> awards(LocalDate from, LocalDate to, int page)` | `prfawad`（`stdate`・`eddate`・`cpage`・`rows=100`・`signgucode=11`。`afterdate` は送らない。05 の 3.2 の S3） |
-| `showCount(…)` | `prfstsPrfBy`。**作らない（人間の決定待ち。05 の 3.6）**。決まったら形を 06 に書いてから作る |
 | `List<KopisGenreStat> genreStats(Period period)` | `boxStatsCate`（`stdate` = `period.start`・`eddate` = `period.end`。地域の変数は送らない（効かない。05 の 3.2 の「S6 の詳細」））。`합계` の行も含めて返し、除くのは `GenreTrendCalculator` |
 
 - XML の読み方（根要素・行要素の名前、エラーの見分け方、空の応答、値の整え方）は 7.1 の「KOPIS の XML の読み方」。結果コードの扱い（05 の 3.5）: `01`・`02`・`05`・`06`・それ以外の知らないコード → `KopisFatalException`（再試行しない。メッセージは `KOPIS {service} returncode={code} errmsg={errmsg}`）、`03`・通信の失敗・タイムアウト・5xx → `KopisRetryableException`、`04` → 詳細は `Optional.empty()`、一覧は 0 件。
@@ -593,7 +592,6 @@ flowchart LR
 | `RankingCollectStep` | S2 | 期間の種類 × 現在・直前の 6 期間ごとに、① 全体（`boxOffice(period, Optional.empty())`）を照会 → 0 件なら**未集計**として、その期間は何も保存せず（ジャンルも照会しない）`StepSummary` の `notYetAvailable` を1足し、`addDetail("notYetAvailable", "{DAILY|WEEKLY|MONTHLY}|{期間の初日}")` → ② 1 件以上なら全体の組を `RankingSaveService.replace(collectionKey, items, now)`、続けて `Genre` の 9 個を順に照会して、0 件も含めて組ごとに `replace`（組ごとに1トランザクション。行の入れ替えと `ranking_collection` の追加・更新。05 の 3.4）。全体の照会が失敗した期間はジャンルを照会しない。件数: `collected`（`replace` した組の数）、`notYetAvailable`、`failed`（照会に失敗した組の数。1 以上ならステップは失敗） |
 | `AwardCollectStep` | S3 | 窓を 31 日ずつ → `markAwarded(kopisIds)`（立てるだけ） |
 | `MissingPerformanceStep` | S4 | S2・S3 で見た ID のうち DB にないもの → `saveFromKopis`（S1 と同じ） |
-| `ShowCountStep` | S5 | **作らない（人間の決定待ち。05 の 3.6）** |
 | `GenreTrendStep` | S6 | 期間 = `Period(today − 30 日, today − 1 日)` → `genreStats(period)` → `GenreTrendCalculator.calculate(stats)` → 空でなければ `GenreTrendSaveService.replace(period, rows, GenreTrendBasis.NATIONAL, now)`。`InvalidGenreStatException` → 何も保存せずステップを失敗（`errorMessage` に例外のメッセージ）。件数: `saved`（保存した行の数）、`zeroTotal`（分母が 0 で保存しなかったら 1） |
 
 **`GenreTrendCalculator`**（`collect`。Spring に依存しない。05 の 3.2 の「S6 の詳細」）
@@ -606,10 +604,10 @@ flowchart LR
 
 **`RankingCollectStep` の期間**（05 の 3.4、ADR 0008 3.）: 4.4 の `ranking.RankingPeriods`（Spring に依存しない暦の計算）に `static List<RankingTarget> collectTargets(LocalDate today)` を足して使う。`RankingTarget(PeriodType type, Period period)` の 6 つ（日次: 前日・前々日、週次: 先週の月〜日・その前の週、月次: 先月・先々月。この順）。暦の計算を2か所に作らないため。`collect` から使うのはこの計算の部品だけで、`ranking` の Service は呼ばない（2.2 の矢印は Service の呼び出しなので増やさない）。単体テストで月の変わり目・年の変わり目・月曜日を確かめる。
 
-- `PerformanceSaveService.saveFromKopis(KopisPerformanceDetail, LocalDateTime now)` → `SaveOutcome`（`@Transactional`）: `ProviderValues` で 05 の 3.3 の 10.（A-02）の判定（ID の長さ・空 → 保存しない、`Genre.fromKopisName` が空 → 保存しない、URL が長い → NULL・項目を保存しない、文が長い → `Texts.truncateCodePoints`・`TEXT` の列は `Texts.truncateUtf8Bytes(…, 65535)`）→ 会場がなければ `KopisClient.getVenue` → `DistrictParser.parse(address)`（25 区。決められなければ NULL）→ `upsertVenue` → `upsertPerformance`（`is_hidden`・`has_award`・`total_show_count` は更新しない）→ `deleteBookingSites(id, COLLECTED)` → `insertBookingSites`（名前が空なら NULL、URL が空なら保存しない）。外部の呼び出し（会場）はトランザクションの前に済ませる（`PerformanceCollectStep` が先に `getVenue` を呼んで渡す）。
+- `PerformanceSaveService.saveFromKopis(KopisPerformanceDetail, LocalDateTime now)` → `SaveOutcome`（`@Transactional`）: `ProviderValues` で 05 の 3.3 の 10.（A-02）の判定（ID の長さ・空 → 保存しない、`Genre.fromKopisName` が空 → 保存しない、URL が長い → NULL・項目を保存しない、文が長い → `Texts.truncateCodePoints`・`TEXT` の列は `Texts.truncateUtf8Bytes(…, 65535)`）→ 会場がなければ `KopisClient.getVenue` → `DistrictParser.parse(address)`（25 区。決められなければ NULL）→ `upsertVenue` → `upsertPerformance`（`is_hidden`・`has_award` は更新しない）→ `deleteBookingSites(id, COLLECTED)` → `insertBookingSites`（名前が空なら NULL、URL が空なら保存しない）。外部の呼び出し（会場）はトランザクションの前に済ませる（`PerformanceCollectStep` が先に `getVenue` を呼んで渡す）。
 - 件数の内訳（保存しなかった公演、切り詰めた数、区を決められなかった会場、座標のない会場など）は `StepSummary`（5.2）に数え、`batch_step_run.summary` に JSON の文字列で保存する。
 
-**`CollectMapper`**（`mapper/collect/CollectMapper.xml`）: `Optional<Long> findVenueIdByKopisId`、`void upsertVenue`、`Optional<Long> findPerformanceIdByKopisId`、`void upsertPerformance`（`INSERT … AS n ON DUPLICATE KEY UPDATE`。管理者の修正は別テーブルなので触れない）、`int deleteBookingSites(long performanceId, String source)`、`void insertBookingSites(…)`、`int markAwarded(Collection<String> kopisIds, LocalDateTime now)`、`Set<String> findExistingKopisIds(Collection<String>)`、`Optional<Long> findCollectionId(…)`・`void upsertRankingCollection(…)`・`int deleteRankingEntries(long collectionId)`・`void insertRankingEntries(…)`、`int deleteGenreTrends(Period)`・`void insertGenreTrends(…)`。S5 用のメソッド（上演回数の更新、対象の公演の読み出し）は、05 の 3.6 の方法が決まるまで作らない（2026-11-20、Issue #38）。
+**`CollectMapper`**（`mapper/collect/CollectMapper.xml`）: `Optional<Long> findVenueIdByKopisId`、`void upsertVenue`、`Optional<Long> findPerformanceIdByKopisId`、`void upsertPerformance`（`INSERT … AS n ON DUPLICATE KEY UPDATE`。管理者の修正は別テーブルなので触れない）、`int deleteBookingSites(long performanceId, String source)`、`void insertBookingSites(…)`、`int markAwarded(Collection<String> kopisIds, LocalDateTime now)`、`Set<String> findExistingKopisIds(Collection<String>)`、`Optional<Long> findCollectionId(…)`・`void upsertRankingCollection(…)`・`int deleteRankingEntries(long collectionId)`・`void insertRankingEntries(…)`、`int deleteGenreTrends(Period)`・`void insertGenreTrends(…)`。上演回数のメソッドは作らない（S5 はない。05 の 3.6）。
 
 ### 4.10 翻訳（`translation`）
 
@@ -740,16 +738,16 @@ CatTicket の会員登録を完了するには、下のリンクを開いてく�
     - `JobLockReleaseTest`（単体。`SqlSessionFactory`・`SqlSession`・`JobLockMapper`・`DataSource`（`unwrap` でモックの `HikariDataSource` を返す）・`Connection` をモック）: `releaseLock` が `1` → `evictConnection` を呼ばずに `close`。`0`・`null`・例外 → `evictConnection(c)` の後に `close`（`InOrder`）。`evictConnection` が例外でも `close` を呼び、`Held.close` は投げない。`getLock` が例外 → `evictConnection` して、その例外が出る。`DataSource` が Hikari でない → コンストラクタが `IllegalStateException`。
     - `JobLockTest`（`@MybatisTest`。実際の MySQL）に足す: ① `sqlSessionFactory.openSession()` の `getConnection()` のクラス名が `com.zaxxer.hikari` で始まる。② 捨てるとロックが外れる: テストで `openSession()` し、その `JobLockMapper` で名前 A（`catticket-test-…`）の `GET_LOCK` を取る → 同じ session で `releaseAndClose(session, 名前B)`（B は取っていないので `NULL` → 捨てる）→ 別の `tryAcquire(A)` が 5 秒以内に取れる（100 ms ごとに試す。物理接続は別のスレッドで閉じるため）。
 - `catticket-{task}` のロック名は最長 31 文字（`catticket-purge-expired-signups`。MySQL の上限 64 文字以内）。
-- ステップの名前（`batch_step_run.step_name`）: B-01 は `S1`〜`S7`。B-02〜B-04 は1つのステップとして記録し（04 の `batch_step_run.step_name`）、名前は処理の名前と同じ（`import-subway`、`create-admin`、`purge-expired-signups`）。B-04 は消した件数を `processed_count` に入れる。
+- ステップの名前（`batch_step_run.step_name`）: B-01 は `S1`〜`S4`・`S6`・`S7`（`S5` は欠番。05 の 3.6）。B-02〜B-04 は1つのステップとして記録し（04 の `batch_step_run.step_name`）、名前は処理の名前と同じ（`import-subway`、`create-admin`、`purge-expired-signups`）。B-04 は消した件数を `processed_count` に入れる。
 - 「前回 S1 が成功した日」は `findLastSuccessfulS1` の `started_at` の日付（04 の DB-10）。
 
 ### 5.3 B-01 日次収集（`collect.batch.DailyCollectJob`）
 
-- `run()`: `BatchJobRunner.execute(DAILY_COLLECT, ctx -> …)` の中で S1〜S7 を順に呼ぶ（05 の 3.2）。各ステップは `try` で囲み、例外は `StepResult` の失敗にして次へ進む。1つでも失敗なら `PARTIAL_FAILURE`、すべて成功なら `SUCCESS`。
-- ステップのクラスは 4.9（S1〜S6）と `translation.TranslationStep`（S7。`TranslationService.translatePending` を呼ぶ）。
+- `run()`: `BatchJobRunner.execute(DAILY_COLLECT, ctx -> …)` の中で S1〜S4・S6・S7 を順に呼ぶ（05 の 3.2）。各ステップは `try` で囲み、例外は `StepResult` の失敗にして次へ進む。1つでも失敗なら `PARTIAL_FAILURE`、すべて成功なら `SUCCESS`。
+- ステップのクラスは 4.9（S1〜S4・S6）と `translation.TranslationStep`（S7。`TranslationService.translatePending` を呼ぶ）。
 - S4 の入力（S2・S3 で見た公演 ID）は `DailyCollectJob` がメモリで受け渡す（`StepResult` とは別に `Set<String>`）。
 - 再実行（`daily-collect`）は同じクラス。冪等性は 05 の 3.2 の表のとおり（追加・更新・入れ替え）。
-- **S5 は、05 の 3.6 の方法が決まるまで呼ばない**（2026-11-20、Issue #38）。S4 の次は S6。`batch_step_run` に `S5` の行は作らない（実行していないステップを成功・失敗として残さないため）。決まったら S5 を足し、この節を直す。
+- **S5 はない**（欠番。人間の決定2、2026-11-20、Issue #38 コメント 7032205139。05 の 3.6）。S4 の次は S6。`batch_step_run` に `S5` の行は作らない。将来ステップを足すときは `S8` から名前を付け、`S5` を使い回さない。
 
 ### 5.4 B-02 駅・コインロッカーの取り込み（`surrounding.batch.SubwayImportJob`）
 
@@ -909,7 +907,6 @@ verify(token):
 | B-01 S1・S4 | 公演1件（`PerformanceSaveService.saveFromKopis`）。会場の保存も同じトランザクション |
 | B-01 S2 | 期間の種類・期間・ジャンルの組1つ（`RankingSaveService.replace`） |
 | B-01 S3 | 1回の照会の結果（`markAwarded`） |
-| B-01 S5 | 未決（05 の 3.6 の方法が人間の決定待ち） |
 | B-01 S6 | 集計期間1つ（`GenreTrendSaveService.replace`） |
 | B-01 S7 | 翻訳の束1つ（`TranslationBatchWriter.save`） |
 | B-02 | 全体で1つ（`SubwayImportWriter.replaceAll`） |
@@ -942,7 +939,6 @@ verify(token):
 | `prfplc/{mt10id}`（施設詳細） | `dbs` | `db`（1つ） | 結果コード `04` |
 | `prfawad`（受賞作） | `dbs` | `db` | `<dbs/>`（空の実物はまだないが、`pblprfr` と同じ形とみる。`04` が来ても 0 件） |
 | `boxoffice`（順位） | `boxofs` | `boxof` | `<boxofs/>` |
-| `prfstsPrfBy`（公演別統計） | `prfsts` | `prfst` | `<prfsts/>` |
 | `boxStatsCate`（ジャンル別統計） | `box-statsofs` | `boxStatsof` | 空の実物はない（`<box-statsofs/>` とみる） |
 | **エラー（どのサービスも）** | `dbs` | `db`（`returncode`・`errmsg`・`responsetime`） | — |
 
@@ -1133,7 +1129,7 @@ catticket:
 | F-29 | SC-03, SC-02 | API-20, 03、B-01（S2） | `ranking_collection`, `ranking_entry`, `performance` | `RankingController`・`RankingService.getRanking`、`RankingPeriods`、`RankingCollectStep`・`RankingSaveService` |
 | F-30 | SC-01, SC-02, SC-11 | API-01, 03, 43, 11〜13 | `review` | `ReviewService.findRatingStats`、`Rating` |
 | F-31 | SC-01, SC-02, SC-03, SC-11 | API-01, 03, 20, 21, 43、B-01（S3） | `performance` | `PerformanceSummaryAssembler`、`AwardCollectStep` |
-| F-32 | SC-02 | API-03、B-01（S1, S5） | `performance`, `override` | `PerformanceService.getDetail`、`ShowCountStep` |
+| F-32 | SC-02 | API-03、B-01（S1。② は廃止: R-69） | `performance`, `override` | `PerformanceService.getDetail`、`PerformanceCollectStep` |
 | F-33 | SC-03 | API-21、B-01（S2） | `ranking_collection`, `ranking_entry`, `performance` | `RankingService.getRising`、`RisingCalculator` |
 | F-34 | SC-03 | API-22、B-01（S6） | `genre_trend` | `RankingService.getGenreTrend`、`GenreTrendStep`・`GenreTrendCalculator` |
 | F-35 | CM-01, SC-04 | API-30, 32 | — | `AuthController.me`、`SecurityConfig`（`logout`）、`server.servlet.session.timeout` |
@@ -1159,7 +1155,7 @@ catticket:
 | ID | 事項 | 誰が・いつ | 決まらないと困るもの |
 |---|---|---|---|
 | U-01 | Jackson 3（`tools.jackson`）で、文字列 → 数値・真偽の型の変換を失敗にする設定のメソッド名と、`jackson-dataformat-xml` の読み取りのアノテーションの名前（Jackson 2 から変わったもの） | **解消**（2026-11-10、Issue #23・PR #32）。jackson-databind 3.1.7（Spring Boot 4.1.2 が管理）: `MapperBuilder.withCoercionConfig(LogicalType, Consumer<MutableCoercionConfig>)`、`MutableCoercionConfig.setCoercion(CoercionInputShape, CoercionAction)`・`setAcceptBlankAsEmpty(Boolean)`、`DeserializationFeature.ACCEPT_FLOAT_AS_INT`。Spring Boot の `org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer`。XML のアノテーションは `tools.jackson.dataformat.xml.annotation` の `JacksonXmlRootElement`・`JacksonXmlProperty`・`JacksonXmlElementWrapper`・`JacksonXmlText`（jackson-dataformat-xml 3.1.7）。テスト: `ErrorResponseWebMvcTest$StrictJsonTypes`。確認先（確認日 2026-11-10）: https://javadoc.io/doc/tools.jackson.core/jackson-databind/3.1.7 （`cfg.MapperBuilder`・`cfg.MutableCoercionConfig`・`DeserializationFeature`）、https://docs.spring.io/spring-boot/api/java/org/springframework/boot/jackson/autoconfigure/JsonMapperBuilderCustomizer.html （Spring Boot 4.1.2 API）、https://docs.spring.io/spring-boot/appendix/dependency-versions/coordinates.html （両方 3.1.7）、XML のアノテーションは javadoc.io に 3.1.7 の頁がないため FasterXML/jackson-dataformat-xml のタグ `jackson-dataformat-xml-3.1.7` のソース（`src/main/java/tools/jackson/dataformat/xml/annotation/`） | 3.3、4.9 |
-| U-02 | KOPIS の結果コードの要素名・ジャンルの名前（`genrenm`）の一覧（05 の 7）、`prfstsPrfBy` の意味（05 の 3.6） | **結果コード・ジャンルは解消、`prfstsPrfBy` は人間の決定待ち**（2026-11-20、Issue #38。実行 Claude が実際の KOPIS を呼んで確かめ、architect が 05・06 に書いた）。**結果コード**: 要素は `dbs/db/returncode`・`errmsg`・`responsetime`（根要素はどのサービスも `dbs`）。0 件は空の根要素。読み方は 7.1、扱いは 4.9・05 の 3.5。**ジャンル**: 下の表の 9 つ（`Genre` の定数と KOPIS の名前）。`pblprfr` の `genrenm`、`boxoffice` の `cate`、`boxStatsCate` の `catenm` で同じ名前。**今のコードの `BBBC` の名前 `무용` は誤りで、`무용(서양/한국무용)` に直す**（このままでは舞踊の公演が「一覧にないジャンル」として保存されない。直すのは backend-dev）。`KID`・`OPEN` は `catecode` として通るがジャンルではないので `Genre` に入れない。**`prfstsPrfBy`**: 累計ではなく期間の中の回数。開幕からの累計を確かめられないため、05 の 3.6 で作業を止めて報告した（人間の決定待ち） | 4.9 の `KopisClient`・`Genre`、7.1 |
+| U-02 | KOPIS の結果コードの要素名・ジャンルの名前（`genrenm`）の一覧（05 の 7）、`prfstsPrfBy` の意味（05 の 3.6） | **解消**（2026-11-20、Issue #38。実行 Claude が実際の KOPIS を呼んで確かめ、architect が 05・06 に書いた）。**結果コード**: 要素は `dbs/db/returncode`・`errmsg`・`responsetime`（根要素はどのサービスも `dbs`）。0 件は空の根要素。読み方は 7.1、扱いは 4.9・05 の 3.5。**ジャンル**: 下の表の 9 つ（`Genre` の定数と KOPIS の名前）。`pblprfr` の `genrenm`、`boxoffice` の `cate`、`boxStatsCate` の `catenm` で同じ名前。**今のコードの `BBBC` の名前 `무용` は誤りで、`무용(서양/한국무용)` に直す**（このままでは舞踊の公演が「一覧にないジャンル」として保存されない。直すのは backend-dev）。`KID`・`OPEN` は `catecode` として通るがジャンルではないので `Genre` に入れない。**`prfstsPrfBy`**: 累計ではなく期間の中の回数。開幕からの累計を確かめられないため、05 の 3.6 で作業を止めて報告し、人間が F-32 ② の廃止を決めた（R-69、2026-11-20、Issue #38 コメント 7032205139）。B-01 は `prfstsPrfBy` を呼ばない（S5 はない） | 4.9 の `KopisClient`・`Genre`、7.1 |
 
 **U-02 のジャンルの一覧（`common.code.Genre`。2026-11-20 に確定）**
 
@@ -1195,7 +1191,7 @@ catticket:
 
 ### 06. 클래스 설계서
 
-- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10). PR #32의 reviewer 판정은 조건부 승인이며, 06에 대한 지적(U-01·U-04·U-06·U-07 갱신, 4.5·7.2·8.1·3.2 추가 기술)을 반영함(2026-11-10. 사람의 확인 대기). Issue #23의 결정 E-2·E-3(코멘트 6783513546)을 3.3·11에 반영(2026-11-11). Issue #36에서 역·물품보관함 파일 확인 결과와 사람의 결정(2026-11-19, Issue #36 코멘트)을 4.9·5.2·5.4·8.1·9의 A-07·11의 U-03에 반영(2026-11-19). 같은 Issue의 구현(커밋 061e657·9f8ea15)에서 알게 된 것(따옴표 안의 줄바꿈, 수동 실행의 기동 방법·devtools·`SecurityConfig`, `StepSummary`의 JSON, `error_message` 다듬기, `JobLock` 테스트용 메서드, U-11)을 3.4·5.1·5.2·5.4·11에 반영(2026-11-19), reviewer 확인 대기. Issue #38에서 `JobLock`의 `RELEASE_LOCK` 반환값 처리와 실패한 접속을 버리는 방법, 잡의 `error_message`에 처음 실패한 스텝의 이유를 쓰는 것을 5.2에 추가(2026-11-20. 결정 근거는 Issue #36 코멘트 7031400502), reviewer 확인 대기. Issue #38에서 KOPIS 실제 호출 확인 결과(05의 3.1~3.6·7)를 3.6의 `Genre`·4.9·5.3·6.4·7.1·11의 U-02에 반영(2026-11-20. 장르 목록, 결과 코드와 XML 읽는 법, S2의 미집계 기간, S6의 예매 수. **S5의 `showCount`는 사람의 결정 대기**), reviewer 확인 대기
+- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10). PR #32의 reviewer 판정은 조건부 승인이며, 06에 대한 지적(U-01·U-04·U-06·U-07 갱신, 4.5·7.2·8.1·3.2 추가 기술)을 반영함(2026-11-10. 사람의 확인 대기). Issue #23의 결정 E-2·E-3(코멘트 6783513546)을 3.3·11에 반영(2026-11-11). Issue #36에서 역·물품보관함 파일 확인 결과와 사람의 결정(2026-11-19, Issue #36 코멘트)을 4.9·5.2·5.4·8.1·9의 A-07·11의 U-03에 반영(2026-11-19). 같은 Issue의 구현(커밋 061e657·9f8ea15)에서 알게 된 것(따옴표 안의 줄바꿈, 수동 실행의 기동 방법·devtools·`SecurityConfig`, `StepSummary`의 JSON, `error_message` 다듬기, `JobLock` 테스트용 메서드, U-11)을 3.4·5.1·5.2·5.4·11에 반영(2026-11-19), reviewer 확인 대기. Issue #38에서 `JobLock`의 `RELEASE_LOCK` 반환값 처리와 실패한 접속을 버리는 방법, 잡의 `error_message`에 처음 실패한 스텝의 이유를 쓰는 것을 5.2에 추가(2026-11-20. 결정 근거는 Issue #36 코멘트 7031400502), reviewer 확인 대기. Issue #38에서 KOPIS 실제 호출 확인 결과(05의 3.1~3.6·7)를 3.6의 `Genre`·4.9·5.3·6.4·7.1·11의 U-02에 반영(2026-11-20. 장르 목록, 결과 코드와 XML 읽는 법, S2의 미집계 기간, S6의 예매 수), reviewer 확인 대기. Issue #38의 사람의 결정 1·2(2026-11-20, 코멘트 7032205139. 01의 R-69·X-30)로 S5(상연 횟수)를 없애고 `showCount`·`ShowCountStep`·`totalShowCount`·S5용 Mapper 메서드를 뺐다(4.8·4.9·5.2·5.3·6.4·7.1·10·11의 U-02. S5는 결번이며 스텝 이름은 다시 매기지 않는다. 05의 3.6), reviewer 확인 대기
 - 담당: architect
 - 입력: `01-requirements.md`, `02-screens.md`, `03-api.md`(API 사양 상세), `04-tables.md`와 `backend/src/main/resources/db/migration/V1__create_schema.sql`, `05-batch.md`, ADR 0001~0016.
 - 대상: 백엔드(`backend/`, Spring Boot)만. Angular 클래스 설계는 대상 외(공정 5에서 frontend-dev가 `02`·`03`·`07`로 만든다).
@@ -1251,7 +1247,7 @@ catticket:
 | `com.catticket.account` | 닉네임·비밀번호 변경, 탈퇴 | API-40~42 |
 | `com.catticket.favorite` | 즐겨찾기 | API-43~45 |
 | `com.catticket.admin` | 관리자의 공연 관리·리뷰 관리 | API-50~56 |
-| `com.catticket.collect` | KOPIS 수집(B-01의 S1~S6)과 B-01 전체 흐름 | B-01 |
+| `com.catticket.collect` | KOPIS 수집(B-01의 S1~S4·S6. S5는 결번)과 B-01 전체 흐름 | B-01 |
 | `com.catticket.translation` | Azure Translator 번역(B-01의 S7)과 번역 조회 | B-01 S7, API의 `lang=ja` |
 | `com.catticket.mail` | 메일 발송과 발송 기록·상한 | API-33, 35, 37 |
 | `com.catticket.summary` | 공연 카드(`PerformanceSummary`) 조립. 번역과 평점을 한 번에 조회(3.5) | API-01, 05, 20, 21, 43 |
@@ -1734,7 +1730,7 @@ Service
 | 메서드 | SQL 역할 |
 |---|---|
 | `List<AdminPerformanceListRow> search(AdminSearchCondition)`·`long count(…)` | `performance_effective` + 공연장(1.6의 공개 조건을 쓰지 않음). 키워드는 `pe.title LIKE #{kw} ESCAPE '\\' OR pe.kopis_performance_id COLLATE utf8mb4_0900_as_ci LIKE #{kw} ESCAPE '\\'`(A-03). `hasOverride`는 `EXISTS (SELECT 1 FROM performance_override …)`. `ORDER BY pe.start_date DESC, pe.kopis_performance_id`. `AdminPerformanceListRow`(record): `String kopisPerformanceId`, `String title`, `String venueName`, `LocalDate startDate`, `LocalDate endDate`, `boolean isHidden`, `boolean hasOverride`(`title`·기간은 수정을 반영한 값. Service가 `AdminPerformanceItem`(03의 API-50 응답)으로 바꾼다: `kopisPerformanceId` → `performanceId`, 나머지는 같은 이름, `status`는 `PerformanceStatus.of(startDate, endDate, today)`로 추가) |
-| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | `performance p JOIN venue v`. **자동 수집 값만**(뷰를 쓰지 않는다. 04의 11.3). 잠그지 않는다. `AdminPerformanceRow`: `long id`, `kopisPerformanceId`, `isHidden`, 수정할 수 있는 10개 항목의 자동 수집 값(`title`, `startDate`, `endDate`, `genreCode`, `castText`, `ticketPrice`, `scheduleText`, `runtime`, `ageLimit`, `isOpenRun`. 예매처는 `findBookingSites`), 공연장(`kopisVenueId`, `name`, `address`), `posterUrl`, `hasAward`, `totalShowCount` |
+| `Optional<AdminPerformanceRow> findPerformance(String kopisPerformanceId)` | `performance p JOIN venue v`. **자동 수집 값만**(뷰를 쓰지 않는다. 04의 11.3). 잠그지 않는다. `AdminPerformanceRow`: `long id`, `kopisPerformanceId`, `isHidden`, 수정할 수 있는 10개 항목의 자동 수집 값(`title`, `startDate`, `endDate`, `genreCode`, `castText`, `ticketPrice`, `scheduleText`, `runtime`, `ageLimit`, `isOpenRun`. 예매처는 `findBookingSites`), 공연장(`kopisVenueId`, `name`, `address`), `posterUrl`, `hasAward` |
 | `Optional<Long> findPerformanceId(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = …`(API-55의 존재 확인. 잠그지 않는다) |
 | `Optional<Long> findPerformanceIdForUpdate(String kopisPerformanceId)` | `SELECT id FROM performance WHERE kopis_performance_id = #{kopisPerformanceId} FOR UPDATE`(다른 표를 조인하지 않는다. 4.8의 "잠금과 읽기") |
 | `List<OverrideRow> findOverrides(long performanceId)` | `performance_override`(`OverrideRow(fieldName, overrideValue, updatedAt)`. `booking_sites` 행도 포함) |
@@ -1744,7 +1740,7 @@ Service
 | `int deleteBookingSites(long performanceId, String source)`·`void insertBookingSites(long performanceId, String source, List<BookingSiteInput>, LocalDateTime now)` | `ADMIN` 행(정렬은 배열 순서 1, 2, …) |
 | `int updateHidden(String kopisPerformanceId, boolean hidden, LocalDateTime now)` | `performance.is_hidden` |
 
-**4.9 수집(`collect`, B-01의 S1~S6)**
+**4.9 수집(`collect`, B-01의 S1~S4·S6)**
 
 `collect.client.KopisClient`(ADR 0008, `docs/kopis-api.md`는 참고)
 
@@ -1755,7 +1751,6 @@ Service
 | `Optional<KopisVenueDetail> getVenue(String mt10id)` | `prfplc/{mt10id}`. `04` → `Optional.empty()` |
 | `List<KopisBoxOfficeItem> boxOffice(Period period, Optional<Genre> genre)` | `boxoffice`(`stdate`·`eddate`·`area=11`, 장르가 있으면 `catecode` = `Genre.code()`. `cpage`·`rows`는 보내지 않는다). 최대 50행·페이지 없음(05의 3.4). 빈 응답 → 빈 리스트. 기간 종류는 `stdate`~`eddate`로 정해지므로 인수로 갖지 않는다(집계의 기간 종류는 부르는 쪽의 `collectionKey`가 갖는다) |
 | `KopisPage<KopisAwardItem> awards(LocalDate from, LocalDate to, int page)` | `prfawad`(`stdate`·`eddate`·`cpage`·`rows=100`·`signgucode=11`. `afterdate`는 보내지 않는다. 05의 3.2의 S3) |
-| `showCount(…)` | `prfstsPrfBy`. **만들지 않는다(사람의 결정 대기. 05의 3.6)**. 정해지면 형태를 06에 쓴 뒤 만든다 |
 | `List<KopisGenreStat> genreStats(Period period)` | `boxStatsCate`(`stdate` = `period.start`·`eddate` = `period.end`. 지역 변수는 보내지 않는다(듣지 않음. 05의 3.2의 "S6 상세")). `합계` 행도 포함해 돌려주고, 빼는 것은 `GenreTrendCalculator` |
 
 - XML 읽는 법(루트 요소·행 요소 이름, 오류 구별 방법, 빈 응답, 값 다듬기)은 7.1의 "KOPIS XML 읽는 법". 결과 코드 처리(05의 3.5): `01`·`02`·`05`·`06`·그 밖의 모르는 코드 → `KopisFatalException`(재시도 안 함. 메시지는 `KOPIS {service} returncode={code} errmsg={errmsg}`), `03`·통신 실패·타임아웃·5xx → `KopisRetryableException`, `04` → 상세는 `Optional.empty()`, 목록은 0건.
@@ -1770,7 +1765,6 @@ Service
 | `RankingCollectStep` | S2 | 기간 종류 × 현재·직전의 6기간마다 ① 전체(`boxOffice(period, Optional.empty())`)를 조회 → 0건이면 **미집계**로 보고 그 기간은 아무것도 저장하지 않으며(장르도 조회하지 않는다) `StepSummary`의 `notYetAvailable`에 1을 더하고 `addDetail("notYetAvailable", "{DAILY|WEEKLY|MONTHLY}|{기간 첫날}")` → ② 1건 이상이면 전체 조합을 `RankingSaveService.replace(collectionKey, items, now)`, 이어서 `Genre` 9개를 순서대로 조회해 0건도 포함해 조합마다 `replace`(조합마다 트랜잭션 1개. 행 교체와 `ranking_collection` 추가·갱신. 05의 3.4). 전체 조회가 실패한 기간은 장르를 조회하지 않는다. 건수: `collected`(`replace`한 조합 수), `notYetAvailable`, `failed`(조회에 실패한 조합 수. 1 이상이면 스텝은 실패) |
 | `AwardCollectStep` | S3 | 창을 31일씩 → `markAwarded(kopisIds)`(세우기만) |
 | `MissingPerformanceStep` | S4 | S2·S3에서 본 ID 중 DB에 없는 것 → `saveFromKopis`(S1과 같음) |
-| `ShowCountStep` | S5 | **만들지 않는다(사람의 결정 대기. 05의 3.6)** |
 | `GenreTrendStep` | S6 | 기간 = `Period(today − 30일, today − 1일)` → `genreStats(period)` → `GenreTrendCalculator.calculate(stats)` → 비어 있지 않으면 `GenreTrendSaveService.replace(period, rows, GenreTrendBasis.NATIONAL, now)`. `InvalidGenreStatException` → 아무것도 저장하지 않고 스텝을 실패(`errorMessage`에 예외 메시지). 건수: `saved`(저장한 행 수), `zeroTotal`(분모가 0이라 저장하지 않았으면 1) |
 
 `GenreTrendCalculator`(`collect`. Spring 비의존. 05의 3.2의 "S6 상세")
@@ -1783,10 +1777,10 @@ Service
 
 `RankingCollectStep`의 기간(05의 3.4, ADR 0008 3.): 4.4의 `ranking.RankingPeriods`(Spring 비의존 달력 계산)에 `static List<RankingTarget> collectTargets(LocalDate today)`를 더해 쓴다. `RankingTarget(PeriodType type, Period period)` 6개(일간: 전날·전전날, 주간: 지난주 월~일·그 앞 주, 월간: 지난달·지지난달. 이 순서). 달력 계산을 두 곳에 만들지 않기 위해. `collect`에서 쓰는 것은 이 계산 부품뿐이고 `ranking`의 Service는 부르지 않는다(2.2의 화살표는 Service 호출이므로 늘리지 않는다). 단위 테스트로 월 경계·연 경계·월요일을 확인한다.
 
-- `PerformanceSaveService.saveFromKopis(KopisPerformanceDetail, LocalDateTime now)` → `SaveOutcome`(`@Transactional`): `ProviderValues`로 05의 3.3의 10.(A-02) 판정(ID 길이·빈 값 → 저장 안 함, `Genre.fromKopisName`이 비면 → 저장 안 함, URL이 김 → NULL·항목 저장 안 함, 문장이 김 → `Texts.truncateCodePoints`·`TEXT` 열은 `Texts.truncateUtf8Bytes(…, 65535)`) → 공연장이 없으면 `KopisClient.getVenue` → `DistrictParser.parse(address)`(25구. 정하지 못하면 NULL) → `upsertVenue` → `upsertPerformance`(`is_hidden`·`has_award`·`total_show_count`는 갱신 안 함) → `deleteBookingSites(id, COLLECTED)` → `insertBookingSites`(이름이 비면 NULL, URL이 비면 저장 안 함). 외부 호출(공연장)은 트랜잭션 전에 끝낸다(`PerformanceCollectStep`이 먼저 `getVenue`를 불러 넘긴다).
+- `PerformanceSaveService.saveFromKopis(KopisPerformanceDetail, LocalDateTime now)` → `SaveOutcome`(`@Transactional`): `ProviderValues`로 05의 3.3의 10.(A-02) 판정(ID 길이·빈 값 → 저장 안 함, `Genre.fromKopisName`이 비면 → 저장 안 함, URL이 김 → NULL·항목 저장 안 함, 문장이 김 → `Texts.truncateCodePoints`·`TEXT` 열은 `Texts.truncateUtf8Bytes(…, 65535)`) → 공연장이 없으면 `KopisClient.getVenue` → `DistrictParser.parse(address)`(25구. 정하지 못하면 NULL) → `upsertVenue` → `upsertPerformance`(`is_hidden`·`has_award`는 갱신 안 함) → `deleteBookingSites(id, COLLECTED)` → `insertBookingSites`(이름이 비면 NULL, URL이 비면 저장 안 함). 외부 호출(공연장)은 트랜잭션 전에 끝낸다(`PerformanceCollectStep`이 먼저 `getVenue`를 불러 넘긴다).
 - 건수 내역(저장하지 않은 공연, 잘라낸 수, 구를 정하지 못한 공연장, 좌표 없는 공연장 등)은 `StepSummary`(5.2)에 세어 `batch_step_run.summary`에 JSON 문자열로 저장한다.
 
-`CollectMapper`(`mapper/collect/CollectMapper.xml`): `Optional<Long> findVenueIdByKopisId`, `void upsertVenue`, `Optional<Long> findPerformanceIdByKopisId`, `void upsertPerformance`(`INSERT … AS n ON DUPLICATE KEY UPDATE`. 관리자 수정은 별도 테이블이므로 건드리지 않음), `int deleteBookingSites(long performanceId, String source)`, `void insertBookingSites(…)`, `int markAwarded(Collection<String> kopisIds, LocalDateTime now)`, `Set<String> findExistingKopisIds(Collection<String>)`, `Optional<Long> findCollectionId(…)`·`void upsertRankingCollection(…)`·`int deleteRankingEntries(long collectionId)`·`void insertRankingEntries(…)`, `int deleteGenreTrends(Period)`·`void insertGenreTrends(…)`. S5용 메서드(상연 횟수 갱신, 대상 공연 읽기)는 05의 3.6의 방법이 정해질 때까지 만들지 않는다(2026-11-20, Issue #38).
+`CollectMapper`(`mapper/collect/CollectMapper.xml`): `Optional<Long> findVenueIdByKopisId`, `void upsertVenue`, `Optional<Long> findPerformanceIdByKopisId`, `void upsertPerformance`(`INSERT … AS n ON DUPLICATE KEY UPDATE`. 관리자 수정은 별도 테이블이므로 건드리지 않음), `int deleteBookingSites(long performanceId, String source)`, `void insertBookingSites(…)`, `int markAwarded(Collection<String> kopisIds, LocalDateTime now)`, `Set<String> findExistingKopisIds(Collection<String>)`, `Optional<Long> findCollectionId(…)`·`void upsertRankingCollection(…)`·`int deleteRankingEntries(long collectionId)`·`void insertRankingEntries(…)`, `int deleteGenreTrends(Period)`·`void insertGenreTrends(…)`. 상연 횟수 메서드는 만들지 않는다(S5는 없음. 05의 3.6).
 
 **4.10 번역(`translation`)**
 
@@ -1894,16 +1888,16 @@ Service
     - `JobLockReleaseTest`(단위. `SqlSessionFactory`·`SqlSession`·`JobLockMapper`·`DataSource`(`unwrap`으로 목 `HikariDataSource`를 반환)·`Connection`을 목): `releaseLock`이 `1` → `evictConnection`을 부르지 않고 `close`. `0`·`null`·예외 → `evictConnection(c)` 뒤에 `close`(`InOrder`). `evictConnection`이 예외여도 `close`를 부르고 `Held.close`는 던지지 않는다. `getLock`이 예외 → `evictConnection`하고 그 예외가 나온다. `DataSource`가 Hikari가 아님 → 생성자가 `IllegalStateException`.
     - `JobLockTest`(`@MybatisTest`. 실제 MySQL)에 추가: ① `sqlSessionFactory.openSession()`의 `getConnection()` 클래스 이름이 `com.zaxxer.hikari`로 시작한다. ② 버리면 잠금이 풀린다: 테스트에서 `openSession()`하고 그 `JobLockMapper`로 이름 A(`catticket-test-…`)의 `GET_LOCK`을 얻는다 → 같은 session으로 `releaseAndClose(session, 이름B)`(B는 얻지 않았으므로 `NULL` → 버림) → 다른 `tryAcquire(A)`가 5초 안에 얻어진다(100 ms마다 시도. 물리 접속은 다른 스레드에서 닫히므로).
 - `catticket-{task}` 잠금 이름은 최장 31자(`catticket-purge-expired-signups`. MySQL 상한 64자 이내).
-- 스텝 이름(`batch_step_run.step_name`): B-01은 `S1`~`S7`. B-02~B-04는 스텝 하나로 기록하고(04의 `batch_step_run.step_name`), 이름은 처리 이름과 같다(`import-subway`, `create-admin`, `purge-expired-signups`). B-04는 삭제 건수를 `processed_count`에 넣는다.
+- 스텝 이름(`batch_step_run.step_name`): B-01은 `S1`~`S4`·`S6`·`S7`(`S5`는 결번. 05의 3.6). B-02~B-04는 스텝 하나로 기록하고(04의 `batch_step_run.step_name`), 이름은 처리 이름과 같다(`import-subway`, `create-admin`, `purge-expired-signups`). B-04는 삭제 건수를 `processed_count`에 넣는다.
 - "지난번 S1이 성공한 날"은 `findLastSuccessfulS1`의 `started_at` 날짜(04의 DB-10).
 
 **5.3 B-01 일간 수집(`collect.batch.DailyCollectJob`)**
 
-- `run()`: `BatchJobRunner.execute(DAILY_COLLECT, ctx -> …)` 안에서 S1~S7을 차례로 부른다(05의 3.2). 각 스텝은 `try`로 감싸고, 예외는 `StepResult` 실패로 하고 다음으로 진행한다. 하나라도 실패면 `PARTIAL_FAILURE`, 모두 성공이면 `SUCCESS`.
-- 스텝 클래스는 4.9(S1~S6)와 `translation.TranslationStep`(S7. `TranslationService.translatePending` 호출).
+- `run()`: `BatchJobRunner.execute(DAILY_COLLECT, ctx -> …)` 안에서 S1~S4·S6·S7을 차례로 부른다(05의 3.2). 각 스텝은 `try`로 감싸고, 예외는 `StepResult` 실패로 하고 다음으로 진행한다. 하나라도 실패면 `PARTIAL_FAILURE`, 모두 성공이면 `SUCCESS`.
+- 스텝 클래스는 4.9(S1~S4·S6)와 `translation.TranslationStep`(S7. `TranslationService.translatePending` 호출).
 - S4의 입력(S2·S3에서 본 공연 ID)은 `DailyCollectJob`이 메모리로 넘긴다(`StepResult`와 별도의 `Set<String>`).
 - 재실행(`daily-collect`)은 같은 클래스. 멱등성은 05의 3.2 표대로(추가·갱신·교체).
-- **S5는 05의 3.6의 방법이 정해질 때까지 부르지 않는다**(2026-11-20, Issue #38). S4 다음은 S6. `batch_step_run`에 `S5` 행은 만들지 않는다(실행하지 않은 스텝을 성공·실패로 남기지 않기 위해). 정해지면 S5를 더하고 이 절을 고친다.
+- **S5는 없다**(결번. 사람의 결정 2, 2026-11-20, Issue #38 코멘트 7032205139. 05의 3.6). S4 다음은 S6. `batch_step_run`에 `S5` 행은 만들지 않는다. 앞으로 스텝을 더할 때는 `S8`부터 이름을 붙이고 `S5`를 다시 쓰지 않는다.
 
 **5.4 B-02 역·물품보관함 수집(`surrounding.batch.SubwayImportJob`)**
 
@@ -2013,7 +2007,6 @@ B-04(`AuthPurgeService.purgeExpiredSignups`): 5.6대로, 트랜잭션 1개에서
 | B-01 S1·S4 | 공연 1건(`PerformanceSaveService.saveFromKopis`). 공연장 저장도 같은 트랜잭션 |
 | B-01 S2 | 기간 종류·기간·장르 조합 1개(`RankingSaveService.replace`) |
 | B-01 S3 | 1회 조회 결과(`markAwarded`) |
-| B-01 S5 | 미결(05의 3.6의 방법이 사람의 결정 대기) |
 | B-01 S6 | 집계 기간 1개(`GenreTrendSaveService.replace`) |
 | B-01 S7 | 번역 묶음 1개(`TranslationBatchWriter.save`) |
 | B-02 | 전체 1개(`SubwayImportWriter.replaceAll`) |
@@ -2046,7 +2039,6 @@ KOPIS XML 읽는 법(확인: 2026-11-20, Issue #38. 실행 Claude가 실제로 �
 | `prfplc/{mt10id}`(시설상세) | `dbs` | `db`(1개) | 결과 코드 `04` |
 | `prfawad`(수상작) | `dbs` | `db` | `<dbs/>`(빈 실물은 아직 없지만 `pblprfr`와 같은 형태로 본다. `04`가 와도 0건) |
 | `boxoffice`(순위) | `boxofs` | `boxof` | `<boxofs/>` |
-| `prfstsPrfBy`(공연별 통계) | `prfsts` | `prfst` | `<prfsts/>` |
 | `boxStatsCate`(장르별 통계) | `box-statsofs` | `boxStatsof` | 빈 실물은 없다(`<box-statsofs/>`로 본다) |
 | **오류(모든 서비스)** | `dbs` | `db`(`returncode`·`errmsg`·`responsetime`) | — |
 
@@ -2170,7 +2162,7 @@ KOPIS XML 읽는 법(확인: 2026-11-20, Issue #38. 실행 Claude가 실제로 �
 | F-29 | SC-03, SC-02 | API-20, 03, B-01(S2) | `ranking_collection`, `ranking_entry`, `performance` | `RankingController`·`RankingService.getRanking`, `RankingPeriods`, `RankingCollectStep`·`RankingSaveService` |
 | F-30 | SC-01, SC-02, SC-11 | API-01, 03, 43, 11~13 | `review` | `ReviewService.findRatingStats`, `Rating` |
 | F-31 | SC-01, SC-02, SC-03, SC-11 | API-01, 03, 20, 21, 43, B-01(S3) | `performance` | `PerformanceSummaryAssembler`, `AwardCollectStep` |
-| F-32 | SC-02 | API-03, B-01(S1, S5) | `performance`, `override` | `PerformanceService.getDetail`, `ShowCountStep` |
+| F-32 | SC-02 | API-03, B-01(S1. ②는 폐지: R-69) | `performance`, `override` | `PerformanceService.getDetail`, `PerformanceCollectStep` |
 | F-33 | SC-03 | API-21, B-01(S2) | `ranking_collection`, `ranking_entry`, `performance` | `RankingService.getRising`, `RisingCalculator` |
 | F-34 | SC-03 | API-22, B-01(S6) | `genre_trend` | `RankingService.getGenreTrend`, `GenreTrendStep`·`GenreTrendCalculator` |
 | F-35 | CM-01, SC-04 | API-30, 32 | — | `AuthController.me`, `SecurityConfig`(`logout`), `server.servlet.session.timeout` |
@@ -2196,7 +2188,7 @@ KOPIS XML 읽는 법(확인: 2026-11-20, Issue #38. 실행 Claude가 실제로 �
 | ID | 사항 | 누가·언제 | 정해지지 않으면 곤란한 것 |
 |---|---|---|---|
 | U-01 | Jackson 3(`tools.jackson`)에서 문자열 → 수치·진위 변환을 실패로 하는 설정의 메서드명과, `jackson-dataformat-xml` 읽기 어노테이션 이름(Jackson 2에서 바뀐 것) | **해소**(2026-11-10, Issue #23·PR #32). jackson-databind 3.1.7(Spring Boot 4.1.2가 관리): `MapperBuilder.withCoercionConfig(LogicalType, Consumer<MutableCoercionConfig>)`, `MutableCoercionConfig.setCoercion(CoercionInputShape, CoercionAction)`·`setAcceptBlankAsEmpty(Boolean)`, `DeserializationFeature.ACCEPT_FLOAT_AS_INT`. Spring Boot의 `org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer`. XML 어노테이션은 `tools.jackson.dataformat.xml.annotation`의 `JacksonXmlRootElement`·`JacksonXmlProperty`·`JacksonXmlElementWrapper`·`JacksonXmlText`(jackson-dataformat-xml 3.1.7). 테스트: `ErrorResponseWebMvcTest$StrictJsonTypes`. 확인처(확인일 2026-11-10): https://javadoc.io/doc/tools.jackson.core/jackson-databind/3.1.7 (`cfg.MapperBuilder`·`cfg.MutableCoercionConfig`·`DeserializationFeature`), https://docs.spring.io/spring-boot/api/java/org/springframework/boot/jackson/autoconfigure/JsonMapperBuilderCustomizer.html (Spring Boot 4.1.2 API), https://docs.spring.io/spring-boot/appendix/dependency-versions/coordinates.html (둘 다 3.1.7), XML 어노테이션은 javadoc.io에 3.1.7 페이지가 없어 FasterXML/jackson-dataformat-xml 태그 `jackson-dataformat-xml-3.1.7`의 소스(`src/main/java/tools/jackson/dataformat/xml/annotation/`) | 3.3, 4.9 |
-| U-02 | KOPIS 결과 코드 요소명·장르 이름(`genrenm`) 목록(05의 7), `prfstsPrfBy`의 의미(05의 3.6) | **결과 코드·장르는 해소, `prfstsPrfBy`는 사람의 결정 대기**(2026-11-20, Issue #38. 실행 Claude가 실제 KOPIS를 불러 확인하고 architect가 05·06에 썼다). **결과 코드**: 요소는 `dbs/db/returncode`·`errmsg`·`responsetime`(루트 요소는 어느 서비스든 `dbs`). 0건은 빈 루트 요소. 읽는 법은 7.1, 처리는 4.9·05의 3.5. **장르**: 아래 표의 9개(`Genre` 상수와 KOPIS 이름). `pblprfr`의 `genrenm`, `boxoffice`의 `cate`, `boxStatsCate`의 `catenm`에서 같은 이름. **지금 코드의 `BBBC` 이름 `무용`은 틀렸고 `무용(서양/한국무용)`으로 고친다**(이대로면 무용 공연이 "목록에 없는 장르"로 저장되지 않는다. 고치는 것은 backend-dev). `KID`·`OPEN`은 `catecode`로 통하지만 장르가 아니므로 `Genre`에 넣지 않는다. **`prfstsPrfBy`**: 누계가 아니라 기간 안의 횟수. 개막부터의 누계를 확인할 수 없으므로 05의 3.6에서 작업을 멈추고 보고했다(사람의 결정 대기) | 4.9의 `KopisClient`·`Genre`, 7.1 |
+| U-02 | KOPIS 결과 코드 요소명·장르 이름(`genrenm`) 목록(05의 7), `prfstsPrfBy`의 의미(05의 3.6) | **해소**(2026-11-20, Issue #38. 실행 Claude가 실제 KOPIS를 불러 확인하고 architect가 05·06에 썼다). **결과 코드**: 요소는 `dbs/db/returncode`·`errmsg`·`responsetime`(루트 요소는 어느 서비스든 `dbs`). 0건은 빈 루트 요소. 읽는 법은 7.1, 처리는 4.9·05의 3.5. **장르**: 아래 표의 9개(`Genre` 상수와 KOPIS 이름). `pblprfr`의 `genrenm`, `boxoffice`의 `cate`, `boxStatsCate`의 `catenm`에서 같은 이름. **지금 코드의 `BBBC` 이름 `무용`은 틀렸고 `무용(서양/한국무용)`으로 고친다**(이대로면 무용 공연이 "목록에 없는 장르"로 저장되지 않는다. 고치는 것은 backend-dev). `KID`·`OPEN`은 `catecode`로 통하지만 장르가 아니므로 `Genre`에 넣지 않는다. **`prfstsPrfBy`**: 누계가 아니라 기간 안의 횟수. 개막부터의 누계를 확인할 수 없으므로 05의 3.6에서 작업을 멈추고 보고했고, 사람이 F-32 ② 폐지를 정했다(R-69, 2026-11-20, Issue #38 코멘트 7032205139). B-01은 `prfstsPrfBy`를 부르지 않는다(S5는 없음) | 4.9의 `KopisClient`·`Genre`, 7.1 |
 
 U-02의 장르 목록(`common.code.Genre`. 2026-11-20에 확정)
 
