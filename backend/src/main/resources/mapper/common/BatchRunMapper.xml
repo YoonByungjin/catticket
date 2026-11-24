@@ -28,6 +28,7 @@
         processed_count = #{processedCount},
         summary = #{summary},
         error_message = #{errorMessage},
+        window_end_date = #{windowEndDate},
         updated_at = #{finishedAt}
     WHERE id = #{id}
   </update>

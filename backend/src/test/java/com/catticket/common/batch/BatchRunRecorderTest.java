@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Method;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -75,7 +76,25 @@ class BatchRunRecorderTest {
 
 		verify(mapper).updateStepRun(21L, NOW, "SUCCESS", 574L,
 				"{\"stationsSaved\":261,\"lockerUnmatched\":1,\"details\":{\"lockerUnmatched\":[\"7|이수|7호선 대합실\"]}}",
-				null);
+				null, null);
+	}
+
+	@Test
+	void finishStepWritesWindowEndDateOfSuccessfulS1() {
+		StepSummary summary = new StepSummary();
+		summary.add("saved", 120);
+
+		recorder.finishStep(new StepRun(21L, 11L, "S1"),
+				StepResult.success(120, summary, LocalDate.of(2027, 5, 18)), NOW);
+
+		verify(mapper).updateStepRun(21L, NOW, "SUCCESS", 120L, "{\"saved\":120}", null,
+				LocalDate.of(2027, 5, 18));
+	}
+
+	@Test
+	void failedStepCannotHaveWindowEndDate() {
+		assertThatThrownBy(() -> new StepResult(false, 0, null, "x", LocalDate.of(2027, 5, 18)))
+			.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
@@ -85,7 +104,7 @@ class BatchRunRecorderTest {
 				NOW);
 
 		verify(mapper).updateStepRun(21L, NOW, "FAILURE", 0L, null,
-				"HttpClientErrorException: GET http://x?service=*** line2");
+				"HttpClientErrorException: GET http://x?service=*** line2", null);
 	}
 
 	@Test

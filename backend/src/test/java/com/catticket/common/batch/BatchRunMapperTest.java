@@ -72,7 +72,7 @@ class BatchRunMapperTest {
 		long jobId = insertJob("import-subway", T0);
 		long stepId = insertStep(jobId, "import-subway", T0);
 
-		mapper.updateStepRun(stepId, T0.plusSeconds(5), "SUCCESS", 574L, "{\"stationsSaved\":261}", null);
+		mapper.updateStepRun(stepId, T0.plusSeconds(5), "SUCCESS", 574L, "{\"stationsSaved\":261}", null, null);
 
 		Map<String, Object> row = jdbcTemplate.queryForMap("SELECT * FROM batch_step_run WHERE id = ?", stepId);
 		assertThat(((Number) row.get("job_run_id")).longValue()).isEqualTo(jobId);
@@ -81,14 +81,30 @@ class BatchRunMapperTest {
 		assertThat(((Number) row.get("processed_count")).longValue()).isEqualTo(574L);
 		assertThat(row.get("summary")).isEqualTo("{\"stationsSaved\":261}");
 		assertThat(row.get("error_message")).isNull();
+		assertThat(row.get("window_end_date")).isNull();
 		assertThat(row.get("finished_at")).isEqualTo(T0.plusSeconds(5));
+	}
+
+	@Test
+	void successfulS1WritesWindowEndDate() {
+		// 06 の 11 の U-11: 成功した S1 の窓の末日を updateStepRun で書く
+		long jobId = insertJob("daily-collect", T0);
+		long s1 = insertStep(jobId, "S1", T0);
+
+		mapper.updateStepRun(s1, T0.plusMinutes(3), "SUCCESS", 120L, "{\"saved\":120}", null,
+				LocalDate.of(2027, 5, 18));
+
+		assertThat(jdbcTemplate.queryForObject("SELECT window_end_date FROM batch_step_run WHERE id = ?",
+				LocalDate.class, s1))
+			.isEqualTo(LocalDate.of(2027, 5, 18));
+		assertThat(mapper.findLastSuccessfulS1()).contains(new LastS1(LocalDate.of(2026, 11, 19), LocalDate.of(2027, 5, 18)));
 	}
 
 	@Test
 	void findLastSuccessfulS1IsEmptyWithoutSuccess() {
 		long jobId = insertJob("daily-collect", T0);
 		long s1 = insertStep(jobId, "S1", T0);
-		mapper.updateStepRun(s1, T0.plusMinutes(1), "FAILURE", 0L, null, "boom");
+		mapper.updateStepRun(s1, T0.plusMinutes(1), "FAILURE", 0L, null, "boom", null);
 
 		assertThat(mapper.findLastSuccessfulS1()).isEmpty();
 	}
@@ -98,21 +114,21 @@ class BatchRunMapperTest {
 		// 古い成功
 		long job1 = insertJob("daily-collect", T0.minusDays(2));
 		long old = insertStep(job1, "S1", T0.minusDays(2));
-		mapper.updateStepRun(old, T0.minusDays(2).plusMinutes(1), "SUCCESS", 10L, null, null);
+		mapper.updateStepRun(old, T0.minusDays(2).plusMinutes(1), "SUCCESS", 10L, null, null, null);
 		jdbcTemplate.update("UPDATE batch_step_run SET window_end_date = ? WHERE id = ?",
 				LocalDate.of(2027, 5, 16), old);
 		// 新しい成功（ここを返す）
 		long job2 = insertJob("daily-collect", T0.minusDays(1));
 		long latest = insertStep(job2, "S1", T0.minusDays(1));
-		mapper.updateStepRun(latest, T0.minusDays(1).plusMinutes(1), "SUCCESS", 10L, null, null);
+		mapper.updateStepRun(latest, T0.minusDays(1).plusMinutes(1), "SUCCESS", 10L, null, null, null);
 		jdbcTemplate.update("UPDATE batch_step_run SET window_end_date = ? WHERE id = ?",
 				LocalDate.of(2027, 5, 17), latest);
 		// もっと新しいが失敗の S1 と、成功した S1 以外のステップは対象外
 		long job3 = insertJob("daily-collect", T0);
 		long failed = insertStep(job3, "S1", T0);
-		mapper.updateStepRun(failed, T0.plusMinutes(1), "FAILURE", 0L, null, "boom");
+		mapper.updateStepRun(failed, T0.plusMinutes(1), "FAILURE", 0L, null, "boom", null);
 		long s2 = insertStep(job3, "S2", T0);
-		mapper.updateStepRun(s2, T0.plusMinutes(2), "SUCCESS", 60L, null, null);
+		mapper.updateStepRun(s2, T0.plusMinutes(2), "SUCCESS", 60L, null, null, null);
 
 		assertThat(mapper.findLastSuccessfulS1())
 			.contains(new LastS1(LocalDate.of(2026, 11, 18), LocalDate.of(2027, 5, 17)));
@@ -123,11 +139,11 @@ class BatchRunMapperTest {
 		long jobId = insertJob("daily-collect", T0);
 		// started_at はジョブの開始時刻と同じ値にする（id の順で決まること）
 		long s1 = insertStep(jobId, "S1", T0);
-		mapper.updateStepRun(s1, T0.plusMinutes(1), "SUCCESS", 10L, null, null);
+		mapper.updateStepRun(s1, T0.plusMinutes(1), "SUCCESS", 10L, null, null, null);
 		long s2 = insertStep(jobId, "S2", T0);
-		mapper.updateStepRun(s2, T0.plusMinutes(2), "FAILURE", 0L, null, "KopisFatalException: 02");
+		mapper.updateStepRun(s2, T0.plusMinutes(2), "FAILURE", 0L, null, "KopisFatalException: 02", null);
 		long s3 = insertStep(jobId, "S3", T0);
-		mapper.updateStepRun(s3, T0.plusMinutes(3), "FAILURE", 0L, null, "X: y");
+		mapper.updateStepRun(s3, T0.plusMinutes(3), "FAILURE", 0L, null, "X: y", null);
 
 		assertThat(mapper.findFirstFailedStep(jobId)).contains(new FailedStep("S2", "KopisFatalException: 02"));
 	}
@@ -136,11 +152,11 @@ class BatchRunMapperTest {
 	void findFirstFailedStepIgnoresSuccessUnfinishedAndOtherJobs() {
 		long other = insertJob("daily-collect", T0.minusDays(1));
 		long otherStep = insertStep(other, "S1", T0.minusDays(1));
-		mapper.updateStepRun(otherStep, T0.minusDays(1).plusMinutes(1), "FAILURE", 0L, null, "other job");
+		mapper.updateStepRun(otherStep, T0.minusDays(1).plusMinutes(1), "FAILURE", 0L, null, "other job", null);
 
 		long jobId = insertJob("daily-collect", T0);
 		long s1 = insertStep(jobId, "S1", T0);
-		mapper.updateStepRun(s1, T0.plusMinutes(1), "SUCCESS", 10L, null, null);
+		mapper.updateStepRun(s1, T0.plusMinutes(1), "SUCCESS", 10L, null, null, null);
 		// 始めたが終わりを記録できなかった（result が NULL）
 		insertStep(jobId, "S2", T0);
 
@@ -151,7 +167,7 @@ class BatchRunMapperTest {
 	void findFirstFailedStepKeepsNullMessage() {
 		long jobId = insertJob("daily-collect", T0);
 		long s7 = insertStep(jobId, "S7", T0);
-		mapper.updateStepRun(s7, T0.plusMinutes(1), "FAILURE", 0L, null, null);
+		mapper.updateStepRun(s7, T0.plusMinutes(1), "FAILURE", 0L, null, null, null);
 
 		assertThat(mapper.findFirstFailedStep(jobId)).isEqualTo(Optional.of(new FailedStep("S7", null)));
 	}
