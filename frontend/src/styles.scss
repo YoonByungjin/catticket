@@ -1,4 +1,5 @@
 @use 'sass:string';
+@use '@angular/cdk' as cdk;
 @use '@angular/material' as mat;
 @use './theme/theme-colors' as colors;
 
@@ -57,6 +58,10 @@ html:lang(ja) {
     )
   );
 }
+
+// 見えない文言のクラス（07 の 4.2.1）。v22 の mat.core() は空で、CDK はこのクラスを LiveAnnouncer などを
+// 使うときにしか読み込まないため、公式の mixin で常に出す
+@include cdk.a11y-visually-hidden();
 
 body {
   margin: 0;

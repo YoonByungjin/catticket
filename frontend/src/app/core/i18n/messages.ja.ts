@@ -17,6 +17,8 @@ export const ja: Messages = {
   'header.theme.toDark': 'ダーク表示に切り替える',
   'header.theme.toLight': 'ライト表示に切り替える',
 
+  'attribution.newTab': '(新しいタブで開きます)',
+
   'notify.loggedOut': 'ログアウトしました',
   'notify.sessionExpired': '一定時間操作がなかったため、ログアウトしました',
 

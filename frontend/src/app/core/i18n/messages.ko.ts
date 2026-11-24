@@ -19,6 +19,9 @@ export const ko = {
   'header.theme.toDark': '다크 표시로 전환',
   'header.theme.toLight': '라이트 표시로 전환',
 
+  // CM-02 フッターの出典のリンクの中の見えない文言（02 の 3.2・3.4、07 の 4.2.1）。出典の原文ではないので翻訳する
+  'attribution.newTab': '(새 탭에서 열림)',
+
   // CM-03 通知（02 の 3.1・3.5）
   'notify.loggedOut': '로그아웃했습니다',
   'notify.sessionExpired': '일정 시간 조작이 없어 로그아웃되었습니다',
