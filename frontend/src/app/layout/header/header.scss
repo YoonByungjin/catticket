@@ -5,6 +5,10 @@
 
 .ct-header {
   gap: 8px;
+  // 画面の左右の余白: PC 表示 24px、スマホ表示 16px（07 の 2.4）。
+  // Toolbar の既定は 16px で、余白のテーマの API がないため自作のクラスで指定する
+  padding-right: 24px;
+  padding-left: 24px;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   // PC 64px（07 の 3.）
   @include mat.toolbar-overrides(
@@ -18,6 +22,8 @@
   // スマホ表示は 56px。Toolbar の既定の切り替え幅（599px）は 02 の 1. の境目と違うため、同じ境目で指定する
   @media #{bp.$handset} {
     gap: 4px;
+    padding-right: 16px;
+    padding-left: 16px;
     @include mat.toolbar-overrides(
       (
         standard-height: 56px,
