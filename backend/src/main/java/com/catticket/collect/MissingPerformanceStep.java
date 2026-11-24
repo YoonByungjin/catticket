@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,14 +43,21 @@ public class MissingPerformanceStep {
 	}
 
 	/**
-	 * @param seenIds S2・S3 で見た公演 ID（DailyCollectJob がメモリで渡す。06 の 5.3）
+	 * S2・S3 で見た公演 ID は DailyCollectJob がメモリで渡す（06 の 5.3）。受賞作かどうかを保存に渡すため、2つに分けて受ける。
+	 *
+	 * @param rankingIds S2 で見た公演 ID
+	 * @param awardIds S3 で見た受賞作の公演 ID
 	 * @throws com.catticket.collect.client.StepAbortedException KOPIS の呼び出しが続けて失敗した（捕まえずに外へ出す）
 	 */
-	public StepResult run(BatchContext ctx, Set<String> seenIds) {
+	public StepResult run(BatchContext ctx, Set<String> rankingIds, Set<String> awardIds) {
 		policy.startStep();
 		StepSummary summary = new StepSummary();
 		UnitFailures failures = new UnitFailures(summary, log);
-		List<String> candidates = seenIds.stream().filter(ProviderValues::isValidId).distinct().toList();
+		// rankingIds の順、続けて awardIds（06 の 4.9）
+		List<String> candidates = Stream.concat(rankingIds.stream(), awardIds.stream())
+			.filter(ProviderValues::isValidId)
+			.distinct()
+			.toList();
 		summary.add("candidates", candidates.size());
 
 		Set<String> existing = new HashSet<>();
@@ -62,7 +70,7 @@ public class MissingPerformanceStep {
 		summary.add("missing", missing.size());
 
 		for (String id : missing) {
-			importer.importOne(id, ctx.now(), summary, failures);
+			importer.importOne(id, awardIds.contains(id), ctx.now(), summary, failures);
 		}
 		log.info("S4 finished: {}", summary);
 		long saved = summary.get("saved");

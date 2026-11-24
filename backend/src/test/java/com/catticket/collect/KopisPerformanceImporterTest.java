@@ -3,6 +3,7 @@ package com.catticket.collect;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -61,15 +62,15 @@ class KopisPerformanceImporterTest {
 		when(client.getPerformance("PF303043")).thenReturn(Optional.of(detail));
 		when(mapper.findVenueByKopisId("FC000011")).thenReturn(Optional.empty());
 		when(client.getVenue("FC000011")).thenReturn(Optional.of(venue));
-		when(saveService.saveFromKopis(detail, venue, NOW)).thenReturn(saved());
+		when(saveService.saveFromKopis(detail, venue, false, NOW)).thenReturn(saved());
 
-		importer.importOne("PF303043", NOW, summary, failures);
+		importer.importOne("PF303043", false, NOW, summary, failures);
 
 		// 外部の呼び出しをすべて終えてから保存のトランザクションに入る（06 の 6.1）
 		InOrder order = inOrder(client, saveService);
 		order.verify(client).getPerformance("PF303043");
 		order.verify(client).getVenue("FC000011");
-		order.verify(saveService).saveFromKopis(detail, venue, NOW);
+		order.verify(saveService).saveFromKopis(detail, venue, false, NOW);
 		assertThat(summary.get("saved")).isEqualTo(1);
 		assertThat(summary.get("venueSaved")).isEqualTo(1);
 		assertThat(failures.any()).isFalse();
@@ -79,26 +80,40 @@ class KopisPerformanceImporterTest {
 	void existingVenueIsNotFetched() {
 		when(client.getPerformance("PF303043")).thenReturn(Optional.of(detail));
 		when(mapper.findVenueByKopisId("FC000011")).thenReturn(Optional.of(new CollectVenueRow(7L, "서울특별시")));
-		when(saveService.saveFromKopis(detail, null, NOW))
+		when(saveService.saveFromKopis(detail, null, false, NOW))
 			.thenReturn(new SaveOutcome(true, List.of(CollectNote.of("saved"))));
 
-		importer.importOne("PF303043", NOW, summary, failures);
+		importer.importOne("PF303043", false, NOW, summary, failures);
 
 		verify(client, never()).getVenue(anyString());
-		verify(saveService).saveFromKopis(eq(detail), isNull(), eq(NOW));
+		verify(saveService).saveFromKopis(eq(detail), isNull(), eq(false), eq(NOW));
 		assertThat(summary.get("saved")).isEqualTo(1);
+	}
+
+	@Test
+	void awardedIsPassedToTheSave() {
+		// S4 の受賞作は保存と同じトランザクションで受賞歴を立てる（06 の 11 の U-13）
+		when(client.getPerformance("PF303043")).thenReturn(Optional.of(detail));
+		when(mapper.findVenueByKopisId("FC000011")).thenReturn(Optional.of(new CollectVenueRow(7L, "서울특별시")));
+		when(saveService.saveFromKopis(detail, null, true, NOW)).thenReturn(
+				new SaveOutcome(true, List.of(CollectNote.of("saved"), CollectNote.of("awardMarked"))));
+
+		importer.importOne("PF303043", true, NOW, summary, failures);
+
+		verify(saveService).saveFromKopis(detail, null, true, NOW);
+		assertThat(summary.get("awardMarked")).isEqualTo(1);
 	}
 
 	@Test
 	void detailNotFoundIsCountedNotFailed() {
 		when(client.getPerformance("PF1")).thenReturn(Optional.empty());
 
-		importer.importOne("PF1", NOW, summary, failures);
+		importer.importOne("PF1", false, NOW, summary, failures);
 
 		assertThat(summary.get("detailNotFound")).isEqualTo(1);
 		assertThat(summary.details("detailNotFound")).containsExactly("PF1");
 		assertThat(failures.any()).isFalse();
-		verify(saveService, never()).saveFromKopis(any(), any(), any());
+		verify(saveService, never()).saveFromKopis(any(), any(), anyBoolean(), any());
 	}
 
 	@Test
@@ -106,12 +121,12 @@ class KopisPerformanceImporterTest {
 		KopisPerformanceDetail unknownGenre = ProviderValuesTest.detail("PF1", "FC1", "오페라", "공연", null, List.of());
 		when(client.getPerformance("PF1")).thenReturn(Optional.of(unknownGenre));
 
-		importer.importOne("PF1", NOW, summary, failures);
+		importer.importOne("PF1", false, NOW, summary, failures);
 
 		assertThat(summary.get("skippedGenre")).isEqualTo(1);
 		assertThat(summary.details("skippedGenre")).containsExactly("PF1|오페라");
 		verify(client, never()).getVenue(anyString());
-		verify(saveService, never()).saveFromKopis(any(), any(), any());
+		verify(saveService, never()).saveFromKopis(any(), any(), anyBoolean(), any());
 	}
 
 	@Test
@@ -120,11 +135,11 @@ class KopisPerformanceImporterTest {
 		when(mapper.findVenueByKopisId("FC000011")).thenReturn(Optional.empty());
 		when(client.getVenue("FC000011")).thenReturn(Optional.empty());
 
-		importer.importOne("PF303043", NOW, summary, failures);
+		importer.importOne("PF303043", false, NOW, summary, failures);
 
 		assertThat(summary.get("venueNotFound")).isEqualTo(1);
 		assertThat(failures.any()).isFalse();
-		verify(saveService, never()).saveFromKopis(any(), any(), any());
+		verify(saveService, never()).saveFromKopis(any(), any(), anyBoolean(), any());
 	}
 
 	@Test
@@ -134,21 +149,21 @@ class KopisPerformanceImporterTest {
 		when(mapper.findVenueByKopisId("FC000011")).thenReturn(Optional.empty());
 		when(client.getVenue("FC000011")).thenThrow(new KopisFatalException("KOPIS prfplc/{id} HTTP 404"));
 
-		importer.importOne("PF1", NOW, summary, failures);
-		importer.importOne("PF303043", NOW, summary, failures);
+		importer.importOne("PF1", false, NOW, summary, failures);
+		importer.importOne("PF303043", false, NOW, summary, failures);
 
 		assertThat(summary.get("failed")).isEqualTo(2);
 		assertThat(summary.details("failed")).containsExactly("performance PF1", "venue FC000011 of PF303043");
 		assertThat(failures.message())
 			.isEqualTo("2 failed; first: performance PF1: KopisRetryableException: KOPIS pblprfr/{id} HTTP 503");
-		verify(saveService, never()).saveFromKopis(any(), any(), any());
+		verify(saveService, never()).saveFromKopis(any(), any(), anyBoolean(), any());
 	}
 
 	@Test
 	void stepAbortedIsNotCaught() {
 		when(client.getPerformance("PF1")).thenThrow(new StepAbortedException("aborted"));
 
-		assertThatThrownBy(() -> importer.importOne("PF1", NOW, summary, failures))
+		assertThatThrownBy(() -> importer.importOne("PF1", false, NOW, summary, failures))
 			.isInstanceOf(StepAbortedException.class);
 		assertThat(failures.any()).isFalse();
 	}

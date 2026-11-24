@@ -39,8 +39,10 @@ public class KopisPerformanceImporter {
 	/**
 	 * 保存しなかった理由・切り詰めなどは summary に数える。KOPIS の呼び出しの失敗は failures に数える。
 	 * StepAbortedException は捕まえない（ステップを止める）。
+	 *
+	 * @param awarded S3 で見た受賞作なら true（S4 だけ。S1 は false）
 	 */
-	void importOne(String mt20id, LocalDateTime now, StepSummary summary, UnitFailures failures) {
+	void importOne(String mt20id, boolean awarded, LocalDateTime now, StepSummary summary, UnitFailures failures) {
 		Optional<KopisPerformanceDetail> detail;
 		try {
 			detail = client.getPerformance(mt20id);
@@ -78,7 +80,7 @@ public class KopisPerformanceImporter {
 			}
 			newVenue = venue.get();
 		}
-		SaveOutcome outcome = saveService.saveFromKopis(detail.get(), newVenue, now);
+		SaveOutcome outcome = saveService.saveFromKopis(detail.get(), newVenue, awarded, now);
 		outcome.notes().forEach(n -> note(summary, n));
 		if (!outcome.saved()) {
 			log.info("performance {} not saved: {}", mt20id, outcome.notes());

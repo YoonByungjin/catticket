@@ -59,7 +59,7 @@ class SaveServicesTest {
 		@Test
 		void isOneTransaction() throws Exception {
 			Method m = PerformanceSaveService.class.getMethod("saveFromKopis", KopisPerformanceDetail.class,
-					KopisVenueDetail.class, LocalDateTime.class);
+					KopisVenueDetail.class, boolean.class, LocalDateTime.class);
 			assertThat(m.getAnnotation(Transactional.class)).isNotNull();
 		}
 
@@ -70,7 +70,7 @@ class SaveServicesTest {
 			KopisVenueDetail venue = new KopisVenueDetail("FC000011", "샤롯데씨어터", "서울특별시 송파구 올림픽로 240",
 					"37.5", "127.1");
 
-			SaveOutcome outcome = service.saveFromKopis(detail, venue, NOW);
+			SaveOutcome outcome = service.saveFromKopis(detail, venue, false, NOW);
 
 			assertThat(outcome.saved()).isTrue();
 			assertThat(outcome.notes()).extracting(CollectNote::name).containsExactly("venueSaved", "saved");
@@ -92,9 +92,51 @@ class SaveServicesTest {
 			when(mapper.findVenueByKopisId("FC000011")).thenReturn(Optional.of(new CollectVenueRow(7L, "서울특별시 종로구")));
 			when(mapper.findPerformanceIdByKopisId("PF303043")).thenReturn(Optional.of(42L));
 
-			assertThat(service.saveFromKopis(detail, null, NOW).saved()).isTrue();
+			assertThat(service.saveFromKopis(detail, null, false, NOW).saved()).isTrue();
 
 			verify(mapper, never()).upsertVenue(any(), any());
+			// 受賞作でなければ受賞歴に触れない
+			verify(mapper, never()).markAwarded(any(), any());
+		}
+
+		@Test
+		void awardedMarksTheAwardAfterTheUpsert() {
+			// S4 が保存した S3 の受賞作（06 の 11 の U-13。同じトランザクションの中）
+			when(mapper.findVenueByKopisId("FC000011")).thenReturn(Optional.of(new CollectVenueRow(7L, "서울특별시 종로구")));
+			when(mapper.findPerformanceIdByKopisId("PF303043")).thenReturn(Optional.of(42L));
+			when(mapper.markAwarded(List.of("PF303043"), NOW)).thenReturn(1);
+
+			SaveOutcome outcome = service.saveFromKopis(detail, null, true, NOW);
+
+			assertThat(outcome.saved()).isTrue();
+			assertThat(outcome.notes()).extracting(CollectNote::name).containsExactly("saved", "awardMarked");
+			InOrder order = inOrder(mapper);
+			order.verify(mapper).upsertPerformance(any(PerformanceValues.class), eq(7L), eq(true), eq(NOW));
+			order.verify(mapper).markAwarded(List.of("PF303043"), NOW);
+		}
+
+		@Test
+		void awardedAlreadyMarkedIsNotCounted() {
+			when(mapper.findVenueByKopisId("FC000011")).thenReturn(Optional.of(new CollectVenueRow(7L, "서울특별시 종로구")));
+			when(mapper.findPerformanceIdByKopisId("PF303043")).thenReturn(Optional.of(42L));
+			when(mapper.markAwarded(List.of("PF303043"), NOW)).thenReturn(0);
+
+			SaveOutcome outcome = service.saveFromKopis(detail, null, true, NOW);
+
+			assertThat(outcome.notes()).extracting(CollectNote::name).containsExactly("saved");
+		}
+
+		@Test
+		void skippedAwardedPerformanceDoesNotMarkTheAward() {
+			KopisPerformanceDetail unknownGenre = ProviderValuesTest.detail("PF1", "FC1", "오페라", "공연", null,
+					List.of());
+			assertThat(service.saveFromKopis(unknownGenre, null, true, NOW).saved()).isFalse();
+
+			// 会場がなくて保存しないときも立てない
+			when(mapper.findVenueByKopisId("FC000011")).thenReturn(Optional.empty());
+			assertThat(service.saveFromKopis(detail, null, true, NOW).saved()).isFalse();
+
+			verify(mapper, never()).markAwarded(any(), any());
 		}
 
 		@Test
@@ -103,7 +145,7 @@ class SaveServicesTest {
 			when(mapper.findVenueByKopisId("FC1")).thenReturn(Optional.of(new CollectVenueRow(7L, null)));
 			when(mapper.findPerformanceIdByKopisId("PF1")).thenReturn(Optional.of(42L));
 
-			service.saveFromKopis(noSites, null, NOW);
+			service.saveFromKopis(noSites, null, false, NOW);
 
 			verify(mapper).deleteBookingSites(42L, "COLLECTED");
 			verify(mapper, never()).insertBookingSites(anyLong(), any(), any(), any());
@@ -116,11 +158,11 @@ class SaveServicesTest {
 					null, null, null, null, null, "연극", null, null, "FC1", List.<KopisRelate>of());
 			when(mapper.findVenueByKopisId("FC1")).thenReturn(Optional.of(new CollectVenueRow(7L, "서울특별시 중구")));
 			when(mapper.findPerformanceIdByKopisId("PF1")).thenReturn(Optional.of(1L));
-			service.saveFromKopis(d, null, NOW);
+			service.saveFromKopis(d, null, false, NOW);
 			verify(mapper).upsertPerformance(any(), eq(7L), eq(true), eq(NOW));
 
 			when(mapper.findVenueByKopisId("FC1")).thenReturn(Optional.of(new CollectVenueRow(7L, "경기도 고양시")));
-			service.saveFromKopis(d, null, NOW);
+			service.saveFromKopis(d, null, false, NOW);
 			verify(mapper).upsertPerformance(any(), eq(7L), eq(false), eq(NOW));
 		}
 
@@ -129,7 +171,7 @@ class SaveServicesTest {
 			KopisPerformanceDetail unknownGenre = ProviderValuesTest.detail("PF1", "FC1", "오페라", "공연", null,
 					List.of());
 
-			SaveOutcome outcome = service.saveFromKopis(unknownGenre, null, NOW);
+			SaveOutcome outcome = service.saveFromKopis(unknownGenre, null, false, NOW);
 
 			assertThat(outcome.saved()).isFalse();
 			assertThat(outcome.notes()).containsExactly(CollectNote.of("skippedGenre", "PF1|오페라"));
@@ -139,7 +181,7 @@ class SaveServicesTest {
 		@Test
 		void venueWithoutNameSkipsThePerformance() {
 			SaveOutcome outcome = service.saveFromKopis(detail,
-					new KopisVenueDetail("FC000011", null, null, null, null), NOW);
+					new KopisVenueDetail("FC000011", null, null, null, null), false, NOW);
 
 			assertThat(outcome.saved()).isFalse();
 			assertThat(outcome.notes()).containsExactly(CollectNote.of("skippedVenueInvalid", "FC000011|fcltynm"));
@@ -150,7 +192,7 @@ class SaveServicesTest {
 		void missingVenueSkipsThePerformance() {
 			when(mapper.findVenueByKopisId("FC000011")).thenReturn(Optional.empty());
 
-			SaveOutcome outcome = service.saveFromKopis(detail, null, NOW);
+			SaveOutcome outcome = service.saveFromKopis(detail, null, false, NOW);
 
 			assertThat(outcome.saved()).isFalse();
 			assertThat(outcome.notes()).containsExactly(CollectNote.of("venueNotFound", "PF303043|FC000011"));

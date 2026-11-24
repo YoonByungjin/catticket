@@ -27,7 +27,7 @@ public final class DistrictParser {
 			return Optional.empty();
 		}
 		// 区の名前は空白で区切られた最初の語。前方一致にしない（「중구」と「중랑구」などを取り違えないため）
-		String first = rest.split("\s+", 2)[0];
+		String first = rest.split("\\s+", 2)[0];
 		return SeoulDistrict.fromKoreanName(first);
 	}
 

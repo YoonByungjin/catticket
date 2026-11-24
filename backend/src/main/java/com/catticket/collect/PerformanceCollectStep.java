@@ -67,7 +67,7 @@ public class PerformanceCollectStep {
 		summary.add("listed", ids.size());
 
 		for (String id : ids) {
-			importer.importOne(id, ctx.now(), summary, failures);
+			importer.importOne(id, false, ctx.now(), summary, failures);
 		}
 
 		long saved = summary.get("saved");

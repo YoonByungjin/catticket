@@ -190,6 +190,17 @@ class CollectMapperTest {
 	}
 
 	@Test
+	void markAwardedSetsTheFlagOnANewlyInsertedPerformance() {
+		// S4 が新しく入れた S3 の受賞作（06 の 11 の U-13。upsertPerformance は has_award を書かない）
+		long id = savePerformance(saveVenue(), "스위니토드", T1);
+		assertThat(jdbc.queryForObject("SELECT has_award FROM performance WHERE id = ?", Boolean.class, id)).isFalse();
+
+		assertThat(mapper.markAwarded(List.of(PERF), T1)).isEqualTo(1);
+
+		assertThat(jdbc.queryForObject("SELECT has_award FROM performance WHERE id = ?", Boolean.class, id)).isTrue();
+	}
+
+	@Test
 	void findExistingKopisIds() {
 		savePerformance(saveVenue(), "스위니토드", T1);
 

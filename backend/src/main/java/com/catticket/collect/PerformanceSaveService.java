@@ -31,13 +31,16 @@ public class PerformanceSaveService {
 	}
 
 	/**
-	 * 自動収集の値を追加・更新する。管理者の修正（performance_override）・is_hidden・has_award は書き換えない。
+	 * 自動収集の値を追加・更新する。管理者の修正（performance_override）・is_hidden は書き換えない。
+	 * has_award は upsert では書かず、awarded のときだけ立てる（消さない）。
 	 * 予約サイトは COLLECTED の行だけを入れ替える（ADMIN の行は変えない）。
 	 *
 	 * @param newVenue 会場がまだ DB にないときの施設詳細（あるときは null）
+	 * @param awarded S3 で見た受賞作（S4）。保存と同じトランザクションで受賞歴を立てる（S3 は S4 より前に終わるため。05 の 3.2）
 	 */
 	@Transactional
-	public SaveOutcome saveFromKopis(KopisPerformanceDetail detail, KopisVenueDetail newVenue, LocalDateTime now) {
+	public SaveOutcome saveFromKopis(KopisPerformanceDetail detail, KopisVenueDetail newVenue, boolean awarded,
+			LocalDateTime now) {
 		Conversion<PerformanceValues> performance = ProviderValues.performance(detail);
 		List<CollectNote> notes = new ArrayList<>(performance.notes());
 		if (performance.skipped()) {
@@ -70,6 +73,9 @@ public class PerformanceSaveService {
 			mapper.insertBookingSites(performanceId, COLLECTED, values.bookingSites(), now);
 		}
 		notes.add(CollectNote.of("saved"));
+		if (awarded && mapper.markAwarded(List.of(values.kopisPerformanceId()), now) == 1) {
+			notes.add(CollectNote.of("awardMarked"));
+		}
 		return new SaveOutcome(true, notes);
 	}
 

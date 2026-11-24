@@ -3,6 +3,7 @@ package com.catticket.collect;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -54,9 +55,9 @@ class MissingPerformanceStepTest {
 	@BeforeEach
 	void setUp() {
 		doAnswer(inv -> {
-			inv.<StepSummary>getArgument(2).increment("saved");
+			inv.<StepSummary>getArgument(3).increment("saved");
 			return null;
-		}).when(importer).importOne(anyString(), any(), any(), any());
+		}).when(importer).importOne(anyString(), anyBoolean(), any(), any(), any());
 	}
 
 	@Test
@@ -64,15 +65,15 @@ class MissingPerformanceStepTest {
 		Set<String> seen = new LinkedHashSet<>(List.of("PFA", "PFB", "PFC", "PF0123456789012345678"));
 		when(mapper.findExistingKopisIds(anyCollection())).thenReturn(Set.of("PFB"));
 
-		StepResult result = step.run(CTX, seen);
+		StepResult result = step.run(CTX, seen, Set.of());
 
 		// 公演 ID として使えない ID は DB に問い合わせない
 		verify(mapper).findExistingKopisIds(List.of("PFA", "PFB", "PFC"));
 		InOrder order = inOrder(policy, importer);
 		order.verify(policy).startStep();
-		order.verify(importer).importOne(eq("PFA"), eq(NOW), any(), any());
-		order.verify(importer).importOne(eq("PFC"), eq(NOW), any(), any());
-		verify(importer, never()).importOne(eq("PFB"), any(), any(), any());
+		order.verify(importer).importOne(eq("PFA"), eq(false), eq(NOW), any(), any());
+		order.verify(importer).importOne(eq("PFC"), eq(false), eq(NOW), any(), any());
+		verify(importer, never()).importOne(eq("PFB"), anyBoolean(), any(), any(), any());
 		assertThat(result.success()).isTrue();
 		assertThat(result.processedCount()).isEqualTo(2);
 		assertThat(result.summary().get("candidates")).isEqualTo(3);
@@ -80,8 +81,37 @@ class MissingPerformanceStepTest {
 	}
 
 	@Test
+	void awardedIsPassedOnlyForAwardIds() {
+		// 順位だけ・受賞作だけ・両方（06 の 11 の U-13）。候補は rankingIds の順、続けて awardIds
+		Set<String> rankingIds = new LinkedHashSet<>(List.of("PFR", "PFBOTH"));
+		Set<String> awardIds = new LinkedHashSet<>(List.of("PFBOTH", "PFW"));
+		when(mapper.findExistingKopisIds(anyCollection())).thenReturn(Set.of());
+
+		StepResult result = step.run(CTX, rankingIds, awardIds);
+
+		verify(mapper).findExistingKopisIds(List.of("PFR", "PFBOTH", "PFW"));
+		InOrder order = inOrder(importer);
+		order.verify(importer).importOne(eq("PFR"), eq(false), eq(NOW), any(), any());
+		order.verify(importer).importOne(eq("PFBOTH"), eq(true), eq(NOW), any(), any());
+		order.verify(importer).importOne(eq("PFW"), eq(true), eq(NOW), any(), any());
+		assertThat(result.summary().get("candidates")).isEqualTo(3);
+		assertThat(result.summary().get("missing")).isEqualTo(3);
+	}
+
+	@Test
+	void awardIdsAloneAreCandidates() {
+		when(mapper.findExistingKopisIds(anyCollection())).thenReturn(Set.of("PFW1"));
+
+		StepResult result = step.run(CTX, Set.of(), new LinkedHashSet<>(List.of("PFW1", "PFW2")));
+
+		verify(importer).importOne(eq("PFW2"), eq(true), eq(NOW), any(), any());
+		verify(importer, never()).importOne(eq("PFW1"), anyBoolean(), any(), any(), any());
+		assertThat(result.processedCount()).isEqualTo(1);
+	}
+
+	@Test
 	void nothingToDoWithoutCandidates() {
-		StepResult result = step.run(CTX, Set.of());
+		StepResult result = step.run(CTX, Set.of(), Set.of());
 
 		verify(policy).startStep();
 		verify(mapper, never()).findExistingKopisIds(anyCollection());
@@ -99,11 +129,11 @@ class MissingPerformanceStepTest {
 			return new HashSet<>(ids);
 		});
 
-		StepResult result = step.run(CTX, seen);
+		StepResult result = step.run(CTX, seen, Set.of());
 
 		verify(mapper, times(3)).findExistingKopisIds(anyCollection());
 		assertThat(chunks).allSatisfy(c -> assertThat(c.size()).isLessThanOrEqualTo(500));
-		verify(importer, never()).importOne(anyString(), any(), any(), any());
+		verify(importer, never()).importOne(anyString(), anyBoolean(), any(), any(), any());
 		assertThat(result.summary().get("missing")).isZero();
 	}
 
@@ -111,13 +141,13 @@ class MissingPerformanceStepTest {
 	void failedImportFailsTheStep() {
 		when(mapper.findExistingKopisIds(anyCollection())).thenReturn(Set.of());
 		doAnswer(inv -> {
-			inv.<UnitFailures>getArgument(3).record("performance PFA", new KopisRetryableException("timeout"));
+			inv.<UnitFailures>getArgument(4).record("performance PFA", new KopisRetryableException("timeout"));
 			return null;
-		}).when(importer).importOne(eq("PFA"), any(), any(), any());
+		}).when(importer).importOne(eq("PFA"), anyBoolean(), any(), any(), any());
 
-		StepResult result = step.run(CTX, new LinkedHashSet<>(List.of("PFA", "PFB")));
+		StepResult result = step.run(CTX, new LinkedHashSet<>(List.of("PFA", "PFB")), Set.of());
 
-		verify(importer).importOne(eq("PFB"), any(), any(), any());
+		verify(importer).importOne(eq("PFB"), anyBoolean(), any(), any(), any());
 		assertThat(result.success()).isFalse();
 		assertThat(result.errorMessage()).isEqualTo("1 failed; first: performance PFA: KopisRetryableException: timeout");
 	}
@@ -127,11 +157,11 @@ class MissingPerformanceStepTest {
 		when(mapper.findExistingKopisIds(anyCollection())).thenReturn(Set.of());
 		doAnswer(inv -> {
 			throw new StepAbortedException("aborted");
-		}).when(importer).importOne(eq("PFA"), any(), any(), any());
+		}).when(importer).importOne(eq("PFA"), anyBoolean(), any(), any(), any());
 
-		assertThatThrownBy(() -> step.run(CTX, new LinkedHashSet<>(List.of("PFA", "PFB"))))
+		assertThatThrownBy(() -> step.run(CTX, new LinkedHashSet<>(List.of("PFA", "PFB")), Set.of()))
 			.isInstanceOf(StepAbortedException.class);
-		verify(importer, never()).importOne(eq("PFB"), any(), any(), any());
+		verify(importer, never()).importOne(eq("PFB"), anyBoolean(), any(), any(), any());
 	}
 
 }

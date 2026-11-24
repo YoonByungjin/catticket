@@ -3,6 +3,7 @@ package com.catticket.collect;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -66,9 +67,9 @@ class PerformanceCollectStepTest {
 		when(client.listPerformances(any(), any(), any(), anyInt())).thenReturn(page());
 		// 取り込みは保存できたとして数える
 		doAnswer(inv -> {
-			inv.<StepSummary>getArgument(2).increment("saved");
+			inv.<StepSummary>getArgument(3).increment("saved");
 			return null;
-		}).when(importer).importOne(anyString(), any(), any(), any());
+		}).when(importer).importOne(anyString(), anyBoolean(), any(), any(), any());
 	}
 
 	private static KopisPage<KopisPerformanceListItem> page(String... ids) {
@@ -102,8 +103,8 @@ class PerformanceCollectStepTest {
 		verify(client, times(7)).listPerformances(any(), any(), isNull(), anyInt());
 		verify(client, never()).listPerformances(TODAY, firstEnd, null, 3);
 		// 区間をまたいだ同じ公演は 1 回だけ取り込む
-		verify(importer, times(103)).importOne(anyString(), eq(NOW), any(), any());
-		verify(importer, times(1)).importOne(eq("PFB"), any(), any(), any());
+		verify(importer, times(103)).importOne(anyString(), eq(false), eq(NOW), any(), any());
+		verify(importer, times(1)).importOne(eq("PFB"), anyBoolean(), any(), any(), any());
 		assertThat(result.success()).isTrue();
 		assertThat(result.windowEndDate()).isEqualTo(LocalDate.of(2027, 5, 23));
 		assertThat(result.processedCount()).isEqualTo(103);
@@ -136,7 +137,7 @@ class PerformanceCollectStepTest {
 
 		// ほかの区間も読み、読めた公演は保存する
 		verify(client, times(6)).listPerformances(any(), any(), isNull(), eq(1));
-		verify(importer).importOne(eq("PFA"), any(), any(), any());
+		verify(importer).importOne(eq("PFA"), anyBoolean(), any(), any(), any());
 		assertThat(result.success()).isFalse();
 		assertThat(result.windowEndDate()).isNull();
 		assertThat(result.processedCount()).isEqualTo(1);
@@ -149,13 +150,13 @@ class PerformanceCollectStepTest {
 	void failedPerformanceFailsTheStep() {
 		when(client.listPerformances(eq(TODAY), any(), isNull(), eq(1))).thenReturn(page("PFA", "PFB"));
 		doAnswer(inv -> {
-			inv.<UnitFailures>getArgument(3).record("performance PFA", new KopisFatalException("KOPIS HTTP 404"));
+			inv.<UnitFailures>getArgument(4).record("performance PFA", new KopisFatalException("KOPIS HTTP 404"));
 			return null;
-		}).when(importer).importOne(eq("PFA"), any(), any(), any());
+		}).when(importer).importOne(eq("PFA"), anyBoolean(), any(), any(), any());
 
 		StepResult result = step.run(CTX);
 
-		verify(importer).importOne(eq("PFB"), any(), any(), any());
+		verify(importer).importOne(eq("PFB"), anyBoolean(), any(), any(), any());
 		assertThat(result.success()).isFalse();
 		assertThat(result.windowEndDate()).isNull();
 		assertThat(result.errorMessage()).startsWith("1 failed; first: performance PFA: KopisFatalException");
@@ -168,7 +169,7 @@ class PerformanceCollectStepTest {
 
 		StepResult result = step.run(CTX);
 
-		verify(importer, times(1)).importOne(anyString(), any(), any(), any());
+		verify(importer, times(1)).importOne(anyString(), anyBoolean(), any(), any(), any());
 		assertThat(result.summary().get("skippedId")).isEqualTo(2);
 		assertThat(result.success()).isTrue();
 	}
@@ -178,7 +179,7 @@ class PerformanceCollectStepTest {
 		when(client.listPerformances(any(), any(), any(), anyInt())).thenThrow(new StepAbortedException("aborted"));
 
 		assertThatThrownBy(() -> step.run(CTX)).isInstanceOf(StepAbortedException.class);
-		verify(importer, never()).importOne(anyString(), any(), any(), any());
+		verify(importer, never()).importOne(anyString(), anyBoolean(), any(), any(), any());
 	}
 
 	@Test
@@ -186,10 +187,10 @@ class PerformanceCollectStepTest {
 		when(client.listPerformances(eq(TODAY), any(), isNull(), eq(1))).thenReturn(page("PFA", "PFB"));
 		doAnswer(inv -> {
 			throw new StepAbortedException("aborted");
-		}).when(importer).importOne(eq("PFA"), any(), any(), any());
+		}).when(importer).importOne(eq("PFA"), anyBoolean(), any(), any(), any());
 
 		assertThatThrownBy(() -> step.run(CTX)).isInstanceOf(StepAbortedException.class);
-		verify(importer, never()).importOne(eq("PFB"), any(), any(), any());
+		verify(importer, never()).importOne(eq("PFB"), anyBoolean(), any(), any(), any());
 	}
 
 	@Test

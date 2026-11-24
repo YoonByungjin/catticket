@@ -24,6 +24,14 @@ class DistrictParserTest {
 		assertThat(DistrictParser.parse("서울특별시종로구 대학로 116")).contains(SeoulDistrict.JONGNO);
 	}
 
+	@Test
+	void splitsOnAnyWhitespace() {
+		// 半角の空白だけでなく、タブ・改行でも区切る（06 の 11 の U-14）
+		assertThat(DistrictParser.parse("서울특별시\t마포구\t독막로7길 23")).contains(SeoulDistrict.MAPO);
+		assertThat(DistrictParser.parse("서울특별시 종로구\t대학로 116")).contains(SeoulDistrict.JONGNO);
+		assertThat(DistrictParser.parse("서울특별시 종로구\n대학로 116")).contains(SeoulDistrict.JONGNO);
+	}
+
 	@ParameterizedTest
 	@EnumSource(SeoulDistrict.class)
 	void allTwentyFiveDistricts(SeoulDistrict district) {
