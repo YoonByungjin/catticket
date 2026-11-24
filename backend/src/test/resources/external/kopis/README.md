@@ -19,3 +19,5 @@
 | `genre-stats.xml` | `boxStatsCate` 2026-10-21〜11-19（9 ジャンル + `합계`。대중무용 の `totnmrssm` が負） |
 | `error-01.xml` / `error-05.xml` / `error-06.xml` | 実際の結果コード 01・05・06 |
 | `error-02.xml` / `error-03.xml` / `error-99.xml` | 01 の形の `returncode`・`errmsg` だけを変えたもの（**加工**。02 は確認済みの文言、03 は起こせなかった、99 は知らないコードの例） |
+| `performance-list-truncated.xml` | `performance-list-page-100.xml` の先頭 1,200 バイト（**加工**。途中で切れた応答。文字の途中で切れている。06 の 7.1、2026-11-24） |
+| `maintenance.html` | 整形式の保守中のページ（**作成**。行要素も結果コードもない応答。06 の 7.1 の「読む手順」の 6.、2026-11-24） |

@@ -27,7 +27,7 @@ public class KopisXmlReader {
 	 * 行を読む。空の根要素（{@code <dbs/>}・{@code <boxofs/>} など）と結果コード 04 は空のリスト。
 	 *
 	 * @throws KopisFatalException     01・02・05・06・知らないコード
-	 * @throws KopisRetryableException 03、XML として読めない本文
+	 * @throws KopisRetryableException 03、XML として読めない本文、行要素も結果コードもない本文
 	 */
 	public <T> List<T> readRows(String service, byte[] body, Class<? extends KopisEnvelope<T>> envelopeType) {
 		JsonNode tree = readTree(service, body);
@@ -54,8 +54,14 @@ public class KopisXmlReader {
 		catch (JacksonException e) {
 			throw unreadable(service, e);
 		}
-		List<T> rows = envelope == null ? null : envelope.rows();
-		return rows == null ? List.of() : rows.stream().filter(Objects::nonNull).toList();
+		List<T> rows = envelope == null || envelope.rows() == null ? List.of()
+				: envelope.rows().stream().filter(Objects::nonNull).toList();
+		if (rows.isEmpty()) {
+			// 子の要素があるのに行も結果コードもないのは行要素の名前が違う応答（整形式の HTML など）で、本当の 0 件ではない。
+			// 0 件にすると S1 が区間を取り終えたと記録してしまうので、通信の失敗と同じく再試行する（06 の 7.1 の 6.）
+			throw new KopisRetryableException("KOPIS " + service + " unexpected response: no row element");
+		}
+		return rows;
 	}
 
 	private JsonNode readTree(String service, byte[] body) {

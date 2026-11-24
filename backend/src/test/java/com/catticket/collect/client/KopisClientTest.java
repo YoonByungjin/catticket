@@ -319,6 +319,65 @@ class KopisClientTest {
 	}
 
 	@Test
+	void redirectIsFatal() {
+		// https で呼んだときの 301 など。リダイレクトに頼らず、再試行もしない（05 の 3.5）
+		server.expect(once(), requestTo(startsWith(BASE + "/pblprfr/PF1")))
+			.andRespond(withStatus(HttpStatus.MOVED_PERMANENTLY).header("Location", "https://kopis.test/x"));
+
+		assertThatThrownBy(() -> client.getPerformance("PF1")).isInstanceOf(KopisFatalException.class)
+			.hasMessage("KOPIS pblprfr/{id} HTTP 301");
+		server.verify();
+		assertThat(slept).isEmpty();
+	}
+
+	@Test
+	void tooManyRequestsIsFatal() {
+		server.expect(once(), requestTo(startsWith(BASE + "/boxoffice")))
+			.andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+
+		assertThatThrownBy(() -> client
+			.boxOffice(new Period(LocalDate.of(2026, 11, 19), LocalDate.of(2026, 11, 19)), Optional.empty()))
+			.isInstanceOf(KopisFatalException.class)
+			.hasMessage("KOPIS boxoffice HTTP 429");
+		server.verify();
+		assertThat(slept).isEmpty();
+	}
+
+	@Test
+	void serverErrorGivesUpAsRetryable() {
+		server.expect(times(4), requestTo(startsWith(BASE + "/prfplc/FC1"))).andRespond(withServerError());
+
+		assertThatThrownBy(() -> client.getVenue("FC1")).isInstanceOf(KopisRetryableException.class)
+			.hasMessage("KOPIS prfplc/{id} HTTP 500");
+		server.verify();
+		assertThat(slept).containsExactlyElementsOf(BACKOFF);
+	}
+
+	@Test
+	void unexpectedWellFormedPageIsRetried() {
+		// 行要素のない応答を 0 件にしない（06 の 7.1 の 6.）
+		server.expect(once(), requestTo(startsWith(BASE + "/pblprfr?")))
+			.andRespond(withSuccess(bytes("maintenance.html"), MediaType.TEXT_HTML));
+		server.expect(once(), requestTo(startsWith(BASE + "/pblprfr?"))).andRespond(xml("performance-list-last-page.xml"));
+
+		assertThat(client.listPerformances(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 20), null, 12).items())
+			.hasSize(73);
+		server.verify();
+		assertThat(slept).containsExactly(Duration.ofSeconds(2));
+	}
+
+	@Test
+	void truncatedBodyIsRetried() {
+		server.expect(once(), requestTo(startsWith(BASE + "/pblprfr?"))).andRespond(xml("performance-list-truncated.xml"));
+		server.expect(once(), requestTo(startsWith(BASE + "/pblprfr?"))).andRespond(xml("performance-list-page-100.xml"));
+
+		assertThat(client.listPerformances(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 20), null, 1).items())
+			.hasSize(100);
+		server.verify();
+		assertThat(slept).containsExactly(Duration.ofSeconds(2));
+	}
+
+	@Test
 	void tenConsecutiveFailedCallsAbortTheStep() {
 		// 10 回の呼び出し × (最初 + 再試行 3 回)。どれも 5xx
 		server.expect(times(40), requestTo(startsWith(BASE + "/pblprfr/"))).andRespond(withServerError());

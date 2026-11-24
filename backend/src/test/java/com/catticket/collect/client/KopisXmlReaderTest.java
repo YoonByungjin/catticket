@@ -220,6 +220,43 @@ class KopisXmlReaderTest {
 			.hasMessage("KOPIS pblprfr returncode=03 errmsg=DB ERROR");
 	}
 
+	@Test
+	void decimalSecondsInUpdatedateAreReadAsText() {
+		// 小数の秒の付いた実物（変換は ProviderValues。06 の 7.1）
+		KopisPerformanceDetail d = reader
+			.readRows("pblprfr/{id}", bytes("performance-detail-blank-items.xml"), PerformanceDetailResponse.class)
+			.get(0);
+
+		assertThat(d.updatedate()).isEqualTo("2026-11-06 18:00:03.02675");
+	}
+
+	@Test
+	void truncatedBodyIsRetryable() {
+		// 文字の途中で切れた応答
+		assertThatThrownBy(
+				() -> reader.readRows("pblprfr", bytes("performance-list-truncated.xml"), PerformanceListResponse.class))
+			.isInstanceOf(KopisRetryableException.class)
+			.hasMessageStartingWith("KOPIS pblprfr unreadable response: ");
+	}
+
+	@Test
+	void wellFormedPageWithoutRowsIsRetryable() {
+		// 06 の 7.1 の「読む手順」の 6.: 0 件と扱わない（S1 が区間を取り終えたと記録しないため）
+		assertThatThrownBy(() -> reader.readRows("pblprfr", bytes("maintenance.html"), PerformanceListResponse.class))
+			.isInstanceOf(KopisRetryableException.class)
+			.hasMessage("KOPIS pblprfr unexpected response: no row element");
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "<html><body><p>점검 중</p></body></html>", "<dbs><foo>x</foo></dbs>",
+			"<boxofs><db><x>1</x></db></boxofs>" })
+	void noRowElementIsRetryable(String xml) {
+		assertThatThrownBy(
+				() -> reader.readRows("boxoffice", xml.getBytes(StandardCharsets.UTF_8), BoxOfficeResponse.class))
+			.isInstanceOf(KopisRetryableException.class)
+			.hasMessage("KOPIS boxoffice unexpected response: no row element");
+	}
+
 	@ParameterizedTest
 	@ValueSource(strings = { "<html><body>maintenance", "", "not xml" })
 	void unreadableBodyIsRetryable(String body) {

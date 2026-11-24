@@ -122,6 +122,20 @@ class KopisCallPolicyTest {
 	}
 
 	@Test
+	void retryableAndFatalFailuresCountTogether() {
+		AtomicInteger attempts = new AtomicInteger();
+		for (int i = 0; i < 9; i++) {
+			RuntimeException e = i % 2 == 0 ? new KopisRetryableException("timeout")
+					: new KopisFatalException("HTTP 404");
+			assertThatThrownBy(() -> policy.call(failing(attempts, e))).isInstanceOf(e.getClass());
+		}
+
+		assertThatThrownBy(() -> policy.call(failing(attempts, new KopisFatalException("returncode=02"))))
+			.isInstanceOf(StepAbortedException.class)
+			.hasCauseInstanceOf(KopisFatalException.class);
+	}
+
+	@Test
 	void successResetsTheCount() {
 		AtomicInteger attempts = new AtomicInteger();
 		for (int i = 0; i < 9; i++) {
