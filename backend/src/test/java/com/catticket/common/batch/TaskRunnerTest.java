@@ -58,11 +58,18 @@ class TaskRunnerTest {
 
 	@Test
 	void knownButNotImplementedTaskIs64() {
-		// daily-collect（B-01）などはまだジョブがない
+		// 名前は知っているが、ジョブが登録されていない（create-admin などはまだジョブがない）
 		TaskRunner runner = runner(null, job(TaskName.IMPORT_SUBWAY, JobResult.SUCCESS));
 		assertThat(runner.runTask("daily-collect")).isEqualTo(64);
 		assertThat(runner.runTask("create-admin")).isEqualTo(64);
 		assertThat(runner.runTask("purge-expired-signups")).isEqualTo(64);
+	}
+
+	@Test
+	void dailyCollectIsSelectedByName() {
+		TaskRunner runner = runner(null, job(TaskName.IMPORT_SUBWAY, JobResult.SUCCESS),
+				job(TaskName.DAILY_COLLECT, JobResult.PARTIAL_FAILURE));
+		assertThat(runner.runTask("daily-collect")).isEqualTo(2);
 	}
 
 	@Test
