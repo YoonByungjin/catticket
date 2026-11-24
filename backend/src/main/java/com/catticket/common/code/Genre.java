@@ -5,8 +5,8 @@ import java.util.Optional;
 
 /**
  * KOPIS のジャンル。定数名を API・DB のコード（{@code genre_code}）と同じにする。
- * 値と KOPIS の名前（{@code genrenm}）は 05 の 3.4・docs/kopis-api.md で分かっている分だけ。
- * 共通コードの一覧での確定は 05 の 7（06 の 11 の U-02）。
+ * KOPIS の名前（{@code genrenm}・{@code cate}・{@code catenm}）は実際の応答で確かめた 9 つ（06 の 11 の U-02、2026-11-20）。
+ * 宣言の順は S2 がジャンルを照会する順。
  */
 public enum Genre {
 
@@ -15,7 +15,7 @@ public enum Genre {
 	CCCA("서양음악(클래식)"),
 	CCCC("한국음악(국악)"),
 	CCCD("대중음악"),
-	BBBC("무용"),
+	BBBC("무용(서양/한국무용)"),
 	BBBE("대중무용"),
 	EEEA("복합"),
 	EEEB("서커스/마술");

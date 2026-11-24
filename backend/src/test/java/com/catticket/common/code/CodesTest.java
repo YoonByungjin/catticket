@@ -14,6 +14,9 @@ class CodesTest {
 		assertThat(Arrays.stream(Genre.values()).map(Genre::code)).containsExactlyInAnyOrder("AAAA", "GGGA", "CCCA",
 				"CCCC", "CCCD", "BBBC", "BBBE", "EEEA", "EEEB");
 		assertThat(Genre.fromKopisName(" 뮤지컬 ")).contains(Genre.GGGA);
+		// KOPIS の実際の名前（06 の 11 の U-02）。「무용」だけでは一致しない
+		assertThat(Genre.fromKopisName("무용(서양/한국무용)")).contains(Genre.BBBC);
+		assertThat(Genre.fromKopisName("무용")).isEmpty();
 		assertThat(Genre.fromKopisName("없는 장르")).isEmpty();
 		assertThat(Genre.fromKopisName(null)).isEmpty();
 	}
