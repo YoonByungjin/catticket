@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { LanguageService } from '../../core/i18n/language.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 
 /** 出典の1行の区切り。href があるところだけリンクにする（02 の 3.2） */
 export interface AttributionSegment {
@@ -36,11 +38,14 @@ export function attributionText(line: AttributionLine): string {
 
 /**
  * 出典の2行（07 の 4.2・4.2.1）。外側の枠（背景・余白）は使う側（フッター、SC-01 のダイアログ）が持つ。
- * 新しいタブで開くことを支援技術に伝える文言は 07 の 8. の U-4 が未決のため、まだ足さない。
+ * リンクの中には新しいタブで開くことを支援技術だけに知らせる文言を入れる（02 の 3.2、Issue #40 の U-4）。
+ * リンクの名前を上書きしないよう aria-label は使わない。この文言は画面の文言なので辞書から出し、原文には含めない。
  */
 @Component({
   selector: 'app-attribution',
-  // 区切りの間に空白を足さない（空白だけの文字は Angular が消す。原文との完全一致はテストで確かめる）
+  imports: [TranslatePipe],
+  // 区切りの間に空白を足さない（空白だけの文字は Angular が消す。原文との完全一致はテストで確かめる）。
+  // 見えない文言の <span> は、外側の lang="ko" の中で表示言語の文言を正しく読ませるため表示言語の lang を付ける
   template: `
     @for (line of lines; track $index) {
       <p class="ct-attribution__line">
@@ -51,7 +56,10 @@ export function attributionText(line: AttributionLine): string {
               [href]="segment.href"
               target="_blank"
               rel="noopener noreferrer"
-              >{{ segment.text }}</a
+              >{{ segment.text
+              }}<span class="cdk-visually-hidden" [attr.lang]="language.lang()">{{
+                'attribution.newTab' | translate
+              }}</span></a
             >
           } @else {
             <span>{{ segment.text }}</span>
@@ -103,4 +111,5 @@ export function attributionText(line: AttributionLine): string {
 })
 export class Attribution {
   protected readonly lines = ATTRIBUTION_LINES;
+  protected readonly language = inject(LanguageService);
 }

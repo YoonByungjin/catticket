@@ -78,6 +78,8 @@ describe('Header (CM-01)', () => {
     expect(el.querySelector('.ct-actions > button')?.classList.contains('ct-fixed')).toBe(true);
   });
 
+  // jsdom はスタイルの優先順位をブラウザと同じには計算しない。実際の画面の値は 07 の 4.1.1 の実測
+  // （ヘッドレス Chrome）で確かめた
   it('side padding is set by our own class: PC 24px (07 2.4)', async () => {
     const el = (await render()).nativeElement as HTMLElement;
     const toolbar = el.querySelector('mat-toolbar') as HTMLElement;

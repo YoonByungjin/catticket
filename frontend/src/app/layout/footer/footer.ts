@@ -11,11 +11,19 @@ import { Attribution } from '../attribution/attribution';
     </footer>
   `,
   styles: `
+    @use '../../../theme/breakpoints' as bp;
+
     .ct-footer {
+      // 画面の左右の余白: PC 表示 24px、スマホ表示 16px（07 の 2.4）。ヘッダーと同じ境目で端をそろえる
       padding: 16px 24px;
       background: var(--mat-sys-surface-container-low);
       color: var(--mat-sys-on-surface-variant);
       font: var(--mat-sys-body-small);
+
+      @media #{bp.$handset} {
+        padding-right: 16px;
+        padding-left: 16px;
+      }
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
