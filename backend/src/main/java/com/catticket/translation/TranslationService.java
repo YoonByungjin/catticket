@@ -18,8 +18,10 @@ import com.catticket.common.batch.Sleeper;
 import com.catticket.common.batch.StepResult;
 import com.catticket.common.batch.StepSummary;
 import com.catticket.common.config.CatticketProperties;
+import com.catticket.common.text.Hashes;
 import com.catticket.translation.client.AzureTranslatorClient;
 import com.catticket.translation.client.TranslatorException;
+import com.catticket.translation.client.TranslatorFatalException;
 import com.catticket.translation.client.TranslatorQuotaExceededException;
 import com.catticket.translation.client.TranslatorThrottledException;
 
@@ -77,7 +79,8 @@ public class TranslationService {
 
 	/**
 	 * 翻訳がまだない原文を、種類の順（公演名 → 会場名 → 駅名 → それ以外）に翻訳して保存する。
-	 * 月の上限で止めたときは成功（内訳に monthlyLimit）。403001・再試行の後の失敗は失敗（それまでの保存は残る）。
+	 * 月の上限で止めたとき・長すぎる原文を送らなかったときは成功（内訳に monthlyLimit・tooLong）。
+	 * 403001・再試行しない誤り・再試行の後の失敗は失敗（それまでの保存は残る）。
 	 */
 	public StepResult translatePending(LocalDateTime now) {
 		StepSummary summary = new StepSummary();
@@ -89,12 +92,23 @@ public class TranslationService {
 		for (Source source : sources()) {
 			while (true) {
 				List<String> texts = new ArrayList<>();
+				boolean anyNew = false;
 				for (String text : source.reader().apply(READ_LIMIT)) {
-					if (sent.add(text)) {
-						texts.add(text);
+					if (!sent.add(text)) {
+						continue;
 					}
+					anyNew = true;
+					long length = charCount(text);
+					if (length > requestMaxChars) {
+						// 送ると毎回同じ原文で失敗し S7 が毎日止まるので送らない（06 の 4.10 の 2.）。
+						// sent に入れたので、読み直しても数えない
+						summary.increment("tooLong");
+						summary.addDetail("tooLong", source.name() + "|" + length + "|" + Hashes.sha256Hex(text));
+						continue;
+					}
+					texts.add(text);
 				}
-				if (texts.isEmpty()) {
+				if (!anyNew) {
 					break;
 				}
 				for (List<String> batch : batches(texts, requestMaxChars, MAX_ELEMENTS)) {
@@ -150,7 +164,10 @@ public class TranslationService {
 				new Source("others", mapper::findUntranslatedOthers));
 	}
 
-	/** 403001 はすぐ止め、429 は 60 秒・そのほかは 2・4・8 秒で最大 3 回やり直す（05 の 3.7） */
+	/**
+	 * 403001 と再試行しない誤り（キーが空・4xx）はすぐ止め、429 は 60 秒・そのほかは 2・4・8 秒で最大 3 回やり直す
+	 * （05 の 3.7、06 の 4.10 の 7.）
+	 */
 	private List<String> send(List<String> batch) {
 		int throttled = 0;
 		int failed = 0;
@@ -158,7 +175,7 @@ public class TranslationService {
 			try {
 				return client.translate(batch);
 			}
-			catch (TranslatorQuotaExceededException e) {
+			catch (TranslatorQuotaExceededException | TranslatorFatalException e) {
 				throw e;
 			}
 			catch (TranslatorThrottledException e) {
@@ -187,8 +204,8 @@ public class TranslationService {
 	}
 
 	/**
-	 * 順を保って束ねる: 1回 maxChars 文字（コードポイント）以内・maxElements 個以内。
-	 * 1つで maxChars を超える原文は、その原文だけで1回にする（06 の 4.10 の 2.）。
+	 * 順を保って束ねる: 1回 maxChars 文字（コードポイント）以内・maxElements 個以内（06 の 4.10 の 2.）。
+	 * 1つで maxChars を超える原文は、呼ぶ前に除く（translatePending）。
 	 */
 	static List<List<String>> batches(List<String> texts, int maxChars, int maxElements) {
 		List<List<String>> batches = new ArrayList<>();

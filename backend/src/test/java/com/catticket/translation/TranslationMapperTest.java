@@ -108,6 +108,16 @@ class TranslationMapperTest {
 	}
 
 	@Test
+	void originalsDifferingOnlyInTrailingSpacesAreSeparate() {
+		// utf8mb4_0900_bin（NO PAD）: 04 のハッシュと同じく末尾の空白も区別する（06 の 4.10 の 1.。U-15 ①）
+		long v = venue("FCTRTEST01", P + "극장", null);
+		performance("PFTRTEST01", v, P + "abc", null, null, null, null, null);
+		performance("PFTRTEST02", v, P + "abc ", null, null, null, null, null);
+
+		assertThat(mine(mapper.findUntranslatedTitles(ALL))).containsExactlyInAnyOrder(P + "abc", P + "abc ");
+	}
+
+	@Test
 	void translatedOriginalsAreNotRead() {
 		long v = venue("FCTRTEST01", P + "극장", null);
 		performance("PFTRTEST01", v, P + "공연가", null, null, null, null, null);

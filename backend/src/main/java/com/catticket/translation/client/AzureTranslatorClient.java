@@ -51,14 +51,15 @@ public class AzureTranslatorClient {
 	 * @return 入力と同じ順の訳文
 	 * @throws TranslatorQuotaExceededException エラーの {@code error.code} が 403001
 	 * @throws TranslatorThrottledException     HTTP 429
-	 * @throws TranslatorException              そのほか（通信の失敗・タイムアウト・5xx・読めない応答・件数の違い）
+	 * @throws TranslatorFatalException         キーが空、HTTP 4xx（408・429・403001 以外）
+	 * @throws TranslatorException              そのほか（通信の失敗・タイムアウト・5xx・408・読めない応答・件数の違い）
 	 */
 	public List<String> translate(List<String> texts) {
 		if (texts.isEmpty()) {
 			return List.of();
 		}
 		if (key == null || key.isBlank()) {
-			throw new TranslatorException("Azure Translator key is not set (catticket.azure.translator-key)");
+			throw new TranslatorFatalException("Azure Translator key is not set (catticket.azure.translator-key)");
 		}
 		byte[] requestBody = requestBody(texts);
 		Result result;
@@ -148,6 +149,10 @@ public class AzureTranslatorClient {
 		}
 		if (result.status().isSameCodeAs(HttpStatus.TOO_MANY_REQUESTS)) {
 			return new TranslatorThrottledException(text);
+		}
+		// 要求・キーの誤りは送り直しても同じなので再試行させない。408 はタイムアウトで一時的なので除く
+		if (result.status().is4xxClientError() && !result.status().isSameCodeAs(HttpStatus.REQUEST_TIMEOUT)) {
+			return new TranslatorFatalException(text);
 		}
 		return new TranslatorException(text);
 	}

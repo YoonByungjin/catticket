@@ -17,7 +17,8 @@
 
   <!--
     未翻訳の原文の読み（05 の 3.7、06 の 4.10）。中で原文の候補を UNION ALL で並べ、ここで1つにまとめる。
-    列の照合順序（utf8mb4_0900_as_ci）のままだと大文字・小文字だけ違う原文が1つにまとまるので、utf8mb4_bin で比べる。
+    列の照合順序（utf8mb4_0900_as_ci）のままだと大文字・小文字だけ違う原文が1つにまとまるので、utf8mb4_0900_bin で比べる。
+    utf8mb4_bin（PAD SPACE）は末尾の空白だけ違う原文もまとめるので使わない（04 のハッシュとまとめる単位をそろえる。NO PAD）。
     翻訳済み（同じ原文の SHA-256 の行がある）と空の文は返さない。
   -->
   <sql id="untranslatedHead">
@@ -36,22 +37,22 @@
 
   <select id="findUntranslatedTitles" resultType="string">
     <include refid="untranslatedHead"/>
-      SELECT p.title COLLATE utf8mb4_bin AS source_text FROM performance p
+      SELECT p.title COLLATE utf8mb4_0900_bin AS source_text FROM performance p
       UNION ALL
-      SELECT o.override_value COLLATE utf8mb4_bin FROM performance_override o WHERE o.field_name = 'title'
+      SELECT o.override_value COLLATE utf8mb4_0900_bin FROM performance_override o WHERE o.field_name = 'title'
     <include refid="untranslatedTail"/>
   </select>
 
   <select id="findUntranslatedVenueNames" resultType="string">
     <include refid="untranslatedHead"/>
-      SELECT v.name COLLATE utf8mb4_bin AS source_text FROM venue v
+      SELECT v.name COLLATE utf8mb4_0900_bin AS source_text FROM venue v
     <include refid="untranslatedTail"/>
   </select>
 
   <!-- 公式の日本語表記がある駅名は対象にしない（ADR 0009） -->
   <select id="findUntranslatedStationNames" resultType="string">
     <include refid="untranslatedHead"/>
-      SELECT st.name_ko COLLATE utf8mb4_bin AS source_text FROM station st
+      SELECT st.name_ko COLLATE utf8mb4_0900_bin AS source_text FROM station st
       WHERE st.name_ja IS NULL OR TRIM(st.name_ja) = ''
     <include refid="untranslatedTail"/>
   </select>
@@ -59,17 +60,17 @@
   <!-- 名前が NULL の予約サイトは原文がないので出ない（05 の 3.7。上の IS NOT NULL で除く） -->
   <select id="findUntranslatedOthers" resultType="string">
     <include refid="untranslatedHead"/>
-      SELECT p.cast_text COLLATE utf8mb4_bin AS source_text FROM performance p
-      UNION ALL SELECT p.ticket_price COLLATE utf8mb4_bin FROM performance p
-      UNION ALL SELECT p.schedule_text COLLATE utf8mb4_bin FROM performance p
-      UNION ALL SELECT p.runtime COLLATE utf8mb4_bin FROM performance p
-      UNION ALL SELECT p.age_limit COLLATE utf8mb4_bin FROM performance p
+      SELECT p.cast_text COLLATE utf8mb4_0900_bin AS source_text FROM performance p
+      UNION ALL SELECT p.ticket_price COLLATE utf8mb4_0900_bin FROM performance p
+      UNION ALL SELECT p.schedule_text COLLATE utf8mb4_0900_bin FROM performance p
+      UNION ALL SELECT p.runtime COLLATE utf8mb4_0900_bin FROM performance p
+      UNION ALL SELECT p.age_limit COLLATE utf8mb4_0900_bin FROM performance p
       UNION ALL
-      SELECT o.override_value COLLATE utf8mb4_bin FROM performance_override o
+      SELECT o.override_value COLLATE utf8mb4_0900_bin FROM performance_override o
       WHERE o.field_name IN ('cast_text', 'ticket_price', 'schedule_text', 'runtime', 'age_limit')
-      UNION ALL SELECT b.name COLLATE utf8mb4_bin FROM booking_site b
-      UNION ALL SELECT v.address COLLATE utf8mb4_bin FROM venue v
-      UNION ALL SELECT c.location_text COLLATE utf8mb4_bin FROM coin_locker c
+      UNION ALL SELECT b.name COLLATE utf8mb4_0900_bin FROM booking_site b
+      UNION ALL SELECT v.address COLLATE utf8mb4_0900_bin FROM venue v
+      UNION ALL SELECT c.location_text COLLATE utf8mb4_0900_bin FROM coin_locker c
     <include refid="untranslatedTail"/>
   </select>
 

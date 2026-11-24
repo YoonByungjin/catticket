@@ -129,15 +129,58 @@ class AzureTranslatorClientTest {
 	}
 
 	@Test
-	void otherErrorsAreTranslatorException() {
+	void unauthorizedIsFatal() {
 		AzureTranslatorClient client = newClient(KEY, null);
 		server.expect(once(), requestTo(URL))
 			.andRespond(withStatus(HttpStatus.UNAUTHORIZED).contentType(MediaType.APPLICATION_JSON)
 				.body(json("error-401000.json")));
 
-		assertThatThrownBy(() -> client.translate(List.of("a"))).isExactlyInstanceOf(TranslatorException.class)
+		assertThatThrownBy(() -> client.translate(List.of("a"))).isExactlyInstanceOf(TranslatorFatalException.class)
 			.hasMessageStartingWith("Azure Translator HTTP 401 code=401000")
 			.satisfies(e -> assertThat(e.getMessage()).doesNotContain(KEY));
+	}
+
+	@Test
+	void badRequestIsFatal() {
+		AzureTranslatorClient client = newClient(KEY, null);
+		server.expect(once(), requestTo(URL))
+			.andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_JSON)
+				.body("{\"error\":{\"code\":400050,\"message\":\"The input text is too long.\"}}"));
+
+		assertThatThrownBy(() -> client.translate(List.of("a"))).isExactlyInstanceOf(TranslatorFatalException.class)
+			.hasMessageStartingWith("Azure Translator HTTP 400 code=400050");
+	}
+
+	@Test
+	void forbiddenWithoutQuotaCodeIsFatal() {
+		AzureTranslatorClient client = newClient(KEY, null);
+		server.expect(once(), requestTo(URL))
+			.andRespond(withStatus(HttpStatus.FORBIDDEN).contentType(MediaType.APPLICATION_JSON)
+				.body("{\"error\":{\"code\":403000,\"message\":\"The operation is not allowed.\"}}"));
+
+		assertThatThrownBy(() -> client.translate(List.of("a"))).isExactlyInstanceOf(TranslatorFatalException.class)
+			.hasMessageStartingWith("Azure Translator HTTP 403 code=403000");
+	}
+
+	@Test
+	void requestTimeoutIsRetryable() {
+		AzureTranslatorClient client = newClient(KEY, null);
+		server.expect(once(), requestTo(URL))
+			.andRespond(withStatus(HttpStatus.REQUEST_TIMEOUT).contentType(MediaType.APPLICATION_JSON)
+				.body("{\"error\":{\"code\":408001,\"message\":\"The request timed out.\"}}"));
+
+		// 408 は一時的なので再試行の対象（TranslatorFatalException でない）
+		assertThatThrownBy(() -> client.translate(List.of("a"))).isExactlyInstanceOf(TranslatorException.class)
+			.hasMessageStartingWith("Azure Translator HTTP 408");
+	}
+
+	@Test
+	void serviceUnavailableIsRetryable() {
+		AzureTranslatorClient client = newClient(KEY, null);
+		server.expect(once(), requestTo(URL)).andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+		assertThatThrownBy(() -> client.translate(List.of("a"))).isExactlyInstanceOf(TranslatorException.class)
+			.hasMessageStartingWith("Azure Translator HTTP 503");
 	}
 
 	@Test
@@ -183,8 +226,8 @@ class AzureTranslatorClientTest {
 	void missingKeyFailsWithoutCalling() {
 		AzureTranslatorClient client = newClient("", null);
 
-		assertThatThrownBy(() -> client.translate(List.of("a"))).isExactlyInstanceOf(TranslatorException.class)
-			.hasMessageContaining("key is not set");
+		assertThatThrownBy(() -> client.translate(List.of("a"))).isExactlyInstanceOf(TranslatorFatalException.class)
+			.hasMessage("Azure Translator key is not set (catticket.azure.translator-key)");
 		server.verify();
 	}
 

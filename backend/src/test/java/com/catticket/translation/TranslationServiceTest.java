@@ -39,8 +39,10 @@ import org.springframework.web.client.RestClient;
 import com.catticket.common.batch.Sleeper;
 import com.catticket.common.batch.StepResult;
 import com.catticket.common.config.CatticketProperties;
+import com.catticket.common.text.Hashes;
 import com.catticket.translation.client.AzureTranslatorClient;
 import com.catticket.translation.client.TranslatorException;
+import com.catticket.translation.client.TranslatorFatalException;
 import com.catticket.translation.client.TranslatorQuotaExceededException;
 import com.catticket.translation.client.TranslatorThrottledException;
 
@@ -116,15 +118,6 @@ class TranslationServiceTest {
 			List<List<String>> batches = TranslationService.batches(texts, 10000, 1000);
 
 			assertThat(batches).extracting(List::size).containsExactly(1000, 1000, 1);
-		}
-
-		@Test
-		void textOverMaxCharsIsSentAlone() {
-			String big = repeat('가', 10001);
-
-			List<List<String>> batches = TranslationService.batches(List.of("가", big, "나"), 10000, 1000);
-
-			assertThat(batches).containsExactly(List.of("가"), List.of(big), List.of("나"));
 		}
 
 		@Test
@@ -240,6 +233,88 @@ class TranslationServiceTest {
 			verify(client, times(1)).translate(anyList());
 			verify(mapper, times(2)).findUntranslatedTitles(anyInt());
 			assertThat(result.success()).isTrue();
+		}
+
+	}
+
+	/** 1つで 1 万文字を超える原文は送らない（06 の 4.10 の 2.。U-15 ②） */
+	@Nested
+	class TooLong {
+
+		@Test
+		void textOver10000CharsIsNotSentAndOthersAre() {
+			String big = repeat('가', 10001);
+			pending(List.of("공연", big, "나"), List.of(), List.of(), List.of());
+			translatesAll();
+
+			StepResult result = service.translatePending(NOW);
+
+			assertThat(result.success()).isTrue();
+			verify(client).translate(List.of("공연", "나"));
+			verify(client, times(1)).translate(anyList());
+			assertThat(result.processedCount()).isEqualTo(2);
+			assertThat(result.summary().get("tooLong")).isEqualTo(1);
+			assertThat(result.summary().details("tooLong")).containsExactly("titles|10001|" + Hashes.sha256Hex(big));
+		}
+
+		@Test
+		void exactly10000CharsIsSent() {
+			String max = repeat('가', 10000);
+			pending(List.of(), List.of(), List.of(), List.of(max));
+			translatesAll();
+
+			StepResult result = service.translatePending(NOW);
+
+			assertThat(result.success()).isTrue();
+			verify(client).translate(List.of(max));
+			assertThat(result.summary().get("tooLong")).isZero();
+		}
+
+		@Test
+		void codePointsAreCounted() {
+			// サロゲートペアの文字は1文字。10,000 文字（UTF-16 では 20,000 単位）は送る
+			String max = "𠮷".repeat(10000);
+			String big = "𠮷".repeat(10001);
+			pending(List.of(max, big), List.of(), List.of(), List.of());
+			translatesAll();
+
+			StepResult result = service.translatePending(NOW);
+
+			verify(client).translate(List.of(max));
+			assertThat(result.summary().details("tooLong")).containsExactly("titles|10001|" + Hashes.sha256Hex(big));
+		}
+
+		@Test
+		void textStillReadIsCountedOnceAndReadingMovesOn() {
+			// 送らない原文は翻訳がないので読みに出続けるが、数えるのは1回で、次の種類へ進む
+			String big = repeat('a', 20000);
+			when(mapper.findUntranslatedTitles(anyInt())).thenReturn(List.of(big));
+			when(mapper.findUntranslatedVenueNames(anyInt())).thenReturn(List.of("극장"), List.of());
+			when(mapper.findUntranslatedStationNames(anyInt())).thenReturn(List.of());
+			when(mapper.findUntranslatedOthers(anyInt())).thenReturn(List.of(big));
+			translatesAll();
+
+			StepResult result = service.translatePending(NOW);
+
+			assertThat(result.success()).isTrue();
+			verify(mapper, times(2)).findUntranslatedTitles(anyInt());
+			verify(client).translate(List.of("극장"));
+			verify(client, times(1)).translate(anyList());
+			assertThat(result.summary().get("tooLong")).isEqualTo(1);
+			assertThat(result.summary().details("tooLong")).containsExactly("titles|20000|" + Hashes.sha256Hex(big));
+		}
+
+		@Test
+		void onlyTooLongTextsSendNothing() {
+			pending(List.of(repeat('a', 10001)), List.of(), List.of(), List.of());
+
+			StepResult result = service.translatePending(NOW);
+
+			assertThat(result.success()).isTrue();
+			assertThat(result.processedCount()).isZero();
+			assertThat(result.summary().get("tooLong")).isEqualTo(1);
+			verifyNoInteractions(client, writer);
+			assertThat(sleeps).isEmpty();
 		}
 
 	}
@@ -387,6 +462,23 @@ class TranslationServiceTest {
 		}
 
 		@Test
+		void fatalErrorStopsAfterOneRequestWithoutWaiting() {
+			pending(List.of("가"), List.of("극장"), List.of(), List.of());
+			when(client.translate(anyList()))
+				.thenThrow(new TranslatorFatalException("Azure Translator HTTP 400 code=400000 message=x"));
+
+			StepResult result = service.translatePending(NOW);
+
+			assertThat(result.success()).isFalse();
+			assertThat(result.errorMessage())
+				.isEqualTo("TranslatorFatalException: Azure Translator HTTP 400 code=400000 message=x");
+			verify(client, times(1)).translate(anyList());
+			assertThat(sleeps).isEmpty();
+			verifyNoInteractions(writer);
+			verify(mapper, never()).findUntranslatedVenueNames(anyInt());
+		}
+
+		@Test
 		void otherErrorsFourTimesStop() {
 			pending(List.of("가"), List.of("극장"), List.of(), List.of());
 			when(client.translate(anyList())).thenThrow(new TranslatorException("Azure Translator HTTP 503"));
@@ -428,7 +520,9 @@ class TranslationServiceTest {
 
 			assertThat(result.success()).isFalse();
 			assertThat(result.errorMessage()).isEqualTo(
-					"TranslatorException: Azure Translator key is not set (catticket.azure.translator-key)");
+					"TranslatorFatalException: Azure Translator key is not set (catticket.azure.translator-key)");
+			// 再試行しない（U-15 ③）
+			assertThat(sleeps).isEmpty();
 			verifyNoInteractions(writer);
 		}
 
@@ -448,6 +542,26 @@ class TranslationServiceTest {
 			server.verify();
 			assertThat(result.success()).isFalse();
 			assertThat(result.errorMessage()).startsWith("TranslatorQuotaExceededException:");
+			assertThat(sleeps).isEmpty();
+			verifyNoInteractions(writer);
+		}
+
+		@Test
+		void unauthorizedResponseFileStopsWithoutRetry() {
+			RestClient.Builder builder = RestClient.builder().baseUrl("https://translator.test");
+			MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+			server.expect(ExpectedCount.once(), method(HttpMethod.POST))
+				.andRespond(withStatus(HttpStatus.UNAUTHORIZED).contentType(MediaType.APPLICATION_JSON)
+					.body(json("error-401000.json")));
+			AzureTranslatorClient realClient = new AzureTranslatorClient(builder.build(), PROPS);
+			TranslationService s = new TranslationService(mapper, usageMapper, writer, realClient, sleeper, PROPS);
+			pending(List.of("가"), List.of(), List.of(), List.of());
+
+			StepResult result = s.translatePending(NOW);
+
+			server.verify();
+			assertThat(result.success()).isFalse();
+			assertThat(result.errorMessage()).startsWith("TranslatorFatalException: Azure Translator HTTP 401");
 			assertThat(sleeps).isEmpty();
 			verifyNoInteractions(writer);
 		}
