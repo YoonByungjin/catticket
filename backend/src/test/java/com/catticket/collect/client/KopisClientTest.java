@@ -486,6 +486,35 @@ class KopisClientTest {
 		}
 
 		@Test
+		void http400WithReturnCode04DetailIsEmpty() {
+			// 結果コードの XML の 4xx は、その結果コードの扱い（06 の 4.9）。詳細の 04 は空
+			server.expect(once(), requestTo(startsWith(BASE + "/pblprfr/PF1")))
+				.andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_XML)
+					.body(bytes("performance-detail-04.xml")));
+
+			assertThat(client.getPerformance("PF1")).isEmpty();
+			server.verify();
+			assertThat(slept).isEmpty();
+			assertThat(policy.stopped()).isFalse();
+		}
+
+		@Test
+		void http400WithReturnCode03IsRetried() {
+			String body = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><dbs><db><returncode>03</returncode>"
+					+ "<errmsg>DB ERROR</errmsg><responsetime>2026-11-25 12:00:00</responsetime></db></dbs>";
+			server.expect(times(3), requestTo(startsWith(BASE + "/prfplc/FC1")))
+				.andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_XML).body(body));
+
+			assertThatThrownBy(() -> client.getVenue("FC1")).isInstanceOf(KopisRetryableException.class)
+				.hasMessage("KOPIS prfplc/{id} returncode=03 errmsg=DB ERROR");
+			// 最初 + 再試行 2 回。遮断として扱わない
+			server.verify();
+			assertThat(slept).containsExactlyElementsOf(BACKOFF);
+			assertThat(policy.stopped()).isFalse();
+			assertThat(policy.stepCalls()).isEqualTo(3);
+		}
+
+		@Test
 		void maintenancePageWithoutRequestBlockedIsStillRetryable() {
 			server.expect(times(3), requestTo(startsWith(BASE + "/pblprfr?")))
 				.andRespond(withSuccess(bytes("maintenance.html"), MediaType.TEXT_HTML));
