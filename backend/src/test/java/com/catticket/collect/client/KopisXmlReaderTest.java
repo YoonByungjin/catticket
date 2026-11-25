@@ -266,4 +266,35 @@ class KopisXmlReaderTest {
 			.hasMessageStartingWith("KOPIS pblprfr unreadable response");
 	}
 
+	@ParameterizedTest
+	@CsvSource({ "error-01.xml,01", "error-03.xml,03", "error-99.xml,99", "performance-detail-04.xml,04" })
+	void readResultCodeReadsCodeAndErrmsg(String file, String code) {
+		assertThat(reader.readResultCode("boxoffice", bytes(file))).hasValueSatisfying(r -> {
+			assertThat(r.code()).isEqualTo(code);
+			assertThat(r.errmsg()).isNotBlank();
+		});
+	}
+
+	@Test
+	void readResultCodeOfError01() {
+		assertThat(reader.readResultCode("boxoffice", bytes("error-01.xml")))
+			.contains(new KopisResult("01", "INVALID REQUEST PARAMETER ERROR"));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "performance-list-page-100.xml", "performance-detail-relates.xml", "boxoffice-50.xml",
+			"performance-list-empty.xml", "boxoffice-empty.xml", "maintenance.html", "blocked-400.html",
+			"performance-list-truncated.xml" })
+	void readResultCodeIsEmptyWithoutResultCode(String file) {
+		// 成功の XML（行あり・空の根要素）・HTML・途中で切れた本文は結果コードの応答ではない（06 の 4.9）
+		assertThat(reader.readResultCode("x", bytes(file))).isEmpty();
+	}
+
+	@Test
+	void readResultCodeOfEmptyBodyIsEmpty() {
+		assertThat(reader.readResultCode("x", new byte[0])).isEmpty();
+		assertThat(reader.readResultCode("x", null)).isEmpty();
+		assertThat(reader.readResultCode("x", "not xml".getBytes(StandardCharsets.UTF_8))).isEmpty();
+	}
+
 }

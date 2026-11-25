@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import com.catticket.common.batch.LastS1;
+import com.catticket.common.batch.PreviousS1;
 import com.catticket.common.display.Period;
 
 /**
@@ -104,6 +105,29 @@ class CollectWindowsTest {
 		assertThat(CollectWindows.segments(TODAY, TODAY)).containsExactly(new Period(TODAY, TODAY));
 		assertThat(CollectWindows.segments(TODAY, TODAY.plusDays(30))).containsExactly(new Period(TODAY, TODAY.plusDays(30)));
 		assertThat(CollectWindows.segments(TODAY, TODAY.plusDays(31))).hasSize(2);
+	}
+
+	@Test
+	void baseDateIsTodayUnlessThePreviousS1DidNotSucceed() {
+		LocalDate earlier = TODAY.minusDays(2);
+
+		// 前がない・成功・基準日がない・基準日が今日より後 → 今日
+		assertThat(CollectWindows.baseDate(TODAY, Optional.empty())).isEqualTo(TODAY);
+		assertThat(CollectWindows.baseDate(TODAY, Optional.of(new PreviousS1("SUCCESS", earlier)))).isEqualTo(TODAY);
+		assertThat(CollectWindows.baseDate(TODAY, Optional.of(new PreviousS1("FAILURE", null)))).isEqualTo(TODAY);
+		assertThat(CollectWindows.baseDate(TODAY, Optional.of(new PreviousS1("FAILURE", TODAY.plusDays(1)))))
+			.isEqualTo(TODAY);
+	}
+
+	@Test
+	void baseDateIsInheritedFromAFailedOrUnfinishedS1() {
+		LocalDate earlier = TODAY.minusDays(2);
+
+		assertThat(CollectWindows.baseDate(TODAY, Optional.of(new PreviousS1("FAILURE", earlier)))).isEqualTo(earlier);
+		// 終わりが記録されていない（result が null）
+		assertThat(CollectWindows.baseDate(TODAY, Optional.of(new PreviousS1(null, earlier)))).isEqualTo(earlier);
+		// 今日と同じ日も引き継ぐ（同じ日の2回目の実行）
+		assertThat(CollectWindows.baseDate(TODAY, Optional.of(new PreviousS1("FAILURE", TODAY)))).isEqualTo(TODAY);
 	}
 
 }

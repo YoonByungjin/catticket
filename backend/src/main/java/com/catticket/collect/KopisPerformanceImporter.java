@@ -38,7 +38,7 @@ public class KopisPerformanceImporter {
 
 	/**
 	 * 保存しなかった理由・切り詰めなどは summary に数える。KOPIS の呼び出しの失敗は failures に数える。
-	 * StepAbortedException は捕まえない（ステップを止める）。
+	 * KopisStoppedException・KopisCallLimitException は捕まえない（ステップの一番外まで出す。06 の 4.9）。
 	 *
 	 * @param awarded S3 で見た受賞作なら true（S4 だけ。S1 は false）
 	 */

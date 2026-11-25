@@ -24,7 +24,9 @@ import org.slf4j.LoggerFactory;
 import com.catticket.collect.client.KopisClient;
 import com.catticket.collect.client.KopisFatalException;
 import com.catticket.collect.client.KopisRetryableException;
-import com.catticket.collect.client.StepAbortedException;
+import com.catticket.collect.client.KopisCallLimitException;
+import com.catticket.collect.client.KopisStopReason;
+import com.catticket.collect.client.KopisStoppedException;
 import com.catticket.collect.client.xml.KopisPerformanceDetail;
 import com.catticket.collect.client.xml.KopisVenueDetail;
 import com.catticket.collect.row.CollectVenueRow;
@@ -160,12 +162,33 @@ class KopisPerformanceImporterTest {
 	}
 
 	@Test
-	void stepAbortedIsNotCaught() {
-		when(client.getPerformance("PF1")).thenThrow(new StepAbortedException("aborted"));
+	void stoppedAndCallLimitFromPerformanceAreNotCaught() {
+		when(client.getPerformance("PF1"))
+			.thenThrow(new KopisStoppedException(KopisStopReason.BLOCKED, "KOPIS blocked: x", null));
+		when(client.getPerformance("PF2")).thenThrow(new KopisCallLimitException("limit"));
 
 		assertThatThrownBy(() -> importer.importOne("PF1", false, NOW, summary, failures))
-			.isInstanceOf(StepAbortedException.class);
+			.isInstanceOf(KopisStoppedException.class);
+		assertThatThrownBy(() -> importer.importOne("PF2", false, NOW, summary, failures))
+			.isInstanceOf(KopisCallLimitException.class);
 		assertThat(failures.any()).isFalse();
+		assertThat(summary.get("failed")).isZero();
+	}
+
+	@Test
+	void stoppedAndCallLimitFromVenueAreNotCaught() {
+		when(client.getPerformance("PF303043")).thenReturn(Optional.of(detail));
+		when(mapper.findVenueByKopisId("FC000011")).thenReturn(Optional.empty());
+		when(client.getVenue("FC000011"))
+			.thenThrow(new KopisStoppedException(KopisStopReason.CONSECUTIVE_FAILURES, "stopped", null))
+			.thenThrow(new KopisCallLimitException("limit"));
+
+		assertThatThrownBy(() -> importer.importOne("PF303043", false, NOW, summary, failures))
+			.isInstanceOf(KopisStoppedException.class);
+		assertThatThrownBy(() -> importer.importOne("PF303043", false, NOW, summary, failures))
+			.isInstanceOf(KopisCallLimitException.class);
+		assertThat(failures.any()).isFalse();
+		verify(saveService, never()).saveFromKopis(any(), any(), anyBoolean(), any());
 	}
 
 }

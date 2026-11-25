@@ -58,7 +58,9 @@ class ApplicationConfigTest {
 		assertThat(props.scheduler().enabled()).isFalse();
 		assertThat(props.task()).isNull();
 		assertThat(props.kopis().baseUrl()).isEqualTo("http://www.kopis.or.kr/openApi/restful");
-		assertThat(props.kopis().interval()).isEqualTo(Duration.ofMillis(500));
+		assertThat(props.kopis().interval()).isEqualTo(Duration.ofSeconds(7));
+		// テストはプロファイルなしなので開発の上限（05 の 3.5）
+		assertThat(props.kopis().callLimit()).isEqualTo(new CatticketProperties.Kopis.CallLimit(20, 4, 2, 2, 1));
 		assertThat(props.azure().requestMaxChars()).isEqualTo(10000);
 		assertThat(props.azure().charsPerMinute()).isEqualTo(30000);
 		assertThat(props.azure().monthlyLimitChars()).isEqualTo(1_800_000);

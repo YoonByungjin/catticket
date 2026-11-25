@@ -1,0 +1,10 @@
+# 本番だけ（SPRING_PROFILES_ACTIVE=prod のとき）。05 の 3.5、06 の 8.1
+# 秘密の値は置かない
+catticket:
+  kopis:
+    call-limit:
+      per-run: 1500
+      s2: 70
+      s3: 20
+      s4: 200
+      s6: 5

@@ -72,6 +72,14 @@
     <foreach collection="kopisIds" item="id" open="(" separator="," close=")">#{id}</foreach>
   </select>
 
+  <!-- S1 の続き: 基準日の 0 時以降に収集（S1・S4 が保存）した公演（05 の 3.3 の 12.） -->
+  <select id="findKopisIdsCollectedSince" resultType="string">
+    SELECT kopis_performance_id FROM performance
+    WHERE kopis_performance_id IN
+    <foreach collection="kopisIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+      AND collected_at &gt;= #{since}
+  </select>
+
   <select id="findCollectionId" resultType="long">
     SELECT id FROM ranking_collection
     WHERE period_type = #{periodType} AND genre_code = #{genreCode} AND period_start = #{period.start}

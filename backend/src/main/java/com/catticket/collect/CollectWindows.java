@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.catticket.common.batch.LastS1;
+import com.catticket.common.batch.PreviousS1;
 import com.catticket.common.display.Period;
 
 /**
@@ -36,7 +37,7 @@ public final class CollectWindows {
 	 * S1 の計画（05 の 3.3 の 2.・3.）。
 	 * <ul>
 	 * <li>前回の成功がない（または窓の末日の記録がない）: すべての区間を afterdate なし</li>
-	 * <li>2回目以降: (a) すべての区間を afterdate = 前回の成功の日の前日、(b) 前回の窓の末日の翌日〜今日 + 180 日を afterdate なし</li>
+	 * <li>2回目以降: (a) すべての区間を afterdate = 前回の成功の日（基準日）の前日、(b) 前回の窓の末日の翌日〜今日 + 180 日を afterdate なし</li>
 	 * </ul>
 	 */
 	public static CollectPlan plan(LocalDate today, Optional<LastS1> lastSuccess) {
@@ -59,6 +60,22 @@ public final class CollectWindows {
 		}
 		segments(from, end).forEach(p -> ranges.add(new CollectRange(p, null)));
 		return new CollectPlan(ranges, end);
+	}
+
+	/**
+	 * S1 の収集の基準日（05 の 3.3 の 12.）。前の S1 が成功でない（失敗・終わりの記録なし）ときだけ、その基準日を引き継ぐ。
+	 * 分からないときは今日（飛ばす公演が減るだけで取りこぼさない、安全な側）。
+	 */
+	public static LocalDate baseDate(LocalDate today, Optional<PreviousS1> previous) {
+		if (previous.isEmpty()) {
+			return today;
+		}
+		PreviousS1 prev = previous.get();
+		if ("SUCCESS".equals(prev.result()) || prev.collectBaseDate() == null
+				|| prev.collectBaseDate().isAfter(today)) {
+			return today;
+		}
+		return prev.collectBaseDate();
 	}
 
 	/** from〜to（両端を含む）を 31 日ずつに分ける。from > to なら空 */

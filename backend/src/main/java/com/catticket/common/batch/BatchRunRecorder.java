@@ -63,7 +63,7 @@ public class BatchRunRecorder {
 	public void finishStep(StepRun step, StepResult result, LocalDateTime now) {
 		String summary = result.summary() == null ? null : jsonMapper.writeValueAsString(result.summary());
 		mapper.updateStepRun(step.id(), now, result.success() ? "SUCCESS" : "FAILURE", result.processedCount(),
-				summary, sanitize(result.errorMessage()), result.windowEndDate());
+				summary, sanitize(result.errorMessage()), result.windowEndDate(), result.collectBaseDate());
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)

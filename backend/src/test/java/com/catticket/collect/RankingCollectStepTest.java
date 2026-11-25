@@ -1,10 +1,8 @@
 package com.catticket.collect;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -24,11 +22,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
-import com.catticket.collect.client.KopisCallPolicy;
+import com.catticket.collect.client.KopisCallLimitException;
 import com.catticket.collect.client.KopisClient;
 import com.catticket.collect.client.KopisFatalException;
 import com.catticket.collect.client.KopisRetryableException;
-import com.catticket.collect.client.StepAbortedException;
+import com.catticket.collect.client.KopisStopReason;
+import com.catticket.collect.client.KopisStoppedException;
 import com.catticket.collect.client.xml.KopisBoxOfficeItem;
 import com.catticket.collect.row.RankingCollectionKey;
 import com.catticket.collect.row.RankingEntryInsert;
@@ -55,28 +54,17 @@ class RankingCollectStepTest {
 
 	private static final Period LAST_WEEK = new Period(LocalDate.of(2026, 11, 16), LocalDate.of(2026, 11, 22));
 
-	private final KopisCallPolicy policy = mock(KopisCallPolicy.class);
-
 	private final KopisClient client = mock(KopisClient.class);
 
 	private final RankingSaveService saveService = mock(RankingSaveService.class);
 
-	private final RankingCollectStep step = new RankingCollectStep(policy, client, saveService);
+	private final RankingCollectStep step = new RankingCollectStep(client, saveService);
 
 	private final Set<String> seen = new LinkedHashSet<>();
 
 	@BeforeEach
 	void setUp() {
 		when(client.boxOffice(any(), any())).thenReturn(List.of(new KopisBoxOfficeItem("1", "PF1")));
-	}
-
-	@Test
-	void startsTheStepBeforeCallingKopis() {
-		step.run(CTX, seen);
-
-		InOrder order = inOrder(policy, client);
-		order.verify(policy).startStep();
-		order.verify(client, atLeastOnce()).boxOffice(any(), any());
 	}
 
 	@Test
@@ -163,10 +151,35 @@ class RankingCollectStepTest {
 	}
 
 	@Test
-	void stepAbortedIsNotCaught() {
-		when(client.boxOffice(LAST_WEEK, Optional.empty())).thenThrow(new StepAbortedException("aborted"));
+	void callLimitFailsTheStepKeepingSavedGroupsAndSeenIds() {
+		// 週次の現在の期間は 3 つ目（日次の 2 期間 × 10 組を保存した後）
+		when(client.boxOffice(LAST_WEEK, Optional.empty()))
+			.thenThrow(new KopisCallLimitException("KOPIS call limit reached in S2: 20/20 (run 1220/1500)"));
 
-		assertThatThrownBy(() -> step.run(CTX, seen)).isInstanceOf(StepAbortedException.class);
+		StepResult result = step.run(CTX, seen);
+
+		assertThat(result.success()).isFalse();
+		assertThat(result.processedCount()).isEqualTo(20);
+		assertThat(result.summary().get("collected")).isEqualTo(20);
+		assertThat(result.summary().get("callLimitReached")).isEqualTo(1);
+		assertThat(result.errorMessage()).isEqualTo(
+				"KopisCallLimitException: KOPIS call limit reached in S2: 20/20 (run 1220/1500)");
+		assertThat(seen).containsExactly("PF1");
+		verify(client, times(21)).boxOffice(any(), any());
+	}
+
+	@Test
+	void stoppedKopisFailsTheStepKeepingSavedGroups() {
+		when(client.boxOffice(LAST_WEEK, Optional.empty()))
+			.thenThrow(new KopisStoppedException(KopisStopReason.BLOCKED, "KOPIS blocked: x", null));
+
+		StepResult result = step.run(CTX, seen);
+
+		assertThat(result.success()).isFalse();
+		assertThat(result.processedCount()).isEqualTo(20);
+		assertThat(result.summary().counts()).doesNotContainKey("callLimitReached");
+		assertThat(result.errorMessage()).isEqualTo("KopisStoppedException: KOPIS blocked: x");
+		assertThat(seen).containsExactly("PF1");
 	}
 
 	@Test

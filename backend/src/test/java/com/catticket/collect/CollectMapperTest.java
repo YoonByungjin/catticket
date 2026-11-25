@@ -208,6 +208,28 @@ class CollectMapperTest {
 	}
 
 	@Test
+	void findKopisIdsCollectedSince() {
+		long venueId = saveVenue();
+		LocalDateTime since = LocalDateTime.of(2026, 11, 25, 0, 0);
+		// 基準日の前・ちょうど・後に収集した公演（collected_at は保存した時刻。05 の 3.3 の 12.）
+		mapper.upsertPerformance(performanceWithId("PFTEST0011"), venueId, true, since.minusSeconds(1));
+		mapper.upsertPerformance(performanceWithId("PFTEST0012"), venueId, true, since);
+		mapper.upsertPerformance(performanceWithId("PFTEST0013"), venueId, true, since.plusDays(1));
+
+		assertThat(mapper.findKopisIdsCollectedSince(List.of("PFTEST0011", "PFTEST0012", "PFTEST0013", "PFNOTINDB"),
+				since))
+			.containsExactlyInAnyOrder("PFTEST0012", "PFTEST0013");
+		assertThat(mapper.findKopisIdsCollectedSince(List.of("PFTEST0011"), since)).isEmpty();
+	}
+
+	private static PerformanceValues performanceWithId(String kopisId) {
+		PerformanceValues p = performance("공연 " + kopisId, List.of());
+		return new PerformanceValues(kopisId, p.kopisVenueId(), p.title(), p.startDate(), p.endDate(), p.genreCode(),
+				p.castText(), p.ticketPrice(), p.scheduleText(), p.runtime(), p.ageLimit(), p.posterUrl(), p.openRun(),
+				p.areaSeoul(), p.kopisUpdatedAt(), p.bookingSites());
+	}
+
+	@Test
 	void rankingCollectionReplaceIsIdempotent() {
 		RankingCollectionKey key = new RankingCollectionKey(PeriodType.WEEKLY, RankingCollectionKey.ALL,
 				new Period(LocalDate.of(2026, 11, 16), LocalDate.of(2026, 11, 22)));

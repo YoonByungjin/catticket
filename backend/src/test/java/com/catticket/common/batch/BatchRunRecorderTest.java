@@ -76,25 +76,30 @@ class BatchRunRecorderTest {
 
 		verify(mapper).updateStepRun(21L, NOW, "SUCCESS", 574L,
 				"{\"stationsSaved\":261,\"lockerUnmatched\":1,\"details\":{\"lockerUnmatched\":[\"7|이수|7호선 대합실\"]}}",
-				null, null);
+				null, null, null);
 	}
 
 	@Test
-	void finishStepWritesWindowEndDateOfSuccessfulS1() {
+	void finishStepWritesWindowEndDateAndBaseDateOfSuccessfulS1() {
 		StepSummary summary = new StepSummary();
 		summary.add("saved", 120);
 
 		recorder.finishStep(new StepRun(21L, 11L, "S1"),
-				StepResult.success(120, summary, LocalDate.of(2027, 5, 18)), NOW);
+				StepResult.s1Success(120, summary, LocalDate.of(2027, 5, 18), LocalDate.of(2026, 11, 17)), NOW);
 
 		verify(mapper).updateStepRun(21L, NOW, "SUCCESS", 120L, "{\"saved\":120}", null,
-				LocalDate.of(2027, 5, 18));
+				LocalDate.of(2027, 5, 18), LocalDate.of(2026, 11, 17));
 	}
 
 	@Test
-	void failedStepCannotHaveWindowEndDate() {
-		assertThatThrownBy(() -> new StepResult(false, 0, null, "x", LocalDate.of(2027, 5, 18)))
-			.isInstanceOf(IllegalArgumentException.class);
+	void finishStepWritesBaseDateOfFailedS1() {
+		recorder.finishStep(new StepRun(21L, 11L, "S1"),
+				StepResult.s1Failure(7, new StepSummary(), "KopisCallLimitException: x", LocalDate.of(2026, 11, 17)),
+				NOW);
+
+		// 窓の末日は書かず、基準日は書く（次の実行が引き継ぐ。05 の 3.3 の 12.）
+		verify(mapper).updateStepRun(21L, NOW, "FAILURE", 7L, "{}", "KopisCallLimitException: x", null,
+				LocalDate.of(2026, 11, 17));
 	}
 
 	@Test
@@ -103,8 +108,9 @@ class BatchRunRecorderTest {
 				StepResult.failure(null, "HttpClientErrorException: GET http://x?service=" + KOPIS_KEY + "\nline2"),
 				NOW);
 
-		verify(mapper).updateStepRun(21L, NOW, "FAILURE", 0L, null,
-				"HttpClientErrorException: GET http://x?service=*** line2", null);
+		// 件数のない失敗は processed_count を NULL にする（06 の 5.3）
+		verify(mapper).updateStepRun(21L, NOW, "FAILURE", null, null,
+				"HttpClientErrorException: GET http://x?service=*** line2", null, null);
 	}
 
 	@Test

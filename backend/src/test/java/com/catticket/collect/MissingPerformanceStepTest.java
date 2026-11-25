@@ -1,7 +1,6 @@
 package com.catticket.collect;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -28,9 +27,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
-import com.catticket.collect.client.KopisCallPolicy;
+import com.catticket.collect.client.KopisCallLimitException;
 import com.catticket.collect.client.KopisRetryableException;
-import com.catticket.collect.client.StepAbortedException;
+import com.catticket.collect.client.KopisStopReason;
+import com.catticket.collect.client.KopisStoppedException;
 import com.catticket.common.batch.BatchContext;
 import com.catticket.common.batch.StepResult;
 import com.catticket.common.batch.StepSummary;
@@ -44,13 +44,11 @@ class MissingPerformanceStepTest {
 
 	private static final BatchContext CTX = new BatchContext(1L, NOW, LocalDate.of(2026, 11, 24));
 
-	private final KopisCallPolicy policy = mock(KopisCallPolicy.class);
-
 	private final CollectMapper mapper = mock(CollectMapper.class);
 
 	private final KopisPerformanceImporter importer = mock(KopisPerformanceImporter.class);
 
-	private final MissingPerformanceStep step = new MissingPerformanceStep(policy, mapper, importer);
+	private final MissingPerformanceStep step = new MissingPerformanceStep(mapper, importer);
 
 	@BeforeEach
 	void setUp() {
@@ -69,8 +67,7 @@ class MissingPerformanceStepTest {
 
 		// 公演 ID として使えない ID は DB に問い合わせない
 		verify(mapper).findExistingKopisIds(List.of("PFA", "PFB", "PFC"));
-		InOrder order = inOrder(policy, importer);
-		order.verify(policy).startStep();
+		InOrder order = inOrder(importer);
 		order.verify(importer).importOne(eq("PFA"), eq(false), eq(NOW), any(), any());
 		order.verify(importer).importOne(eq("PFC"), eq(false), eq(NOW), any(), any());
 		verify(importer, never()).importOne(eq("PFB"), anyBoolean(), any(), any(), any());
@@ -113,7 +110,6 @@ class MissingPerformanceStepTest {
 	void nothingToDoWithoutCandidates() {
 		StepResult result = step.run(CTX, Set.of(), Set.of());
 
-		verify(policy).startStep();
 		verify(mapper, never()).findExistingKopisIds(anyCollection());
 		assertThat(result.success()).isTrue();
 		assertThat(result.processedCount()).isZero();
@@ -153,15 +149,41 @@ class MissingPerformanceStepTest {
 	}
 
 	@Test
-	void stepAbortedIsNotCaught() {
+	void callLimitFailsTheStepKeepingSavedCount() {
 		when(mapper.findExistingKopisIds(anyCollection())).thenReturn(Set.of());
 		doAnswer(inv -> {
-			throw new StepAbortedException("aborted");
+			inv.<StepSummary>getArgument(3).increment("saved");
+			return null;
+		}).when(importer).importOne(eq("PFA"), anyBoolean(), any(), any(), any());
+		doAnswer(inv -> {
+			throw new KopisCallLimitException("KOPIS call limit reached in S4: 2/2 (run 18/20)");
+		}).when(importer).importOne(eq("PFB"), anyBoolean(), any(), any(), any());
+
+		StepResult result = step.run(CTX, new LinkedHashSet<>(List.of("PFA", "PFB", "PFC")), Set.of());
+
+		verify(importer, never()).importOne(eq("PFC"), anyBoolean(), any(), any(), any());
+		assertThat(result.success()).isFalse();
+		assertThat(result.processedCount()).isEqualTo(1);
+		assertThat(result.summary().get("saved")).isEqualTo(1);
+		assertThat(result.summary().get("callLimitReached")).isEqualTo(1);
+		assertThat(result.errorMessage()).isEqualTo(
+				"KopisCallLimitException: KOPIS call limit reached in S4: 2/2 (run 18/20)");
+	}
+
+	@Test
+	void stoppedKopisFailsTheStep() {
+		when(mapper.findExistingKopisIds(anyCollection())).thenReturn(Set.of());
+		doAnswer(inv -> {
+			throw new KopisStoppedException(KopisStopReason.BLOCKED, "KOPIS blocked: x", null);
 		}).when(importer).importOne(eq("PFA"), anyBoolean(), any(), any(), any());
 
-		assertThatThrownBy(() -> step.run(CTX, new LinkedHashSet<>(List.of("PFA", "PFB")), Set.of()))
-			.isInstanceOf(StepAbortedException.class);
+		StepResult result = step.run(CTX, new LinkedHashSet<>(List.of("PFA", "PFB")), Set.of());
+
 		verify(importer, never()).importOne(eq("PFB"), anyBoolean(), any(), any(), any());
+		assertThat(result.success()).isFalse();
+		assertThat(result.processedCount()).isZero();
+		assertThat(result.summary().counts()).doesNotContainKey("callLimitReached");
+		assertThat(result.errorMessage()).isEqualTo("KopisStoppedException: KOPIS blocked: x");
 	}
 
 }

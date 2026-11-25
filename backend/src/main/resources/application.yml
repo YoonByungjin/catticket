@@ -57,7 +57,15 @@ catticket:
   kopis:
     base-url: http://www.kopis.or.kr/openApi/restful
     api-key: ${KOPIS_API_KEY:}
-    interval: 500ms
+    # 送信ごとの間隔（05 の 3.5）。根拠なく短くしない
+    interval: 7s
+    # 1回の実行の送信の上限（05 の 3.5）。ここは開発の値（既定）。本番は application-prod.yml
+    call-limit:
+      per-run: 20
+      s2: 4
+      s3: 2
+      s4: 2
+      s6: 1
   azure:
     translator-endpoint: https://api.cognitive.microsofttranslator.com
     translator-key: ${AZURE_TRANSLATOR_KEY:}

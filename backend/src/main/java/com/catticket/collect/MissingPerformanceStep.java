@@ -11,8 +11,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import com.catticket.collect.client.KopisCallPolicy;
+import com.catticket.collect.client.KopisCallLimitException;
+import com.catticket.collect.client.KopisStoppedException;
 import com.catticket.common.batch.BatchContext;
+import com.catticket.common.batch.BatchRunRecorder;
 import com.catticket.common.batch.StepResult;
 import com.catticket.common.batch.StepSummary;
 
@@ -30,14 +32,11 @@ public class MissingPerformanceStep {
 
 	private static final Logger log = LoggerFactory.getLogger(MissingPerformanceStep.class);
 
-	private final KopisCallPolicy policy;
-
 	private final CollectMapper mapper;
 
 	private final KopisPerformanceImporter importer;
 
-	public MissingPerformanceStep(KopisCallPolicy policy, CollectMapper mapper, KopisPerformanceImporter importer) {
-		this.policy = policy;
+	public MissingPerformanceStep(CollectMapper mapper, KopisPerformanceImporter importer) {
 		this.mapper = mapper;
 		this.importer = importer;
 	}
@@ -47,10 +46,8 @@ public class MissingPerformanceStep {
 	 *
 	 * @param rankingIds S2 で見た公演 ID
 	 * @param awardIds S3 で見た受賞作の公演 ID
-	 * @throws com.catticket.collect.client.StepAbortedException KOPIS の呼び出しが続けて失敗した（捕まえずに外へ出す）
 	 */
 	public StepResult run(BatchContext ctx, Set<String> rankingIds, Set<String> awardIds) {
-		policy.startStep();
 		StepSummary summary = new StepSummary();
 		UnitFailures failures = new UnitFailures(summary, log);
 		// rankingIds の順、続けて awardIds（06 の 4.9）
@@ -69,8 +66,18 @@ public class MissingPerformanceStep {
 		missing.removeAll(existing);
 		summary.add("missing", missing.size());
 
-		for (String id : missing) {
-			importer.importOne(id, awardIds.contains(id), ctx.now(), summary, failures);
+		try {
+			for (String id : missing) {
+				importer.importOne(id, awardIds.contains(id), ctx.now(), summary, failures);
+			}
+		}
+		catch (KopisStoppedException | KopisCallLimitException e) {
+			// 止まっても保存した分と件数を残す。残りは翌日の S4 が取る（05 の 3.5）
+			if (e instanceof KopisCallLimitException) {
+				summary.increment("callLimitReached");
+			}
+			log.warn("S4 stopped: {} {}", BatchRunRecorder.describe(e), summary);
+			return StepResult.failure(summary.get("saved"), summary, BatchRunRecorder.describe(e));
 		}
 		log.info("S4 finished: {}", summary);
 		long saved = summary.get("saved");

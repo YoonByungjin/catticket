@@ -6,10 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import com.catticket.collect.client.KopisCallPolicy;
+import com.catticket.collect.client.KopisCallLimitException;
 import com.catticket.collect.client.KopisClient;
 import com.catticket.collect.client.KopisFatalException;
 import com.catticket.collect.client.KopisRetryableException;
+import com.catticket.collect.client.KopisStoppedException;
 import com.catticket.collect.client.xml.KopisGenreStat;
 import com.catticket.collect.row.GenreTrendRow;
 import com.catticket.common.batch.BatchContext;
@@ -29,23 +30,16 @@ public class GenreTrendStep {
 
 	private static final Logger log = LoggerFactory.getLogger(GenreTrendStep.class);
 
-	private final KopisCallPolicy policy;
-
 	private final KopisClient client;
 
 	private final GenreTrendSaveService saveService;
 
-	public GenreTrendStep(KopisCallPolicy policy, KopisClient client, GenreTrendSaveService saveService) {
-		this.policy = policy;
+	public GenreTrendStep(KopisClient client, GenreTrendSaveService saveService) {
 		this.client = client;
 		this.saveService = saveService;
 	}
 
-	/**
-	 * @throws com.catticket.collect.client.StepAbortedException KOPIS の呼び出しが続けて失敗した（捕まえずに外へ出す）
-	 */
 	public StepResult run(BatchContext ctx) {
-		policy.startStep();
 		StepSummary summary = new StepSummary();
 		Period period = new Period(ctx.today().minusDays(30), ctx.today().minusDays(1));
 		List<KopisGenreStat> stats;
@@ -55,6 +49,14 @@ public class GenreTrendStep {
 		catch (KopisRetryableException | KopisFatalException e) {
 			log.warn("S6 failed: {}", BatchRunRecorder.describe(e));
 			return StepResult.failure(summary, BatchRunRecorder.describe(e));
+		}
+		catch (KopisStoppedException | KopisCallLimitException e) {
+			// 単位はステップ全体なので、何も保存せずに失敗にする（06 の 4.9 の「ステップ側の扱い」）
+			if (e instanceof KopisCallLimitException) {
+				summary.increment("callLimitReached");
+			}
+			log.warn("S6 stopped: {}", BatchRunRecorder.describe(e));
+			return StepResult.failure(0, summary, BatchRunRecorder.describe(e));
 		}
 		List<GenreTrendRow> rows;
 		try {

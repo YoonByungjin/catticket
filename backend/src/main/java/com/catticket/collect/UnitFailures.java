@@ -7,7 +7,7 @@ import com.catticket.common.batch.StepSummary;
 
 /**
  * ステップの中で失敗した単位（公演1件・目録の1区間・順位の1組など）を数える（06 の 4.9 の「ステップ側の扱い」）。
- * 1つでもあればステップは失敗。StepAbortedException は単位で捕まえないので、ここには来ない。
+ * 1つでもあればステップは失敗。KopisStoppedException・KopisCallLimitException は単位で捕まえないので、ここには来ない。
  */
 final class UnitFailures {
 

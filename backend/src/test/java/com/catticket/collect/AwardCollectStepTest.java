@@ -1,13 +1,10 @@
 package com.catticket.collect;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -23,13 +20,13 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InOrder;
 
-import com.catticket.collect.client.KopisCallPolicy;
+import com.catticket.collect.client.KopisCallLimitException;
 import com.catticket.collect.client.KopisClient;
 import com.catticket.collect.client.KopisPage;
 import com.catticket.collect.client.KopisRetryableException;
-import com.catticket.collect.client.StepAbortedException;
+import com.catticket.collect.client.KopisStopReason;
+import com.catticket.collect.client.KopisStoppedException;
 import com.catticket.collect.client.xml.KopisAwardItem;
 import com.catticket.common.batch.BatchContext;
 import com.catticket.common.batch.StepResult;
@@ -45,28 +42,17 @@ class AwardCollectStepTest {
 
 	private static final BatchContext CTX = new BatchContext(1L, NOW, TODAY);
 
-	private final KopisCallPolicy policy = mock(KopisCallPolicy.class);
-
 	private final KopisClient client = mock(KopisClient.class);
 
 	private final CollectMapper mapper = mock(CollectMapper.class);
 
-	private final AwardCollectStep step = new AwardCollectStep(policy, client, mapper);
+	private final AwardCollectStep step = new AwardCollectStep(client, mapper);
 
 	private final Set<String> seen = new LinkedHashSet<>();
 
 	@BeforeEach
 	void setUp() {
 		when(client.awards(any(), any(), anyInt())).thenReturn(new KopisPage<>(List.of()));
-	}
-
-	@Test
-	void startsTheStepBeforeCallingKopis() {
-		step.run(CTX, seen);
-
-		InOrder order = inOrder(policy, client);
-		order.verify(policy).startStep();
-		order.verify(client, atLeastOnce()).awards(any(), any(), anyInt());
 	}
 
 	@Test
@@ -118,10 +104,37 @@ class AwardCollectStepTest {
 	}
 
 	@Test
-	void stepAbortedIsNotCaught() {
-		when(client.awards(any(), any(), anyInt())).thenThrow(new StepAbortedException("aborted"));
+	void callLimitFailsTheStepKeepingMarkedCountAndSeenIds() {
+		when(client.awards(TODAY, LocalDate.of(2026, 12, 24), 1))
+			.thenReturn(new KopisPage<>(List.of(new KopisAwardItem("PFA"), new KopisAwardItem("PFB"))));
+		when(mapper.markAwarded(anyCollection(), any())).thenReturn(2);
+		when(client.awards(eq(LocalDate.of(2026, 12, 25)), any(), anyInt()))
+			.thenThrow(new KopisCallLimitException("KOPIS call limit reached in S3: 1/1 (run 12/20)"));
 
-		assertThatThrownBy(() -> step.run(CTX, seen)).isInstanceOf(StepAbortedException.class);
+		StepResult result = step.run(CTX, seen);
+
+		assertThat(result.success()).isFalse();
+		assertThat(result.processedCount()).isEqualTo(2);
+		assertThat(result.summary().get("marked")).isEqualTo(2);
+		assertThat(result.summary().get("callLimitReached")).isEqualTo(1);
+		assertThat(result.errorMessage()).startsWith("KopisCallLimitException: KOPIS call limit reached in S3");
+		// それまでに見た ID は S4 に渡す
+		assertThat(seen).containsExactly("PFA", "PFB");
+		verify(client, times(2)).awards(any(), any(), anyInt());
+	}
+
+	@Test
+	void stoppedKopisFailsTheStep() {
+		when(client.awards(any(), any(), anyInt()))
+			.thenThrow(new KopisStoppedException(KopisStopReason.CONSECUTIVE_FAILURES, "KOPIS calls stopped", null));
+
+		StepResult result = step.run(CTX, seen);
+
+		assertThat(result.success()).isFalse();
+		assertThat(result.processedCount()).isZero();
+		assertThat(result.summary().counts()).doesNotContainKey("callLimitReached");
+		assertThat(result.errorMessage()).isEqualTo("KopisStoppedException: KOPIS calls stopped");
+		verify(client, times(1)).awards(any(), any(), anyInt());
 	}
 
 }

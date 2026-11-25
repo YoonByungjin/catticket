@@ -1,10 +1,13 @@
 package com.catticket.collect.client;
 
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,6 +54,9 @@ public class KopisClient {
 	static final String SEOUL = "11";
 
 	private static final DateTimeFormatter DATE = DateTimeFormatter.BASIC_ISO_DATE;
+
+	/** 遮断の応答の本文をログに出す長さ（06 の 4.9） */
+	private static final int BLOCKED_BODY_LOG_CHARS = 200;
 
 	private static final Pattern SERVICE_PARAM = Pattern.compile("([?&]service=)[^&]*");
 
@@ -172,15 +178,15 @@ public class KopisClient {
 				return uri;
 			}).exchange((request, response) -> {
 				HttpStatusCode status = response.getStatusCode();
-				if (status.is5xxServerError()) {
-					throw new KopisRetryableException("KOPIS " + service + " HTTP " + status.value());
-				}
-				if (!status.is2xxSuccessful()) {
-					// 05 の 3.5 にない失敗は意味が分からないので呼び続けない
-					throw new KopisFatalException("KOPIS " + service + " HTTP " + status.value());
-				}
-				return response.getBody().readAllBytes();
+				// 遮断の印は本文で見分けるので、2xx 以外でも本文を読む
+				InputStream in = response.getBody();
+				byte[] body = in == null ? new byte[0] : in.readAllBytes();
+				return check(service, status.value(), body);
 			});
+		}
+		catch (KopisBlockedException e) {
+			log.warn("KOPIS GET {} blocked: {}", maskedUrl.get(), e.getMessage());
+			throw e;
 		}
 		catch (KopisRetryableException | KopisFatalException e) {
 			log.warn("KOPIS GET {} failed: {}", maskedUrl.get(), e.getMessage());
@@ -195,6 +201,45 @@ public class KopisClient {
 			throw new KopisRetryableException("KOPIS " + service + " I/O error: " + reason,
 					cause == e ? null : cause);
 		}
+	}
+
+	/**
+	 * 状態と本文を確かめる（06 の 4.9 の「KopisClient の遮断の印」の 1.〜4.）。2xx なら本文を返す。
+	 * 遮断の印 → KopisBlockedException（再試行しない）。
+	 */
+	private byte[] check(String service, int status, byte[] body) {
+		String text = new String(body, StandardCharsets.UTF_8);
+		// 同じ遮断の応答が 200・5xx で返っても「読めない応答」として再試行しないよう、状態より先に本文を見る
+		if (text.toLowerCase(Locale.ROOT).contains("request blocked")) {
+			logBlockedBody(service, status, text);
+			throw new KopisBlockedException("KOPIS " + service + " blocked: HTTP " + status + " (Request Blocked)");
+		}
+		if (status == 403 || status == 429) {
+			logBlockedBody(service, status, text);
+			throw new KopisBlockedException("KOPIS " + service + " blocked: HTTP " + status);
+		}
+		if (status >= 400 && status < 500) {
+			if (reader.readResultCode(service, body).isPresent()) {
+				// 結果コードの応答なら、その結果コードの扱い（2xx と同じ読み方。06 の 4.9）
+				return body;
+			}
+			logBlockedBody(service, status, text);
+			throw new KopisBlockedException("KOPIS " + service + " blocked: HTTP " + status + " (non-XML body)");
+		}
+		if (status >= 500) {
+			throw new KopisRetryableException("KOPIS " + service + " HTTP " + status);
+		}
+		if (status < 200 || status >= 300) {
+			// 3xx など。https で呼んだときの 301 のような作りの誤りで、何度呼んでも同じ
+			throw new KopisFatalException("KOPIS " + service + " HTTP " + status);
+		}
+		return body;
+	}
+
+	// 遮断の応答の本文はキーを含まない。原因を確かめられるよう先頭だけを出す（例外のメッセージには入れない）
+	private void logBlockedBody(String service, int status, String text) {
+		String head = text.length() > BLOCKED_BODY_LOG_CHARS ? text.substring(0, BLOCKED_BODY_LOG_CHARS) : text;
+		log.warn("KOPIS {} HTTP {} body: {}", service, status, mask(head.replaceAll("\\s+", " ")));
 	}
 
 	private static <T> Optional<T> first(List<T> rows) {

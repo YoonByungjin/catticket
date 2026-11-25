@@ -10,14 +10,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import com.catticket.collect.client.KopisCallPolicy;
+import com.catticket.collect.client.KopisCallLimitException;
 import com.catticket.collect.client.KopisClient;
 import com.catticket.collect.client.KopisFatalException;
 import com.catticket.collect.client.KopisRetryableException;
+import com.catticket.collect.client.KopisStoppedException;
 import com.catticket.collect.client.xml.KopisBoxOfficeItem;
 import com.catticket.collect.row.RankingCollectionKey;
 import com.catticket.collect.row.RankingEntryInsert;
 import com.catticket.common.batch.BatchContext;
+import com.catticket.common.batch.BatchRunRecorder;
 import com.catticket.common.batch.StepResult;
 import com.catticket.common.batch.StepSummary;
 import com.catticket.common.code.Genre;
@@ -35,26 +37,42 @@ public class RankingCollectStep {
 
 	private static final Logger log = LoggerFactory.getLogger(RankingCollectStep.class);
 
-	private final KopisCallPolicy policy;
-
 	private final KopisClient client;
 
 	private final RankingSaveService saveService;
 
-	public RankingCollectStep(KopisCallPolicy policy, KopisClient client, RankingSaveService saveService) {
-		this.policy = policy;
+	public RankingCollectStep(KopisClient client, RankingSaveService saveService) {
 		this.client = client;
 		this.saveService = saveService;
 	}
 
 	/**
-	 * @param seenIds 保存した順位の行の公演 ID を足す（S4 の入力。DailyCollectJob がメモリで渡す。06 の 5.3）
-	 * @throws com.catticket.collect.client.StepAbortedException KOPIS の呼び出しが続けて失敗した（捕まえずに外へ出す）
+	 * @param seenIds 保存した順位の行の公演 ID を足す（S4 の入力。DailyCollectJob がメモリで渡す。06 の 5.3）。
+	 *                止まったときも、それまでに足した ID は残す
 	 */
 	public StepResult run(BatchContext ctx, Set<String> seenIds) {
-		policy.startStep();
 		StepSummary summary = new StepSummary();
 		UnitFailures failures = new UnitFailures(summary, log);
+		try {
+			collect(ctx, seenIds, summary, failures);
+		}
+		catch (KopisStoppedException | KopisCallLimitException e) {
+			// 止まっても保存した組と件数を残す（06 の 4.9 の「ステップ側の扱い」）
+			if (e instanceof KopisCallLimitException) {
+				summary.increment("callLimitReached");
+			}
+			log.warn("S2 stopped: {} {}", BatchRunRecorder.describe(e), summary);
+			return StepResult.failure(summary.get("collected"), summary, BatchRunRecorder.describe(e));
+		}
+		log.info("S2 finished: {}", summary);
+		long collected = summary.get("collected");
+		if (failures.any()) {
+			return StepResult.failure(collected, summary, failures.message());
+		}
+		return StepResult.success(collected, summary);
+	}
+
+	private void collect(BatchContext ctx, Set<String> seenIds, StepSummary summary, UnitFailures failures) {
 		for (RankingTarget target : RankingPeriods.collectTargets(ctx.today())) {
 			RankingCollectionKey all = new RankingCollectionKey(target.type(), RankingCollectionKey.ALL,
 					target.period());
@@ -76,12 +94,6 @@ public class RankingCollectStep {
 				query(key, Optional.of(genre), failures).ifPresent(items -> save(key, items, ctx, summary, seenIds));
 			}
 		}
-		log.info("S2 finished: {}", summary);
-		long collected = summary.get("collected");
-		if (failures.any()) {
-			return StepResult.failure(collected, summary, failures.message());
-		}
-		return StepResult.success(collected, summary);
 	}
 
 	private Optional<List<KopisBoxOfficeItem>> query(RankingCollectionKey key, Optional<Genre> genre,

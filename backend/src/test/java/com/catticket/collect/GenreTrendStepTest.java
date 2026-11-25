@@ -1,7 +1,6 @@
 package com.catticket.collect;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -17,10 +16,11 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
-import com.catticket.collect.client.KopisCallPolicy;
+import com.catticket.collect.client.KopisCallLimitException;
 import com.catticket.collect.client.KopisClient;
 import com.catticket.collect.client.KopisFatalException;
-import com.catticket.collect.client.StepAbortedException;
+import com.catticket.collect.client.KopisStopReason;
+import com.catticket.collect.client.KopisStoppedException;
 import com.catticket.collect.client.xml.KopisGenreStat;
 import com.catticket.collect.row.GenreTrendRow;
 import com.catticket.common.batch.BatchContext;
@@ -40,13 +40,11 @@ class GenreTrendStepTest {
 	/** 前日までの 30 日 */
 	private static final Period PERIOD = new Period(LocalDate.of(2026, 10, 25), LocalDate.of(2026, 11, 23));
 
-	private final KopisCallPolicy policy = mock(KopisCallPolicy.class);
-
 	private final KopisClient client = mock(KopisClient.class);
 
 	private final GenreTrendSaveService saveService = mock(GenreTrendSaveService.class);
 
-	private final GenreTrendStep step = new GenreTrendStep(policy, client, saveService);
+	private final GenreTrendStep step = new GenreTrendStep(client, saveService);
 
 	@Test
 	void savesNationalSharesOfTheLast30Days() {
@@ -55,8 +53,7 @@ class GenreTrendStepTest {
 
 		StepResult result = step.run(CTX);
 
-		InOrder order = inOrder(policy, client, saveService);
-		order.verify(policy).startStep();
+		InOrder order = inOrder(client, saveService);
 		order.verify(client).genreStats(PERIOD);
 		order.verify(saveService)
 			.replace(PERIOD,
@@ -102,11 +99,31 @@ class GenreTrendStepTest {
 	}
 
 	@Test
-	void stepAbortedIsNotCaught() {
-		when(client.genreStats(any())).thenThrow(new StepAbortedException("aborted"));
+	void callLimitFailsTheStepWithCallLimitReached() {
+		when(client.genreStats(any()))
+			.thenThrow(new KopisCallLimitException("KOPIS call limit reached in S6: 1/1 (run 20/20)"));
 
-		assertThatThrownBy(() -> step.run(CTX)).isInstanceOf(StepAbortedException.class);
-		verify(policy).startStep();
+		StepResult result = step.run(CTX);
+
+		verifyNoInteractions(saveService);
+		assertThat(result.success()).isFalse();
+		assertThat(result.processedCount()).isZero();
+		assertThat(result.summary().get("callLimitReached")).isEqualTo(1);
+		assertThat(result.errorMessage())
+			.isEqualTo("KopisCallLimitException: KOPIS call limit reached in S6: 1/1 (run 20/20)");
+	}
+
+	@Test
+	void stoppedKopisFailsTheStep() {
+		when(client.genreStats(any()))
+			.thenThrow(new KopisStoppedException(KopisStopReason.BLOCKED, "KOPIS blocked: x", null));
+
+		StepResult result = step.run(CTX);
+
+		verifyNoInteractions(saveService);
+		assertThat(result.success()).isFalse();
+		assertThat(result.summary().counts()).doesNotContainKey("callLimitReached");
+		assertThat(result.errorMessage()).isEqualTo("KopisStoppedException: KOPIS blocked: x");
 	}
 
 }

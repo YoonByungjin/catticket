@@ -2,6 +2,7 @@ package com.catticket.collect.client;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import com.catticket.collect.client.xml.KopisEnvelope;
 
@@ -64,6 +65,31 @@ public class KopisXmlReader {
 		return rows;
 	}
 
+	/**
+	 * 結果コードだけを読む（06 の 4.9 の「遮断の印」の 3.。HTTP 4xx の本文が結果コードの応答かを見分ける）。
+	 * 読めない・空・結果コードがない本文（成功の XML・HTML・途中で切れた本文）は空。例外を投げない。
+	 */
+	public Optional<KopisResult> readResultCode(String service, byte[] body) {
+		if (body == null || body.length == 0) {
+			return Optional.empty();
+		}
+		JsonNode tree;
+		try {
+			tree = xmlMapper.readTree(body);
+		}
+		catch (JacksonException e) {
+			return Optional.empty();
+		}
+		if (isEmpty(tree)) {
+			return Optional.empty();
+		}
+		JsonNode first = firstDb(tree);
+		if (first == null || !first.has("returncode")) {
+			return Optional.empty();
+		}
+		return Optional.of(new KopisResult(text(first.get("returncode")), text(first.get("errmsg"))));
+	}
+
 	private JsonNode readTree(String service, byte[] body) {
 		if (body == null || body.length == 0) {
 			throw new KopisRetryableException("KOPIS " + service + " unreadable response: empty body");
@@ -104,7 +130,7 @@ public class KopisXmlReader {
 	}
 
 	private static KopisRetryableException unreadable(String service, JacksonException e) {
-		// 読めない本文（途中で切れた応答・保守中の HTML など）は通信の失敗と同じく再試行し、続けば 10 回で止まる
+		// 読めない本文（途中で切れた応答・保守中の HTML など）は通信の失敗と同じく再試行し、続けば実行の中の 5 回で止まる（KopisCallPolicy）
 		return new KopisRetryableException(
 				"KOPIS " + service + " unreadable response: " + e.getClass().getSimpleName() + ": "
 						+ e.getOriginalMessage());

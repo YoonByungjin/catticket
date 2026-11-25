@@ -3,6 +3,7 @@ package com.catticket.collect.client;
 import static com.catticket.collect.client.KopisFixtures.bytes;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.ExpectedCount.times;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,6 +46,7 @@ import com.catticket.collect.client.xml.KopisVenueDetail;
 import com.catticket.common.batch.Retry;
 import com.catticket.common.code.Genre;
 import com.catticket.common.config.CatticketProperties;
+import com.catticket.common.config.CatticketProperties.Kopis.CallLimit;
 import com.catticket.common.display.Period;
 
 /**
@@ -57,12 +60,17 @@ class KopisClientTest {
 	// テスト用の偽のキー（本物ではない）
 	private static final String KEY = "0123456789abcdef0123456789abcdef";
 
-	private static final List<Duration> BACKOFF = List.of(Duration.ofSeconds(2), Duration.ofSeconds(4),
-			Duration.ofSeconds(8));
+	/** 再試行の待ち（05 の 3.5。30・60 秒で最大 2 回） */
+	private static final List<Duration> BACKOFF = List.of(Duration.ofSeconds(30), Duration.ofSeconds(60));
+
+	/** 遮断の印のテストで、割り当てに当たらない大きさ */
+	private static final CallLimit LIMIT = new CallLimit(1500, 70, 20, 200, 5);
 
 	private final List<Duration> slept = new ArrayList<>();
 
 	private MockRestServiceServer server;
+
+	private KopisCallPolicy policy;
 
 	private KopisClient client;
 
@@ -75,8 +83,11 @@ class KopisClientTest {
 		RestClient.Builder builder = RestClient.builder().baseUrl(BASE);
 		server = MockRestServiceServer.bindTo(builder).build();
 		CatticketProperties props = new CatticketProperties(null, null,
-				new CatticketProperties.Kopis(BASE, key, Duration.ofMillis(500)), null, null, null, null, null, null);
-		KopisCallPolicy policy = new KopisCallPolicy(new Retry(slept::add), slept::add, props);
+				new CatticketProperties.Kopis(BASE, key, Duration.ofSeconds(7), LIMIT), null, null, null, null, null,
+				null);
+		policy = new KopisCallPolicy(new Retry(slept::add), slept::add, props);
+		policy.startJob();
+		policy.startStep("S1");
 		return new KopisClient(builder.build(), props, policy);
 	}
 
@@ -257,12 +268,12 @@ class KopisClientTest {
 		assertThat(client.getPerformance("PF303043")).isPresent();
 
 		server.verify();
-		assertThat(slept).containsExactly(Duration.ofSeconds(2), Duration.ofSeconds(4));
+		assertThat(slept).containsExactlyElementsOf(BACKOFF);
 	}
 
 	@Test
-	void returnCode03GivesUpAfterThreeRetries() {
-		server.expect(times(4), requestTo(startsWith(BASE + "/pblprfr/PF303043"))).andRespond(xml("error-03.xml"));
+	void returnCode03GivesUpAfterTwoRetries() {
+		server.expect(times(3), requestTo(startsWith(BASE + "/pblprfr/PF303043"))).andRespond(xml("error-03.xml"));
 
 		assertThatThrownBy(() -> client.getPerformance("PF303043")).isInstanceOf(KopisRetryableException.class)
 			.hasMessage("KOPIS pblprfr/{id} returncode=03 errmsg=DB ERROR");
@@ -281,7 +292,7 @@ class KopisClientTest {
 		assertThat(client.getVenue("FC004949")).isPresent();
 
 		server.verify();
-		assertThat(slept).containsExactly(Duration.ofSeconds(2), Duration.ofSeconds(4));
+		assertThat(slept).containsExactlyElementsOf(BACKOFF);
 	}
 
 	@Test
@@ -293,12 +304,12 @@ class KopisClientTest {
 		assertThat(client.genreStats(new Period(LocalDate.of(2026, 10, 21), LocalDate.of(2026, 11, 19)))).hasSize(10);
 
 		server.verify();
-		assertThat(slept).containsExactly(Duration.ofSeconds(2));
+		assertThat(slept).containsExactly(Duration.ofSeconds(30));
 	}
 
 	@Test
 	void timeoutGivesUpAsRetryable() {
-		server.expect(times(4), requestTo(startsWith(BASE + "/boxStatsCate")))
+		server.expect(times(3), requestTo(startsWith(BASE + "/boxStatsCate")))
 			.andRespond(withException(new HttpTimeoutException("request timed out")));
 
 		assertThatThrownBy(
@@ -306,15 +317,6 @@ class KopisClientTest {
 			.isInstanceOf(KopisRetryableException.class)
 			.hasMessage("KOPIS boxStatsCate I/O error: HttpTimeoutException: request timed out")
 			.hasCauseInstanceOf(HttpTimeoutException.class);
-		server.verify();
-	}
-
-	@Test
-	void clientErrorIsFatal() {
-		server.expect(once(), requestTo(startsWith(BASE + "/pblprfr/PF1"))).andRespond(withStatus(HttpStatus.NOT_FOUND));
-
-		assertThatThrownBy(() -> client.getPerformance("PF1")).isInstanceOf(KopisFatalException.class)
-			.hasMessage("KOPIS pblprfr/{id} HTTP 404");
 		server.verify();
 	}
 
@@ -331,21 +333,8 @@ class KopisClientTest {
 	}
 
 	@Test
-	void tooManyRequestsIsFatal() {
-		server.expect(once(), requestTo(startsWith(BASE + "/boxoffice")))
-			.andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
-
-		assertThatThrownBy(() -> client
-			.boxOffice(new Period(LocalDate.of(2026, 11, 19), LocalDate.of(2026, 11, 19)), Optional.empty()))
-			.isInstanceOf(KopisFatalException.class)
-			.hasMessage("KOPIS boxoffice HTTP 429");
-		server.verify();
-		assertThat(slept).isEmpty();
-	}
-
-	@Test
 	void serverErrorGivesUpAsRetryable() {
-		server.expect(times(4), requestTo(startsWith(BASE + "/prfplc/FC1"))).andRespond(withServerError());
+		server.expect(times(3), requestTo(startsWith(BASE + "/prfplc/FC1"))).andRespond(withServerError());
 
 		assertThatThrownBy(() -> client.getVenue("FC1")).isInstanceOf(KopisRetryableException.class)
 			.hasMessage("KOPIS prfplc/{id} HTTP 500");
@@ -363,7 +352,7 @@ class KopisClientTest {
 		assertThat(client.listPerformances(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 20), null, 12).items())
 			.hasSize(73);
 		server.verify();
-		assertThat(slept).containsExactly(Duration.ofSeconds(2));
+		assertThat(slept).containsExactly(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -374,22 +363,164 @@ class KopisClientTest {
 		assertThat(client.listPerformances(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 20), null, 1).items())
 			.hasSize(100);
 		server.verify();
-		assertThat(slept).containsExactly(Duration.ofSeconds(2));
+		assertThat(slept).containsExactly(Duration.ofSeconds(30));
 	}
 
 	@Test
-	void tenConsecutiveFailedCallsAbortTheStep() {
-		// 10 回の呼び出し × (最初 + 再試行 3 回)。どれも 5xx
-		server.expect(times(40), requestTo(startsWith(BASE + "/pblprfr/"))).andRespond(withServerError());
+	void fiveConsecutiveFailedCallsStopTheRun() {
+		// 5 回の呼び出し × (最初 + 再試行 2 回)。どれも 5xx
+		server.expect(times(15), requestTo(startsWith(BASE + "/pblprfr/"))).andRespond(withServerError());
 
-		for (int i = 1; i <= 9; i++) {
+		for (int i = 1; i <= 4; i++) {
 			String id = "PF" + i;
 			assertThatThrownBy(() -> client.getPerformance(id)).isInstanceOf(KopisRetryableException.class);
 		}
-		assertThatThrownBy(() -> client.getPerformance("PF10")).isInstanceOf(StepAbortedException.class)
-			.hasMessageContaining("10 consecutive failures");
+		assertThatThrownBy(() -> client.getPerformance("PF5")).isInstanceOf(KopisStoppedException.class)
+			.hasMessageContaining("5 consecutive failures");
 
+		// 止めた後は送らない（16 回目の送信はない）
+		assertThatThrownBy(() -> client.getVenue("FC1")).isInstanceOf(KopisStoppedException.class);
 		server.verify();
+	}
+
+	@Nested
+	class BlockedSigns {
+
+		private void assertBlocked(Runnable call, String message) {
+			KopisStoppedException e = catchThrowableOfType(KopisStoppedException.class, call::run);
+			assertThat(e.reason()).isEqualTo(KopisStopReason.BLOCKED);
+			assertThat(e.getCause()).isInstanceOf(KopisBlockedException.class).hasMessage(message);
+			assertThat(e.getMessage()).doesNotContain(KEY).doesNotContain("http");
+			// 再試行しない（1回だけ送る）
+			server.verify();
+			assertThat(slept).isEmpty();
+			assertThat(policy.stopped()).isTrue();
+		}
+
+		@Test
+		void http400RequestBlockedHtml() {
+			server.expect(once(), requestTo(startsWith(BASE + "/pblprfr?")))
+				.andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.TEXT_HTML)
+					.body(bytes("blocked-400.html")));
+
+			assertBlocked(() -> client.listPerformances(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 20), null, 1),
+					"KOPIS pblprfr blocked: HTTP 400 (Request Blocked)");
+		}
+
+		@Test
+		void stoppedRunSendsNothingMore() {
+			server.expect(once(), requestTo(startsWith(BASE + "/pblprfr?")))
+				.andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.TEXT_HTML)
+					.body(bytes("blocked-400.html")));
+			assertThatThrownBy(() -> client.listPerformances(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 20),
+					null, 1))
+				.isInstanceOf(KopisStoppedException.class);
+
+			// 期待していない送信があれば MockRestServiceServer が失敗させる
+			assertThatThrownBy(() -> client.getPerformance("PF1")).isInstanceOf(KopisStoppedException.class)
+				.hasMessageContaining("KOPIS calls stopped in this run: S1: KOPIS blocked:");
+			server.verify();
+		}
+
+		@ParameterizedTest
+		@CsvSource({ "403,", "403,error-01.xml", "429,", "429,error-01.xml" })
+		void http403And429AreBlockedWhateverTheBody(int status, String file) {
+			ResponseCreator response = file == null ? withStatus(HttpStatus.valueOf(status))
+					: withStatus(HttpStatus.valueOf(status)).contentType(MediaType.APPLICATION_XML).body(bytes(file));
+			server.expect(once(), requestTo(startsWith(BASE + "/boxoffice?"))).andRespond(response);
+
+			assertBlocked(() -> client
+				.boxOffice(new Period(LocalDate.of(2026, 11, 19), LocalDate.of(2026, 11, 19)), Optional.empty()),
+					"KOPIS boxoffice blocked: HTTP " + status);
+		}
+
+		@Test
+		void http404HtmlIsBlocked() {
+			server.expect(once(), requestTo(startsWith(BASE + "/pblprfr/PF1")))
+				.andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.TEXT_HTML)
+					.body("<html><body>Not Found</body></html>"));
+
+			assertBlocked(() -> client.getPerformance("PF1"), "KOPIS pblprfr/{id} blocked: HTTP 404 (non-XML body)");
+		}
+
+		@Test
+		void http400EmptyBodyIsBlocked() {
+			server.expect(once(), requestTo(startsWith(BASE + "/prfplc/FC1")))
+				.andRespond(withStatus(HttpStatus.BAD_REQUEST));
+
+			assertBlocked(() -> client.getVenue("FC1"), "KOPIS prfplc/{id} blocked: HTTP 400 (non-XML body)");
+		}
+
+		@Test
+		void http200WithTheBlockedBodyIsBlocked() {
+			server.expect(once(), requestTo(startsWith(BASE + "/prfawad?")))
+				.andRespond(withSuccess(bytes("blocked-200.html"), MediaType.TEXT_HTML));
+
+			assertBlocked(() -> client.awards(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 20), 1),
+					"KOPIS prfawad blocked: HTTP 200 (Request Blocked)");
+		}
+
+		@Test
+		void http503WithRequestBlockedIsBlocked() {
+			server.expect(once(), requestTo(startsWith(BASE + "/boxStatsCate")))
+				.andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE).body("request blocked"));
+
+			assertBlocked(
+					() -> client.genreStats(new Period(LocalDate.of(2026, 10, 21), LocalDate.of(2026, 11, 19))),
+					"KOPIS boxStatsCate blocked: HTTP 503 (Request Blocked)");
+		}
+
+		@Test
+		void http400WithReturnCodeXmlIsNotBlocked() {
+			server.expect(once(), requestTo(startsWith(BASE + "/boxoffice?")))
+				.andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_XML)
+					.body(bytes("error-01.xml")));
+
+			assertThatThrownBy(() -> client
+				.boxOffice(new Period(LocalDate.of(2026, 11, 19), LocalDate.of(2026, 11, 19)), Optional.empty()))
+				.isInstanceOf(KopisFatalException.class)
+				.hasMessageStartingWith("KOPIS boxoffice returncode=01 errmsg=");
+			server.verify();
+			assertThat(slept).isEmpty();
+			assertThat(policy.stopped()).isFalse();
+		}
+
+		@Test
+		void maintenancePageWithoutRequestBlockedIsStillRetryable() {
+			server.expect(times(3), requestTo(startsWith(BASE + "/pblprfr?")))
+				.andRespond(withSuccess(bytes("maintenance.html"), MediaType.TEXT_HTML));
+
+			assertThatThrownBy(() -> client.listPerformances(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 20),
+					null, 1))
+				.isInstanceOf(KopisRetryableException.class);
+			server.verify();
+			assertThat(policy.stopped()).isFalse();
+		}
+
+		@Test
+		void serverErrorWithoutBodyIsStillRetryable() {
+			server.expect(times(3), requestTo(startsWith(BASE + "/prfplc/FC1")))
+				.andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+			assertThatThrownBy(() -> client.getVenue("FC1")).isInstanceOf(KopisRetryableException.class)
+				.hasMessage("KOPIS prfplc/{id} HTTP 503");
+			server.verify();
+			assertThat(policy.stopped()).isFalse();
+		}
+
+		@Test
+		void blockedLogHasNoKey(CapturedOutput output) {
+			server.expect(once(), requestTo(startsWith(BASE + "/pblprfr/PF1")))
+				.andRespond(withStatus(HttpStatus.BAD_REQUEST).contentType(MediaType.TEXT_HTML)
+					.body(bytes("blocked-400.html")));
+
+			assertThatThrownBy(() -> client.getPerformance("PF1")).isInstanceOf(KopisStoppedException.class);
+
+			assertThat(output.getAll()).contains("KOPIS GET " + BASE + "/pblprfr/PF1?service=*** blocked")
+				.contains("Request Blocked")
+				.doesNotContain(KEY);
+		}
+
 	}
 
 	@Test
@@ -403,7 +534,7 @@ class KopisClientTest {
 
 	@Test
 	void logsMaskTheApiKey(CapturedOutput output) {
-		server.expect(times(4), requestTo(startsWith(BASE + "/pblprfr/PF1")))
+		server.expect(times(3), requestTo(startsWith(BASE + "/pblprfr/PF1")))
 			.andRespond(withException(new ConnectException("Connection refused")));
 
 		assertThatThrownBy(() -> client.getPerformance("PF1")).isInstanceOf(KopisRetryableException.class)

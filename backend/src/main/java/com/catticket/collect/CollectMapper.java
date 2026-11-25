@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import com.catticket.collect.row.BookingSiteValue;
 import com.catticket.collect.row.CollectVenueRow;
@@ -44,6 +45,12 @@ public interface CollectMapper {
 
 	/** kopisIds のうち performance にあるもの。空なら呼ばない */
 	Set<String> findExistingKopisIds(Collection<String> kopisIds);
+
+	/**
+	 * kopisIds のうち collected_at が since 以降の公演（S1 の続きで飛ばす。05 の 3.3 の 12.）。空なら呼ばない
+	 */
+	Set<String> findKopisIdsCollectedSince(@Param("kopisIds") Collection<String> kopisIds,
+			@Param("since") LocalDateTime since);
 
 	Optional<Long> findCollectionId(RankingCollectionKey key);
 
