@@ -1,6 +1,6 @@
 # 06. クラス設計書
 
-- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10）。PR #32 の reviewer の判定は条件付き承認で、06 への指摘（U-01・U-04・U-06・U-07 の更新、4.5・7.2・8.1・3.2 の追記）を反映済み（2026-11-10。人間の確認待ち）。Issue #23 の決定 E-2・E-3（コメント 6783513546）を 3.3・11 に反映（2026-11-11）。Issue #36 で駅・コインロッカーのファイルの確認の結果と人間の決定（2026-11-19、Issue #36 のコメント）を 4.9・5.2・5.4・8.1・9 の A-07・11 の U-03 に反映（2026-11-19）。同じ Issue の実装（コミット 061e657・9f8ea15）で分かったこと（引用符の中の改行、手での実行の起動の方法・devtools・`SecurityConfig`、`StepSummary` の JSON、`error_message` の整え方、`JobLock` のテスト用のメソッド、U-11）を 3.4・5.1・5.2・5.4・11 に反映（2026-11-19）、reviewer の確認待ち。Issue #38 で、`JobLock` の `RELEASE_LOCK` の戻り値の扱いと失敗した接続の捨て方、ジョブの `error_message` に最初に失敗したステップの理由を書くことを 5.2 に追記（2026-11-20。決定の根拠は Issue #36 のコメント 7031400502）、reviewer の確認待ち。Issue #38 で KOPIS の実際の呼び出しの確認の結果（05 の 3.1〜3.6・7）を 3.6 の `Genre`・4.9・5.3・6.4・7.1・11 の U-02 に反映（2026-11-20。ジャンルの一覧、結果コードと XML の読み方、S2 の未集計の期間、S6 の予約数）、reviewer の確認待ち。Issue #38 の人間の決定1・2（2026-11-20、コメント 7032205139。01 の R-69・X-30）で S5（上演回数）をなくし、`showCount`・`ShowCountStep`・`totalShowCount`・S5 用の Mapper のメソッドを外した（4.8・4.9・5.2・5.3・6.4・7.1・10・11 の U-02。S5 は欠番で、ステップの名前は振り直さない。05 の 3.6）、reviewer の確認待ち。Issue #38 の KOPIS のクライアントの実装（コミット 97ba154）で backend-dev が決めたこと（`KopisCallPolicy` の `startStep()` と失敗の数え方、05 の 3.5 にない失敗の扱い、`KopisPerformanceDetail` の `@JsonCreator`、`KopisEnvelope`・`KopisGenreStat`・`StepAbortedException` の形、`updatedate` の小数の秒）を確認して 4.9・7.1 に書き、直す点を 11 の U-12 にした（2026-11-24）、reviewer の確認待ち。Issue #38 の S1〜S4・S6 の実装（コミット 274d3fa・0c58ad4）で backend-dev が決めたこと（`saveFromKopis` の引数、`KopisPerformanceImporter`、`findVenueByKopisId`、S2〜S4 の入力、数えるだけのもの、`DistrictParser`、`StepResult.windowEndDate`）を確認して 4.9・5.2・5.3・6.4 に書き、U-11 を解消し、直す点を U-13（S4 の受賞歴。05 の 3.2）・U-14 にした（2026-11-24）。Issue #38 の S7 の実装（コミット e495d44・4f92571）で backend-dev が決めたこと（読む件数、再試行の数え方、速さの待ち、同じ原文のまとめ、空の文、内訳、DB の例外、対象がないとき）を確認して 4.10 に書き、直す点（照合順序、長すぎる原文、再試行しないエラー）を U-15 にした（2026-11-24）、reviewer の確認待ち。PR #46 の reviewer の軽微1（コメント 7123152330）で、U-12〜U-15 を解消（コミット 72d601f・ce393bd・d281b89。architect がコードを確認）にし、4.9・4.10 の「今のコードは…直す」を直した後の書き方にした（2026-11-24）
+- 状態: レビュー済み（工程4、Issue #20。ゲート4 の reviewer の判定は条件付き承認（2026-11-09）で、ゲート4 の reviewer の指摘のうち 06 に関わるもの（軽微・提案）を反映済み。人間の承認待ち）。Issue #23（PR #32、共通部品の実装）で人間が決めた D-1〜D-4（コメント 6760227708）を 3.2・3.3・3.6・4.1・4.7・4.8・11 に反映（2026-11-10）。PR #32 の reviewer の判定は条件付き承認で、06 への指摘（U-01・U-04・U-06・U-07 の更新、4.5・7.2・8.1・3.2 の追記）を反映済み（2026-11-10。人間の確認待ち）。Issue #23 の決定 E-2・E-3（コメント 6783513546）を 3.3・11 に反映（2026-11-11）。Issue #36 で駅・コインロッカーのファイルの確認の結果と人間の決定（2026-11-19、Issue #36 のコメント）を 4.9・5.2・5.4・8.1・9 の A-07・11 の U-03 に反映（2026-11-19）。同じ Issue の実装（コミット 061e657・9f8ea15）で分かったこと（引用符の中の改行、手での実行の起動の方法・devtools・`SecurityConfig`、`StepSummary` の JSON、`error_message` の整え方、`JobLock` のテスト用のメソッド、U-11）を 3.4・5.1・5.2・5.4・11 に反映（2026-11-19）、reviewer の確認待ち。Issue #38 で、`JobLock` の `RELEASE_LOCK` の戻り値の扱いと失敗した接続の捨て方、ジョブの `error_message` に最初に失敗したステップの理由を書くことを 5.2 に追記（2026-11-20。決定の根拠は Issue #36 のコメント 7031400502）、reviewer の確認待ち。Issue #38 で KOPIS の実際の呼び出しの確認の結果（05 の 3.1〜3.6・7）を 3.6 の `Genre`・4.9・5.3・6.4・7.1・11 の U-02 に反映（2026-11-20。ジャンルの一覧、結果コードと XML の読み方、S2 の未集計の期間、S6 の予約数）、reviewer の確認待ち。Issue #38 の人間の決定1・2（2026-11-20、コメント 7032205139。01 の R-69・X-30）で S5（上演回数）をなくし、`showCount`・`ShowCountStep`・`totalShowCount`・S5 用の Mapper のメソッドを外した（4.8・4.9・5.2・5.3・6.4・7.1・10・11 の U-02。S5 は欠番で、ステップの名前は振り直さない。05 の 3.6）、reviewer の確認待ち。Issue #38 の KOPIS のクライアントの実装（コミット 97ba154）で backend-dev が決めたこと（`KopisCallPolicy` の `startStep()` と失敗の数え方、05 の 3.5 にない失敗の扱い、`KopisPerformanceDetail` の `@JsonCreator`、`KopisEnvelope`・`KopisGenreStat`・`StepAbortedException` の形、`updatedate` の小数の秒）を確認して 4.9・7.1 に書き、直す点を 11 の U-12 にした（2026-11-24）、reviewer の確認待ち。Issue #38 の S1〜S4・S6 の実装（コミット 274d3fa・0c58ad4）で backend-dev が決めたこと（`saveFromKopis` の引数、`KopisPerformanceImporter`、`findVenueByKopisId`、S2〜S4 の入力、数えるだけのもの、`DistrictParser`、`StepResult.windowEndDate`）を確認して 4.9・5.2・5.3・6.4 に書き、U-11 を解消し、直す点を U-13（S4 の受賞歴。05 の 3.2）・U-14 にした（2026-11-24）。Issue #38 の S7 の実装（コミット e495d44・4f92571）で backend-dev が決めたこと（読む件数、再試行の数え方、速さの待ち、同じ原文のまとめ、空の文、内訳、DB の例外、対象がないとき）を確認して 4.10 に書き、直す点（照合順序、長すぎる原文、再試行しないエラー）を U-15 にした（2026-11-24）、reviewer の確認待ち。PR #46 の reviewer の軽微1（コメント 7123152330）で、U-12〜U-15 を解消（コミット 72d601f・ce393bd・d281b89。architect がコードを確認）にし、4.9・4.10 の「今のコードは…直す」を直した後の書き方にした（2026-11-24）。PR #46 の reviewer の重大2（コメント 7123152330）と Issue #38 の人間の決定（コメント 7123543509 の決定3、7152704798 の決定1・2・5）で、KOPIS の呼び出しの方針（05 の 3.5 の改訂）を 3.1・4.9（`KopisClient` の遮断の印、`KopisCallPolicy` の作り直し、`StepAbortedException` をなくす、ステップ側の扱い、S1 の続き、テストの表）・5.2・5.3・7.1・8.1・8.2・10・11（U-16〜U-18）に反映した（2026-11-25）、人間の承認待ち。`batch_step_run` に列を1つ足す必要があり、db-designer に渡す（U-17）
 - 担当: architect
 - 入力: `01-requirements.md`、`02-screens.md`、`03-api.md`（API 仕様の詳細）、`04-tables.md` と `backend/src/main/resources/db/migration/V1__create_schema.sql`、`05-batch.md`、ADR 0001〜0016。
 - 対象: バックエンド（`backend/`、Spring Boot）だけ。Angular のクラス設計は対象外（工程5で frontend-dev が `02`・`03`・`07` から作る）。
@@ -105,7 +105,7 @@ flowchart LR
 
 | クラス | パッケージ | 役割 |
 |---|---|---|
-| `CatticketProperties` | `common.config` | `@ConfigurationProperties("catticket")` の `record`（入れ子の record: `Kopis`, `Azure`, `Recaptcha`, `Mail`, `Admin`, `Subway`, `Scheduler`, `publicBaseUrl`, `task`）。キーは 8 |
+| `CatticketProperties` | `common.config` | `@ConfigurationProperties("catticket")` の `record`（入れ子の record: `Kopis`, `Azure`, `Recaptcha`, `Mail`, `Admin`, `Subway`, `Scheduler`, `publicBaseUrl`, `task`。`Kopis` の中に `CallLimit`（2026-11-25。8.1））。キーは 8 |
 | `ClockConfig` | `common.config` | `Clock` の Bean（`Clock.system(ZoneId.of("Asia/Seoul"))`） |
 | `HttpClientConfig` | `common.config` | 外部 API ごとの `RestClient`（`@Qualifier("kopisRestClient")` など。7） |
 | `JacksonConfig` | `common.config` | `JsonMapperBuilderCustomizer`（3.3 の型の厳しさ） |
@@ -582,26 +582,67 @@ flowchart LR
 
 - XML の読み方（根要素・行要素の名前、エラーの見分け方、空の応答、値の整え方）は 7.1 の「KOPIS の XML の読み方」。結果コードの扱い（05 の 3.5）: `01`・`02`・`05`・`06`・それ以外の知らないコード → `KopisFatalException`（再試行しない。メッセージは `KOPIS {service} returncode={code} errmsg={errmsg}`）、`03`・通信の失敗・タイムアウト・5xx → `KopisRetryableException`、`04` → 詳細は `Optional.empty()`、一覧は 0 件。
 - **05 の 3.5 の表にない失敗**（2026-11-24、Issue #38 の実装（コミット 97ba154）で backend-dev が決め、architect が確認）:
-  - HTTP 3xx・4xx → `KopisFatalException`（`KOPIS {service} HTTP {status}`）。3xx は `https` で呼んだときの 301 など作りの誤り（05 の 3.5）、4xx は要求の誤りで、どちらも何度呼んでも同じため。429 も 4xx として再試行しない（KOPIS は 429 を返すと公開しておらず、返ったとしても制限に当たっているので呼び続けない。続けば下の 10 回で止まる）。
-  - 本文が空・XML として読めない（途中で切れた応答、保守中の HTML など）、木にはなったが封筒の record に読めない → `KopisRetryableException`（`KOPIS {service} unreadable response: …`）。通信の失敗と同じく一時的なことがあるため。続けば 10 回で止まる。
+  - HTTP 3xx → `KopisFatalException`（`KOPIS {service} HTTP {status}`）。`https` で呼んだときの 301 など作りの誤り（05 の 3.5）で、何度呼んでも同じため。
+  - **HTTP 4xx・遮断の印**（2026-11-25 改訂。05 の 3.5 の「遮断の印」。前の「4xx → `KopisFatalException`、429 も再試行しない」を置き換える）: 下の「`KopisClient` の遮断の印」。
+  - 本文が空・XML として読めない（途中で切れた応答、保守中の HTML など）、木にはなったが封筒の record に読めない → `KopisRetryableException`（`KOPIS {service} unreadable response: …`）。通信の失敗と同じく一時的なことがあるため。続けば実行の中の 5 回で止まる（下の `KopisCallPolicy`）。ただし本文に `Request Blocked` を含むものは遮断の印（下）。
   - **XML として読めたが行要素も結果コードもない**（例: 整形式の保守中のページ `<html>…</html>`）→ `KopisRetryableException`（`KOPIS {service} unexpected response: no row element`）。判定: 7.1 の「読む手順」の 6.。**0 件と扱わない**理由: S1 の目録の最初のページが 0 件に見えると、その区間を取り終えたとして `window_end_date` まで記録し、取りこぼしが翌日に直らないため（97ba154 では 0 件にしていたのを 72d601f で直した。11 の U-12）。
   - API キー（`catticket.kopis.api-key`）が空 → 呼ばずに `KopisFatalException`（`KOPIS api key is not set (catticket.kopis.api-key)`）。`KopisCallPolicy` を通さないので、続けての失敗の数には入らない（ステップが1回目で失敗にすればよい）。7.2 のとおり起動時には確かめない。
   - ログ・例外のメッセージには URL のキーを伏せた形だけを出す（`RestClientException` のメッセージは URL を含むので使わず、原因の I/O の例外のクラス名とメッセージ（キーを伏せたもの）を使う）。
-- 呼び出しの間隔（0.5 秒）・再試行（2・4・8 秒、最大 3 回）は `KopisCallPolicy` が持つ（`Sleeper` を使う。テストでは待たない）。同じステップで再試行の後も失敗した呼び出しが続けて 10 回になったら `StepAbortedException`（05 の 3.5）。
-- **`KopisCallPolicy` の決まり**（2026-11-24、コミット 97ba154 で backend-dev が決め、architect が確認）:
-  - singleton の `@Component`。`KopisClient` のすべての呼び出し（API キーが空のときを除く）が `<T> T call(Supplier<T>)` を通る。`call` は `synchronized`（同時に複数を呼ばない。05 の 3.5）。直前の呼び出しがあれば `catticket.kopis.interval`（0.5 秒）待ってから呼ぶ（アプリを起動してから最初の呼び出しは待たない）。再試行は `common.batch.Retry` に `RETRY_WAITS`（2・4・8 秒）と「`KopisRetryableException` なら再試行」を渡す。
-  - **「同じステップ」の区切り**: `void startStep()` が続けての失敗の数を 0 に戻す。**S1〜S4・S6 のステップのクラス（4.9 の表）は `run` の最初に必ず `startStep()` を呼ぶ**（呼ばないと前のステップの数を引き継ぎ、前のステップが 10 回で止まったときは次のステップも1回も呼ばずに止まる）。各ステップの単体テストで、`run` が最初に `startStep()` を呼ぶことを確かめる（`KopisCallPolicy` はモック。`InOrder` で `KopisClient` の呼び出しより前）。singleton に数を持ってよい理由: KOPIS を呼ぶのは B-01 だけで、B-01 は `JobLock`（`catticket-daily-collect`）で同時に1つしか動かず、ステップも順に動くため。
-  - **数え方**: 「失敗した呼び出し」1回 = `call` が例外で終わった1回。再試行の後も `KopisRetryableException` だったものと、`KopisFatalException`（再試行しない）の両方を数える（Fatal も数えるのは、`02` のキーの誤りのように何度呼んでも失敗するとき、ステップが呼び続けないため）。`call` が値を返したら 0 に戻す（`04` の `Optional.empty()`・0 件も成功）。
-  - **止め方**: 失敗の数が 10 に達した呼び出しでは、元の例外を原因にした `StepAbortedException`（`KOPIS calls aborted after 10 consecutive failures; last: {元のメッセージ}`）を投げる。それ以降は `startStep()` まで、呼ばずにすぐ `StepAbortedException` を投げる（待ちも入れない）。
-  - **ステップ側の扱い**（次の回で作る S1〜S4・S6）: `KopisRetryableException`・`KopisFatalException` は、ステップが決めた単位（S1・S4 は公演1件・会場1件・目録の1区間、S2 は組、S3 は1区間、S6 はステップ全体）で捕まえて「失敗」に数え、ステップを失敗にして次の単位へ進んでよい（05 の 3.5 の「そのステップを失敗にする」は、ステップの結果を失敗にすることで、その場で止めることまでは求めない）。**`StepAbortedException` は単位で捕まえず**、ステップの外（5.3 の `DailyCollectJob` の `try`）まで出してステップを止める（`StepResult` の失敗。`errorMessage` は `BatchRunRecorder.describe(e)`）。
-- **`StepAbortedException`** は `collect.client` に置く（`RuntimeException`。投げるのは `KopisCallPolicy` で、ステップは捕まえないので、クライアントと同じパッケージにする）。
+- **呼び出しの方針の改訂**（2026-11-25。05 の 3.5。PR #46 の reviewer の重大2、Issue #38 の人間の決定 7123543509 の決定3・7152704798 の決定1・2）: 間隔 7 秒、再試行 30・60 秒（最大 2 回）、遮断の印と実行の中で続けて 5 回の失敗で**実行の全体**の KOPIS の呼び出しを止める、1回の実行の上限は `KopisCallPolicy` が持つ（`Sleeper` を使う。テストでは待たない）。前の決まり（2026-11-24、コミット 97ba154: 間隔 0.5 秒、2・4・8 秒で最大 3 回、`startStep()` で数を戻しステップごとに 10 回で `StepAbortedException`）は使わない。**`StepAbortedException` はなくす**（下の `KopisStoppedException`・`KopisCallLimitException` に替える）。HTTP のクライアント（`HttpClientConfig` の JDK `HttpClient`）は変えない。
+
+**`KopisClient` の遮断の印**（05 の 3.5 の「遮断の印」。2026-11-25）
+
+応答の本文をバイトで受けた後（今の作りのまま、状態が 2xx 以外でも本文を読む）、次の順で判定する。
+
+1. 本文を UTF-8 の文字列にして、`Request Blocked` を含む（大文字・小文字を区別しない。`text.toLowerCase(Locale.ROOT).contains("request blocked")`）→ 状態によらず `KopisBlockedException`（`KOPIS {service} blocked: HTTP {status} (Request Blocked)`）。
+2. HTTP 403・429 → `KopisBlockedException`（`KOPIS {service} blocked: HTTP {status}`）。
+3. ほかの HTTP 4xx: 本文が結果コードの応答（7.1 の「読む手順」の 3. の判定。`KopisXmlReader` に結果コードだけを読むメソッド `Optional<KopisResult> readResultCode(String service, byte[] body)` を足す。読めない・空・結果コードがない → 空）なら、その結果コードの扱い（上の「結果コードの扱い」。`KopisFatalException` など）。空なら `KopisBlockedException`（`KOPIS {service} blocked: HTTP {status} (non-XML body)`）。
+4. HTTP 5xx → `KopisRetryableException`（今のまま）。3xx → `KopisFatalException`（今のまま）。2xx → 今の読み方（7.1）。
+- `KopisBlockedException`（`collect.client`、`RuntimeException`）は `KopisRetryableException`・`KopisFatalException` の子に**しない**（ステップの単位の `catch (KopisRetryableException | KopisFatalException e)` で捕まらないようにするため）。`KopisCallPolicy` が受けて `KopisStoppedException` に変えるので、ステップには出ない。
+- メッセージにキー・URL を入れない（今のまま）。本文は入れない（HTML が長く、ログで分かれば足りる。WARN のログに本文の先頭 200 文字を出してよい。キーは含まれない）。
+
+**`KopisCallPolicy`**（`collect.client`。singleton の `@Component`。`KopisClient` のすべての呼び出し（API キーが空のときを除く）が `call` を通る。公開のメソッドはすべて `synchronized`）
+
+状態は実行（ジョブ）ごとに持つ。singleton に持ってよい理由は前と同じ（KOPIS を呼ぶのは B-01 だけで、B-01 は `JobLock`（`catticket-daily-collect`）で同時に1つしか動かず、ステップは順に動く）。
+
+| メソッド | 内容 |
+|---|---|
+| `KopisCallPolicy(Retry retry, Sleeper sleeper, CatticketProperties props)` | `props.kopis().interval()`・`callLimit()` を読む。`interval` が null・負、`callLimit` が null、`perRun` ≤ 0、ステップの上限が負 → `IllegalStateException`（起動を失敗させる）。後ろのステップの上限の和 ≥ `perRun`（S1 の割り当てが 0 になる）→ WARN。起動時に INFO: `KOPIS calls: interval={interval}, per-run={perRun}, S2={s2}, S3={s3}, S4={s4}, S6={s6} (S1 up to {perRun − 和})` |
+| `void startJob()` | 実行の初めに1回（5.3 の `DailyCollectJob`）。止めた印（理由・メッセージ・止めたステップ）、実行の送信の数、続けての失敗の数、今のステップを戻す。**これ以外では戻さない** |
+| `void startStep(String stepName)` | KOPIS のステップの初めに（`DailyCollectJob` が呼ぶ。ステップのクラスは呼ばない）。`stepName` は `S1`・`S2`・`S3`・`S4`・`S6`（ほか → `IllegalArgumentException`）。ステップの送信の数を 0 にし、割り当てを決める（下）。止めた印・続けての失敗の数は戻さない |
+| `boolean stopped()` | 止めたか |
+| `String stopMessage()` | 止めた理由: `{止めたステップ}: {KopisStoppedException のメッセージ}`（止めていなければ null） |
+| `int allowance()` | 今のステップの残りの回数（割り当て − ステップの送信の数。0 以上） |
+| `int stepCalls()`・`int runCalls()`・`int perRun()` | 今のステップの送信の数・今の実行の送信の数・1回の上限 |
+| `<T> T call(Supplier<T> attempt)` | 1回の呼び出し（下の「`call` の流れ」） |
+
+- **定数**: `RETRY_WAITS` = 30 秒・60 秒（最大 2 回）、`MAX_CONSECUTIVE_FAILURES` = 5、KOPIS のステップの順 `S1, S2, S3, S4, S6`。間隔は設定 `catticket.kopis.interval`（7 秒）、上限は設定 `catticket.kopis.call-limit`（8.1）。
+- **割り当て**（05 の 3.5 の「1回の実行の上限」）: `allowance = max(0, min(cap(step), perRun − runCalls − Σ cap(後ろのステップ)))`。`cap(S1)` は上限なし（計算は `long` で、`cap(S1)` を `perRun` として扱えばよい）。例（本番: `perRun` 1,500、S2 70・S3 20・S4 200・S6 5）: S1 = 1,205。S1 が 1,205 回使った後は S2 = 70、S3 = 20、S4 = 200、S6 = 5。S1 が 100 回しか使わなくても S2 = min(70, 1,500 − 100 − 225) = 70（使い残しは回さない）。開発（20、S2 4・S3 2・S4 2・S6 1）: S1 = 11。
+- **`call` の流れ**:
+  1. 止めた印がある → 送らずに `KopisStoppedException`（`KOPIS calls stopped in this run: {stopMessage}`。理由は止めたときと同じ）。待たない。
+  2. 送信の前（再試行の送信の前も）に、ステップの送信の数 ≥ 割り当て → 送らずに `KopisCallLimitException`（`KOPIS call limit reached in {step}: {stepCalls}/{割り当て} (run {runCalls}/{perRun})`）。続けての失敗の数は変えない（送っていないので失敗ではない）。
+  3. 1回目の送信の前に、アプリの中で前の送信があれば `interval` 待つ（前と同じく、起動して最初の送信は待たない）。再試行の送信の前は `Retry` の待ち（30・60 秒）だけ（どちらも 7 秒以上なので間隔を守る）。
+  4. ステップと実行の送信の数を1足して送る。全体は `retry.call(sending, RETRY_WAITS, e -> e instanceof KopisRetryableException)` で、`sending` は「2. の確かめ → 数を足す → `attempt.get()`」の `Supplier`（再試行のたびに 2. を確かめる）。
+  5. 値が返った → 続けての失敗の数を 0 にして返す（`04` の `Optional.empty()`・0 件も成功）。
+  6. `KopisBlockedException` → 止めた印を付ける（理由 `BLOCKED`、止めたステップ = 今のステップ）。ERROR のログ（`KOPIS blocked in {step}; stopping all KOPIS calls in this run: {メッセージ}`）。元の例外を原因にした `KopisStoppedException`（`KOPIS blocked: {元のメッセージ}`）を投げる。再試行しない（`Retry` の判定は `KopisRetryableException` だけ）。
+  7. `KopisRetryableException`（再試行の後）・`KopisFatalException` → 続けての失敗の数を1足す。5 になったら止めた印を付け（理由 `CONSECUTIVE_FAILURES`）、ERROR のログ、元の例外を原因にした `KopisStoppedException`（`KOPIS calls stopped after 5 consecutive failures; last: {元のメッセージ}`）。5 未満なら元の例外をそのまま投げる（ステップの単位が `failed` に数える）。
+  8. `KopisCallLimitException`（再試行の途中で 2. に当たった）→ そのまま投げる。
+- **例外**（`collect.client`、どれも `RuntimeException`。`KopisRetryableException`・`KopisFatalException` の子にしない）:
+  - `KopisBlockedException`（上）。
+  - `KopisStoppedException`: `KopisStopReason reason()`（enum `KopisStopReason`: `BLOCKED`・`CONSECUTIVE_FAILURES`）。
+  - `KopisCallLimitException`。
+- **ステップ側の扱い**（S1〜S4・S6。前の「`StepAbortedException` は単位で捕まえない」を置き換える）:
+  - `KopisRetryableException`・`KopisFatalException` は今のまま、ステップが決めた単位（S1・S4 は公演1件・会場1件・目録の1区間、S2 は組、S3 は1区間、S6 はステップ全体）で捕まえて `failed` に数え、次の単位へ進む。
+  - **`KopisStoppedException`・`KopisCallLimitException` は単位で捕まえない**（`KopisPerformanceImporter`・`UnitFailures` も）。ステップの `run` の**一番外**で捕まえ、`KopisCallLimitException` なら `summary.increment("callLimitReached")`、それまでの件数を残したまま `StepResult.failure(処理した数, summary, BatchRunRecorder.describe(e))` を返す（S1 は `s1Failure`。下の表）。WARN のログを出す。これは PR #46 の reviewer の提案4（止まったステップの件数を残す）を取り入れたもの。
+  - ほかの例外（DB の失敗など）は今のまま捕まえずに `DailyCollectJob` の `try` まで出す（そのステップの `summary` は残らない）。
+  - ステップのクラスは `startStep` を呼ばない（`DailyCollectJob` が呼ぶ。5.3）。前の「`run` の最初に `startStep()` を呼ぶ」決まりと、そのテストはなくす。
 - API キーは `catticket.kopis.api-key`（環境変数 `KOPIS_API_KEY`）。クエリの `service` に付ける。ログに URL を出すときはキーを伏せる。
 
 **ステップのクラス**（`collect` パッケージ。S1・S6 は `StepResult run(BatchContext ctx)`、S2・S3 は `StepResult run(BatchContext ctx, Set<String> ids)`（見た公演 ID を `ids` に足す）、S4 は `StepResult run(BatchContext ctx, Set<String> rankingIds, Set<String> awardIds)`。ID の受け渡しは 5.3。2026-11-24 確認）
 
 | クラス | ステップ | 主なメソッド・内容 |
 |---|---|---|
-| `PerformanceCollectStep` | S1 | 窓の計算（`CollectWindows.plan(today, lastSuccess)`: 6 区間、(a)・(b)。05 の 3.3）→ 区間ごとに目録の全ページ（`MAX_PAGES` = 1000 を超えたらその区間を失敗。05 の 3.3 の 1.）→ 目録の ID（重複を除き、見つけた順）ごとに `KopisPerformanceImporter.importOne(id, false, now, …)`（公演1件で1トランザクション）→ 全部成功なら `StepResult.success(saved, summary, plan.windowEnd())`（`window_end_date` を記録。5.2） |
+| `PerformanceCollectStep` | S1 | （2026-11-25 改訂。05 の 3.3 の 1.・7.・12.）① 窓の計算（`CollectWindows.plan(today, batchRunMapper.findLastSuccessfulS1())`: 6 区間、(a)・(b)。05 の 3.3）と基準日（`CollectWindows.baseDate(today, batchRunMapper.findLatestS1Before(ctx.jobRunId()))`）→ ② **区間ごとに**: 目録の全ページ（`MAX_PAGES` = 1000 を超えたらその区間を失敗。05 の 3.3 の 1.）→ その区間の ID（重複を除き、見つけた順。この実行ですでに扱った ID も除く）を `CollectMapper.findKopisIdsCollectedSince(ids, baseDate.atStartOfDay())`（`LOOKUP_CHUNK` = 500 件ずつ）で引き、返った ID は `alreadyCollected` に数えて飛ばす → 残りの ID ごとに `KopisPerformanceImporter.importOne(id, false, now, …)`（公演1件で1トランザクション）→ 次の区間 → ③ 全部成功なら `StepResult.s1Success(saved, summary, plan.windowEnd(), baseDate)`（`window_end_date` と基準日を記録。5.2）。単位の失敗があれば `StepResult.s1Failure(saved, summary, failures.message(), baseDate)`。`KopisStoppedException`・`KopisCallLimitException` は `run` の一番外で捕まえて `s1Failure(saved, summary, describe(e), baseDate)`（上の「ステップ側の扱い」） |
 | `RankingCollectStep` | S2 | 期間の種類 × 現在・直前の 6 期間ごとに、① 全体（`boxOffice(period, Optional.empty())`）を照会 → 0 件なら**未集計**として、その期間は何も保存せず（ジャンルも照会しない）`StepSummary` の `notYetAvailable` を1足し、`addDetail("notYetAvailable", "{DAILY|WEEKLY|MONTHLY}|{期間の初日}")` → ② 1 件以上なら全体の組を `RankingSaveService.replace(collectionKey, items, now)`、続けて `Genre` の 9 個を順に照会して、0 件も含めて組ごとに `replace`（組ごとに1トランザクション。行の入れ替えと `ranking_collection` の追加・更新。05 の 3.4）。全体の照会が失敗した期間はジャンルを照会しない。件数: `collected`（`replace` した組の数）、`notYetAvailable`、`failed`（照会に失敗した組の数。1 以上ならステップは失敗）、`rows`（保存した行の数）、`skippedRow`（05 の 3.4 の「保存しない行」。`toEntries` で除く）。`replace` した組の行の公演 ID を `ids`（`rankingIds`）に足す |
 | `AwardCollectStep` | S3 | 窓（`CollectWindows.window(today)`）を 31 日ずつ、ページの上限は S1 と同じ → 1回の照会の結果ごとに `markAwarded(kopisIds)`（立てるだけ）→ 受賞作の公演 ID を `ids`（`awardIds`）に足す（DB にない ID も足す。S4 が使う）。件数: `listed`・`marked`・`skippedId`・`failed` |
 | `MissingPerformanceStep` | S4 | `rankingIds` ∪ `awardIds`（`rankingIds` の順、続けて `awardIds`。使えない ID は除く）のうち DB にないもの（`findExistingKopisIds` を `LOOKUP_CHUNK` = 500 件ずつ）→ ID ごとに `KopisPerformanceImporter.importOne(id, awardIds.contains(id), now, …)`（S1 と同じ。受賞作なら保存と同じトランザクションで受賞歴を立てる。05 の 3.2 の「S3 と S4 の受賞歴」。`awarded` の引数は ce393bd で足した: 11 の U-13）。件数: `candidates`・`missing`・`saved`・`awardMarked` など |
@@ -623,7 +664,7 @@ flowchart LR
   2. `ProviderValues.performance(detail)` で先に確かめる（保存しない公演のために施設詳細を呼ばないため）。保存しない → その理由（05 の 3.3 の 11.）を数えて終わり。同じ確かめは `saveFromKopis` の中でもう一度行う（そこが正。こちらは呼び出しを減らすためだけ）。
   3. `findVenueByKopisId(mt10id)` が空なら `getVenue(mt10id)`。例外 → `failures.record("venue {mt10id} of {mt20id}", e)` で終わり。空（`04`）→ `venueNotFound` で終わり。
   4. `saveFromKopis(detail, newVenue, awarded, now)`（会場が DB にあるときの `newVenue` は null）→ `SaveOutcome` の notes を数える。
-  - `StepAbortedException` は捕まえない（ステップを止める。上の「ステップ側の扱い」）。
+  - `KopisStoppedException`・`KopisCallLimitException` は捕まえない（ステップの一番外まで出す。上の「ステップ側の扱い」）。
 - `UnitFailures`（`collect`、package-private）: ステップの中で失敗した単位を数える。`record(unit, e)` が `failed` を1足し、内容に単位を足し、WARN を出す。`message()` = `{数} failed; first: {最初の単位}: {describe(e)}`（`StepResult` の `errorMessage`）。
 - 層の決まりとの関係: ステップ・`KopisPerformanceImporter` は Service と同じ層（バッチの処理の流れ）で、`CollectMapper` の読み（ロックなし）と `markAwarded`（1文）を直接呼んでよい。書く処理が2文以上になるものは `@Transactional` の Service（`PerformanceSaveService` など）を通す。
 
@@ -632,11 +673,33 @@ flowchart LR
 - **`StepSummary` の名前（S1〜S4。2026-11-24 確認）**: 失敗に数えるのは `failed` だけ（1 以上ならステップは失敗）。ほかは記録だけ（05 の 3.3 の 11.）。
   - 保存しない（内容あり）: `detailNotFound`（`{mt20id}`）、`venueNotFound`（`{mt20id}|{mt10id}`）、`skippedId`、`skippedVenueId`、`skippedGenre`（`{mt20id}|{genrenm}`）、`skippedInvalid`（`{mt20id}|{項目}`）、`skippedVenueInvalid`（`{mt10id}|fcltynm`）、S2 の `skippedRow`（`{組}|{rnum}|{mt20id}`）。
   - 保存した（記録だけ）: `saved`、`venueSaved`、`truncated`（`{ID}|{項目}`）、`posterUrlTooLong`、`bookingSiteNoUrl`、`bookingSiteUrlTooLong`、`venueNoDistrict`、`venueNoLocation`、`awardMarked`（S4。U-13）。
-  - 流れの数: S1 `ranges`・`pages`・`listed`、S3 `listed`・`marked`、S4 `candidates`・`missing`。
+  - 流れの数: S1 `ranges`・`pages`・`listed`・`alreadyCollected`（基準日より後に収集済みで飛ばした数。05 の 3.3 の 12.。2026-11-25）、S3 `listed`・`marked`、S4 `candidates`・`missing`。
+  - 呼び出しの数（2026-11-25。05 の 3.5）: `kopisCalls`（そのステップの送信の数。`DailyCollectJob` が入れる。5.3）、`callLimitReached`（上限で止まったら 1。ステップが入れる）。どちらも記録だけで、`failed` には入れない（上限で止まったステップは `KopisCallLimitException` で失敗になる）。
   - 内容に入れる提供元の値は 50 コードポイントで切る（`ProviderValues.detailValue`。null は `null`）。
 - **`DistrictParser`**（`collect`、Spring に依存しない）: `static Optional<SeoulDistrict> parse(String address)`。規則は 05 の 3.3 の 5. の「区の決め方」（`서울특별시` の後ろの最初の語が 25 区の名前と完全に一致。間の空白はなくてよい）。語の区切りは空白文字（正規表現 `\s+`。Java の文字列では `"\\s+"` と書く。274d3fa の `"\s+"` は Java 15 以降の文字列のエスケープで半角の空白1文字になり、タブなどで区切れなかったので ce393bd で直した: 11 の U-14）。
 
 **`CollectMapper`**（`mapper/collect/CollectMapper.xml`）: `Optional<CollectVenueRow> findVenueByKopisId(String kopisVenueId)`（`CollectVenueRow(long id, String address)`。住所はソウルの判定（05 の 3.3 の 6.）に使う。2026-11-24 確認。前の名前 `findVenueIdByKopisId` は使わない）、`void upsertVenue`、`Optional<Long> findPerformanceIdByKopisId`、`void upsertPerformance`（`INSERT … AS n ON DUPLICATE KEY UPDATE`。管理者の修正は別テーブルなので触れない）、`int deleteBookingSites(long performanceId, String source)`、`void insertBookingSites(…)`、`int markAwarded(Collection<String> kopisIds, LocalDateTime now)`、`Set<String> findExistingKopisIds(Collection<String>)`、`Optional<Long> findCollectionId(…)`・`void upsertRankingCollection(…)`・`int deleteRankingEntries(long collectionId)`・`void insertRankingEntries(…)`、`int deleteGenreTrends(Period)`・`void insertGenreTrends(…)`。上演回数のメソッドは作らない（S5 はない。05 の 3.6）。
+- 2026-11-25 に足す: `Set<String> findKopisIdsCollectedSince(@Param("kopisIds") Collection<String> kopisIds, @Param("since") LocalDateTime since)`（`SELECT kopis_performance_id FROM performance WHERE kopis_performance_id IN (…) AND collected_at >= #{since}`。S1 の続き。05 の 3.3 の 12.）。空の集合を渡したら SQL を実行せずに空を返す（呼ぶ側で確かめる。`findExistingKopisIds` と同じ）。
+
+**`CollectWindows.baseDate`**（2026-11-25。05 の 3.3 の 12.。Spring に依存しない）: `static LocalDate baseDate(LocalDate today, Optional<PreviousS1> previous)`。前の S1 がない → `today`。前の S1 の `result` が `SUCCESS` → `today`。前の S1 の `collectBaseDate` が null → `today`。`collectBaseDate` が `today` より後（時計の誤りなど）→ `today`。それ以外（`FAILURE`、または `result` が null で終わりが記録されていない）→ `collectBaseDate`。`CollectPlan` は変えない（基準日は `PerformanceCollectStep` が別に持つ）。
+
+**呼び出しの方針のテスト**（2026-11-25。backend-dev が書く単体テストと `@MybatisTest`。テストでは待たない `Sleeper`・`Clock.fixed` を使う。応答のファイルは 7.1）
+
+| テストのクラス | 確かめること |
+|---|---|
+| `KopisCallPolicyTest`（単体。`Retry` は本物、`Sleeper` は待った時間を記録するだけ） | ① 間隔: 起動して最初の送信は待たず、2回目から送信ごとに 7 秒待つ。② 再試行: `KopisRetryableException` は 30・60 秒待って最大 3 回送り（`stepCalls` = 3）、再試行の前に 7 秒の間隔は足さない。`KopisFatalException` は再試行しない。③ **遮断の印**: `KopisBlockedException` → 1回だけ送り、`KopisStoppedException`（`reason` = `BLOCKED`、原因は元の例外）。その後の `call` は `Supplier` を呼ばず、待たずに `KopisStoppedException`。`startStep("S3")` の後も止まったまま。`startJob()` の後は呼べる。④ **続けての失敗**: 失敗 4 回の後の成功で数が 0 に戻る。S2 で 4 回・`startStep("S3")` の後に 1 回 → 5 回目で `KopisStoppedException`（`CONSECUTIVE_FAILURES`。ステップをまたいで数える）。4 回目までは元の例外がそのまま出る。⑤ **割り当て**: 本番の値（1,500・70・20・200・5）で S1 = 1,205、S1 が 1,205 回使った後の S2〜S6 がそれぞれ 70・20・200・5、S1 が 100 回の後の S2 も 70。開発の値（20・4・2・2・1）で S1 = 11。⑥ **上限**: 割り当てを使い切った次の `call` は送らずに `KopisCallLimitException`（続けての失敗の数は変わらない）。再試行の途中で割り当てに当たったら、その再試行を送らずに `KopisCallLimitException`。次の `startStep` で新しい割り当てで呼べる。⑦ 1回の実行の送信の合計が `perRun` を超えない（S1〜S6 を順に、どのステップも割り当てまで使う）。⑧ 設定の誤り（`perRun` 0、負の上限、`interval` null）→ コンストラクタが `IllegalStateException`。⑨ 知らないステップ名 → `IllegalArgumentException` |
+| `KopisClientTest`（`MockRestServiceServer`） | HTTP 400 + `blocked-400.html` → `KopisBlockedException`（メッセージに `Request Blocked`、キーなし）。403・429（本文は空・XML のどちらでも）→ `KopisBlockedException`。404 + HTML・400 + 空の本文 → `KopisBlockedException`（`non-XML body`）。400 + 結果コード `01` の XML → `KopisFatalException`（遮断ではない）。200 + `blocked-200.html`（同じ本文）→ `KopisBlockedException`。503 + `Request Blocked` → `KopisBlockedException`。200 + `maintenance.html`（`Request Blocked` なし）→ `KopisRetryableException`（今のまま）。503（本文なし）→ `KopisRetryableException`。301 → `KopisFatalException` |
+| `KopisXmlReaderTest` | `readResultCode`: 結果コードの XML → コード・`errmsg`。成功の XML（行あり・`<dbs/>`）・HTML・空・途中で切れた本文 → 空 |
+| `DailyCollectJobTest`（単体。ステップ・`KopisCallPolicy`・`BatchRunRecorder` はモック） | ① `startJob()` が S1 より前に1回だけ呼ばれ、各 KOPIS のステップの前に `startStep("{名前}")`（`InOrder`）。② **遮断で止まる**: S2 の実行中に止まった（S2 の後 `stopped()` が真）→ S3・S4・S6 の `run` を呼ばず、それぞれ `finishStep` に失敗（`errorMessage` が `skipped: KOPIS calls stopped in this run at S2: …`、`summary` が `{"kopisCalls":0}`）。S1 で止まった → S2〜S6 を呼ばない。③ **S7 は動く**: どちらの場合も `TranslationStep.run` を呼ぶ。結果は `PARTIAL_FAILURE`。④ 割り当てが 0 のステップ → `run` を呼ばずに失敗（`skipped: no KOPIS call allowance left (…)`）、後ろのステップは呼ぶ。⑤ KOPIS のステップの結果の `summary` に `kopisCalls` = `policy.stepCalls()` が入る（ステップが例外で終わり `summary` がないときも、`kopisCalls` だけの `summary` を作る）。⑥ 止まっていなければ今のまま全部のステップを順に呼ぶ |
+| `PerformanceCollectStepTest`（単体） | ① **区間ごとに保存**: 1つ目の区間の目録の後、2つ目の区間の目録より前に1つ目の区間の公演の `importOne` を呼ぶ（`InOrder`）。② **続き**: `findKopisIdsCollectedSince` が返した ID は `importOne` を呼ばず、`alreadyCollected` に数える。渡す `since` が基準日の 0 時。2つの区間に出た同じ ID は1回だけ扱う。③ **上限**: 目録・詳細の途中で `KopisCallLimitException` → `StepResult` は失敗、`windowEndDate` は null、`collectBaseDate` は基準日、`callLimitReached` = 1、それまでの `saved` が残る。`KopisStoppedException` でも同じ（`callLimitReached` はなし）。④ **再開して終わる**: 前の S1 が `FAILURE`・基準日 11-25、今日 11-27 で全部成功 → `s1Success` の `windowEndDate` = 11-27 + 180 日、`collectBaseDate` = 11-25。⑤ 前の S1 が `SUCCESS` → 基準日は今日 |
+| `CollectWindowsTest`（単体） | `baseDate`: 前がない・`SUCCESS`・基準日 null・基準日が今日より後 → 今日。`FAILURE` + 基準日 → その日。`result` null + 基準日 → その日 |
+| `RankingCollectStepTest`・`AwardCollectStepTest`・`MissingPerformanceStepTest`・`GenreTrendStepTest`（単体） | `KopisStoppedException`・`KopisCallLimitException` を途中の単位で投げさせる → `run` が例外を出さずに失敗の `StepResult` を返し、それまでの件数（S2 は保存した組の数、S4 は `saved`）と `callLimitReached`（上限のとき）が `summary` に残る。S2・S3 は、それまでに見た ID を `ids` に足したまま。前の「`run` の最初に `startStep()`」のテストは消す |
+| `KopisPerformanceImporterTest`（単体） | `getPerformance`・`getVenue` が `KopisStoppedException`・`KopisCallLimitException` → 捕まえずにそのまま出る（`failures` に数えない） |
+| `BatchRunMapperTest`（`@MybatisTest`） | ① `updateStepRun` が `collect_base_date` を書く（null なら NULL）。② `findLastSuccessfulS1` の `successDate` が `collect_base_date`、列が NULL の古い行は `DATE(started_at)`。③ `findLatestS1Before(jobRunId)`: その実行より前の S1 の最も新しい行（`id` が最大）の `result`・`collect_base_date`。`SUCCESS`・`FAILURE`・`result` NULL の行、ほかのステップの行・同じ実行の行は対象外、ない → 空 |
+| `BatchRunRecorderTest`（単体） | `finishStep` が `StepResult.collectBaseDate` を `updateStepRun` に渡す |
+| `StepResultTest`（単体） | `windowEndDate` があって `collectBaseDate` が null → `IllegalArgumentException`。失敗で `windowEndDate` がある → `IllegalArgumentException`（今のまま） |
+| `CollectMapperTest`（`@MybatisTest`） | `findKopisIdsCollectedSince`: `collected_at` が `since` ちょうど・後の ID だけが返る。前の ID・DB にない ID は返らない |
+| `KopisCallLimitConfigTest`（単体。Spring を起動しない） | `YamlPropertySourceLoader` で `application.yml` を読み、`Binder` で `catticket.kopis` を結び付ける → `interval` = 7 秒、`call-limit` が開発の値（20・4・2・2・1）。`application-prod.yml` を重ねる → 本番の値（1,500・70・20・200・5）。**プロファイルなしの既定が開発の値であること**を固定する |
 
 ### 4.10 翻訳（`translation`）
 
@@ -731,6 +794,7 @@ CatTicket の会員登録を完了するには、下のリンクを開いてく�
     - `WebApplicationType.NONE` では `HttpSecurity` がないので、`SecurityConfig.securityFilterChain` は Web アプリのときだけ作る（3.4）。
   - `common.batch.TaskRunner`（`ApplicationRunner`, `ExitCodeGenerator`、`@ConditionalOnProperty("catticket.task")`）: 名前から `BatchJob` を選んで実行し、終了コードを返す。0 = 成功、1 = 失敗、2 = 一部失敗、3 = ロックが取れなかった（同じバッチが実行中）、64 = 知らない名前。
   - ローカル: `cd backend && ./gradlew bootRun --args='--catticket.task=import-subway'`
+    - B-01 をローカルで動かすと、KOPIS の上限は開発の値（1回 20 回。8.1）になる。本番の値で試すとき（Issue #38 の決定4 の実際の実行など。約 3 時間かかる）だけ `--args='--catticket.task=daily-collect --spring.profiles.active=prod'` とする（2026-11-25）。
   - サーバー: `docker compose --profile app run --rm app --catticket.task=import-subway`（Dockerfile の `ENTRYPOINT` が exec 形式（`["java", "-jar", "app.jar"]`）で、後ろの引数がアプリに渡ること。Dockerfile は実行 Claude の担当。11 の U-07）。手順は `docs/ops/`。
 
 ### 5.2 バッチの共通部品（`common.batch`）
@@ -743,8 +807,8 @@ CatTicket の会員登録を完了するには、下のリンクを開いてく�
 | `JobLock` | `GET_LOCK('catticket-{task}', 0)`。MyBatis の `SqlSessionFactory.openSession()` で専用の接続を開き、ジョブの終わりまで持ち続けて `RELEASE_LOCK` してから閉じる（名前付きロックは接続（セッション）に付き、コミット・ロールバックでは外れないため。MySQL 8.4 リファレンス「Locking Functions」、確認日 2026-11-09）。`1` = 取れた、`0`・`NULL` = 取れない。`Optional<Held> tryAcquire(TaskName)`（`Held` は `AutoCloseable`。`close` で外す）。テスト用に、ロック名を直接受ける package-private の `tryAcquire(String name)` を置く（ほかのチェックアウトのテストと同じ名前のロックでぶつからないように。テストの名前は `catticket-test-` で始めるなど本番の名前と重ならないものにする）。トランザクションの中で呼ばない。**`RELEASE_LOCK` が `1` でなかった・例外だった接続はプールに戻さずに捨てる**（下の「`JobLock` の外し方と接続の捨て方」） |
 | `JobLockMapper` | `Integer getLock(String name)`（`SELECT GET_LOCK(#{name}, 0)`）、`Integer releaseLock(String name)` |
 | `BatchRunRecorder` | `long start(TaskName, LocalDateTime)`、`StepRun startStep(long jobRunId, String stepName, LocalDateTime)`、`finishStep(StepRun, StepResult, LocalDateTime)`、`finish(long jobRunId, JobResult, String errorMessage, LocalDateTime)`。すべて `REQUIRES_NEW`（ステップの失敗のロールバックで記録が消えないように）。`error_message` は書く前に整える（下の「`error_message` の整え方」）。`finish` は、結果が `FAILURE`・`PARTIAL_FAILURE` で `errorMessage` が null のとき、最初に失敗したステップの理由を書く（下の「ジョブの `error_message`」）。`static String describe(Throwable)`: 例外を「クラスの単純名: メッセージ」（メッセージがなければクラス名だけ）にする |
-| `BatchRunMapper` | `insertJobRun`、`updateJobRun`、`insertStepRun`、`updateStepRun`、`Optional<LastS1> findLastSuccessfulS1()`（`step_name = 'S1' AND result = 'SUCCESS' ORDER BY started_at DESC LIMIT 1` で、成功した日と `window_end_date`）、`Optional<FailedStep> findFirstFailedStep(long jobRunId)`（下の「ジョブの `error_message`」）。`FailedStep`（record）: `String stepName`, `String errorMessage` |
-| `StepResult`（record） | `success`, `processedCount`, `StepSummary summary`, `errorMessage`, `LocalDate windowEndDate`（成功した S1 の「今回の窓の末日」だけ。ほかは null。失敗で null でなければコンストラクタが `IllegalArgumentException`（04 の `chk_batch_step_run_window`）。11 の U-11、2026-11-24 解消）。作り方: `success(n, summary)`、`success(n, summary, windowEndDate)`（S1）、`failure(summary, msg)`、`failure(n, summary, msg)`。`BatchRunRecorder.finishStep` が `updateStepRun` に `windowEndDate` を渡し、`window_end_date` に書く（null なら NULL） |
+| `BatchRunMapper` | `insertJobRun`、`updateJobRun`、`insertStepRun`、`updateStepRun`、`Optional<LastS1> findLastSuccessfulS1()`（`step_name = 'S1' AND result = 'SUCCESS' ORDER BY started_at DESC LIMIT 1` で、成功した日と `window_end_date`。**2026-11-25 から、成功した日は `COALESCE(collect_base_date, DATE(started_at))`**（基準日。05 の 3.3 の 12.。列は U-17 で db-designer が足す））、`Optional<PreviousS1> findLatestS1Before(long jobRunId)`（2026-11-25。`SELECT result, collect_base_date FROM batch_step_run WHERE step_name = 'S1' AND job_run_id < #{jobRunId} ORDER BY id DESC LIMIT 1`。`PreviousS1`（record）: `String result`（`SUCCESS`・`FAILURE`・null）、`LocalDate collectBaseDate`）、`Optional<FailedStep> findFirstFailedStep(long jobRunId)`（下の「ジョブの `error_message`」）。`FailedStep`（record）: `String stepName`, `String errorMessage`。`updateStepRun` は `collect_base_date` も書く（2026-11-25） |
+| `StepResult`（record） | `success`, `processedCount`, `StepSummary summary`, `errorMessage`, `LocalDate windowEndDate`（成功した S1 の「今回の窓の末日」だけ。ほかは null。失敗で null でなければコンストラクタが `IllegalArgumentException`（04 の `chk_batch_step_run_window`）。11 の U-11、2026-11-24 解消）、**`LocalDate collectBaseDate`**（2026-11-25。S1 の基準日。成功・失敗とも S1 だけが入れ、ほかは null。`windowEndDate` があって `collectBaseDate` が null → `IllegalArgumentException`。05 の 3.3 の 12.）。作り方: `success(n, summary)`、`failure(summary, msg)`、`failure(n, summary, msg)`、S1 用の `s1Success(n, summary, windowEndDate, collectBaseDate)`・`s1Failure(n, summary, msg, collectBaseDate)`（前の `success(n, summary, windowEndDate)` は `s1Success` に替える）。`BatchRunRecorder.finishStep` が `updateStepRun` に `windowEndDate`・`collectBaseDate` を渡し、`window_end_date`・`collect_base_date` に書く（null なら NULL） |
 | `StepSummary`（final クラス。ステップの中で数えるので可変） | 件数 `Map<String, Long> counts`（`LinkedHashMap`。足した順を保つ）と内容 `Map<String, List<String>> details`（B-02 の「件数と内容」用。名前ごとに最大 50 件、それより多い分は入れない（件数は `counts` にある））。メソッド: `increment(String name)`、`add(String name, long n)`、`addDetail(String name, String value)`、`long get(String name)`（ないときは 0）。JSON: `counts` を最上位のキーに足した順で並べ、`details` は空でなければ最後に `"details"` の下に置く（`@JsonValue` で `LinkedHashMap` を作って返す。Jackson 3 の `@JsonAnyGetter` では展開したキーがほかの項目の後ろに並び、`details` が先になるため使わない。2026-11-19、Issue #36 の実装で判明）（例: `{"saved":120,"skippedGenre":2}`、`{"lockerUnmatched":1,"details":{"lockerUnmatched":["7|이수|…"]}}`） |
 | `JobResult`（enum） | `SUCCESS`, `PARTIAL_FAILURE`, `FAILURE`, `LOCKED` |
 | `Retry` | `<T> T call(Supplier<T>, List<Duration> waits, Predicate<Exception> retryable)`（2・4・8 秒など） |
@@ -786,13 +850,19 @@ CatTicket の会員登録を完了するには、下のリンクを開いてく�
     - `JobLockTest`（`@MybatisTest`。実際の MySQL）に足す: ① `sqlSessionFactory.openSession()` の `getConnection()` のクラス名が `com.zaxxer.hikari` で始まる。② 捨てるとロックが外れる: テストで `openSession()` し、その `JobLockMapper` で名前 A（`catticket-test-…`）の `GET_LOCK` を取る → 同じ session で `releaseAndClose(session, 名前B)`（B は取っていないので `NULL` → 捨てる）→ 別の `tryAcquire(A)` が 5 秒以内に取れる（100 ms ごとに試す。物理接続は別のスレッドで閉じるため）。
 - `catticket-{task}` のロック名は最長 31 文字（`catticket-purge-expired-signups`。MySQL の上限 64 文字以内）。
 - ステップの名前（`batch_step_run.step_name`）: B-01 は `S1`〜`S4`・`S6`・`S7`（`S5` は欠番。05 の 3.6）。B-02〜B-04 は1つのステップとして記録し（04 の `batch_step_run.step_name`）、名前は処理の名前と同じ（`import-subway`、`create-admin`、`purge-expired-signups`）。B-04 は消した件数を `processed_count` に入れる。
-- 「前回 S1 が成功した日」は `findLastSuccessfulS1` の `started_at` の日付（04 の DB-10）。
+- 「前回 S1 が成功した日」は `findLastSuccessfulS1` の値で、成功した S1 の基準日（`collect_base_date`。NULL の古い行は `started_at` の日付。04 の DB-10 を U-17 で直す。05 の 3.3 の 12.）。
 
 ### 5.3 B-01 日次収集（`collect.batch.DailyCollectJob`）
 
 - `run()`: `BatchJobRunner.execute(DAILY_COLLECT, ctx -> …)` の中で S1〜S4・S6・S7 を順に呼ぶ（05 の 3.2）。各ステップは `try` で囲み、例外は `StepResult` の失敗にして次へ進む。1つでも失敗なら `PARTIAL_FAILURE`、すべて成功なら `SUCCESS`。
+- **KOPIS の呼び出しの方針**（2026-11-25。05 の 3.2・3.5、4.9 の `KopisCallPolicy`）: 依存に `KopisCallPolicy` を足す。
+  1. `runSteps` の最初（S1 の前）に `policy.startJob()` を1回呼ぶ。
+  2. KOPIS のステップ（S1・S2・S3・S4・S6）は、どれも次の順で行う（`runKopisStep(ctx, name, step)`）: ① `recorder.startStep`（行を作る）→ ② `policy.stopped()` が真なら、`run` を呼ばずに `StepResult.failure(summary, "skipped: KOPIS calls stopped in this run at " + policy.stopMessage())`（`summary` は `kopisCalls` = 0 だけ）→ ③ そうでなければ `policy.startStep(name)`。`policy.allowance()` が 0 なら、`run` を呼ばずに `StepResult.failure(summary, "skipped: no KOPIS call allowance left (" + runCalls + "/" + perRun + ")")` → ④ そうでなければ今のとおり `try` でステップの `run` を呼ぶ → ⑤ 結果の `summary` に `kopisCalls` = `policy.stepCalls()` を足す（`summary` が null（例外で終わった）なら、`kopisCalls` だけの `StepSummary` を作り、同じ失敗の内容で `StepResult` を作り直す）→ ⑥ `recorder.finishStep`。
+  3. S7 は止めた印・割り当てによらず今のとおり呼ぶ（KOPIS を呼ばない）。
+  4. 最後に INFO のログ `KOPIS calls in this run: {runCalls}/{perRun}`（止めたなら `stopped: {stopMessage}` も）。
+  - `skipped` の行の `processed_count` は NULL（`failure(summary, msg)` を使う）。`error_message` は `BatchRunRecorder` が整える（5.2）。ジョブの `error_message` は今のまま最初に失敗したステップ（遮断で止まったステップ、または S1 の上限）になる。
 - ステップのクラスは 4.9（S1〜S4・S6）と `translation.TranslationStep`（S7。`TranslationService.translatePending` を呼ぶ）。
-- S4 の入力（S2・S3 で見た公演 ID）は `DailyCollectJob` がメモリで受け渡す（`StepResult` とは別に `Set<String>`）。**2つの集合に分ける**（2026-11-24。05 の 3.2 の「S3 と S4 の受賞歴」）: `run()` の中で `Set<String> rankingIds = new LinkedHashSet<>()`・`Set<String> awardIds = new LinkedHashSet<>()` を作り、`RankingCollectStep.run(ctx, rankingIds)`、`AwardCollectStep.run(ctx, awardIds)`、`MissingPerformanceStep.run(ctx, rankingIds, awardIds)` と渡す。S2・S3 が失敗・`StepAbortedException` で止まったときも、それまでに足した ID で S4 を行う（05 の 3.2）。
+- S4 の入力（S2・S3 で見た公演 ID）は `DailyCollectJob` がメモリで受け渡す（`StepResult` とは別に `Set<String>`）。**2つの集合に分ける**（2026-11-24。05 の 3.2 の「S3 と S4 の受賞歴」）: `run()` の中で `Set<String> rankingIds = new LinkedHashSet<>()`・`Set<String> awardIds = new LinkedHashSet<>()` を作り、`RankingCollectStep.run(ctx, rankingIds)`、`AwardCollectStep.run(ctx, awardIds)`、`MissingPerformanceStep.run(ctx, rankingIds, awardIds)` と渡す。S2・S3 が失敗・上限（`KopisCallLimitException`）で止まったときも、それまでに足した ID で S4 を行う（05 の 3.2）。KOPIS の呼び出しを止めたとき（`KopisStoppedException`）は S4 を呼ばない（上の 2.）。
 - 再実行（`daily-collect`）は同じクラス。冪等性は 05 の 3.2 の表のとおり（追加・更新・入れ替え）。
 - **S5 はない**（欠番。人間の決定2、2026-11-20、Issue #38 コメント 7032205139。05 の 3.6）。S4 の次は S6。`batch_step_run` に `S5` の行は作らない。将来ステップを足すときは `S8` から名前を付け、`S5` を使い回さない。
 
@@ -1016,7 +1086,7 @@ verify(token):
   - 数（`rnum`・`prfdtcnt`・`ntssnmrssm` など）: 整数の文字列。`boxStatsCate` の `totnmrssm`・`ntssamountsm` は負になりうる（使わない）。
   - 要求の日付（`stdate`・`eddate`・`afterdate`）: `yyyyMMdd`。
 - **使う項目**: 目録 `pblprfr` は `mt20id`。詳細は `mt20id`・`prfnm`・`prfpdfrom`・`prfpdto`・`prfcast`・`prfruntime`・`prfage`・`pcseguidance`・`dtguidance`・`poster`・`area`・`genrenm`・`openrun`・`updatedate`・`mt10id`・`relates`（04 の 4.2・4.3 の列に対応。`prfstate` は使わない。ADR 0008 2.）。施設は `mt10id`・`fcltynm`（会場名）・`adres`・`la`・`lo`（04 の 4.1）。順位は `rnum`・`mt20id`（`cate` は使わない。ジャンルは照会の `catecode` で決まる）。受賞作は `mt20id`。ジャンル別統計は `catenm`・`ntssnmrssm`。
-- **テスト**（`KopisClientTest`・`KopisXmlReaderTest`。応答は `src/test/resources/external/kopis/`）: 実際の応答（2026-11-20 に実行 Claude が取ったもの。キーは伏せてある。実行 Claude から受け取る）を基に、次のファイルを用意する。目録（100 件のページ・最後のページ・`<dbs/>`）、詳細（`relates` が複数・`relates` なし・空白1文字の項目）、詳細の `04`、施設詳細、施設の `04`、順位（50 行・1 行・`<boxofs/>`）、受賞作、ジャンル別統計（`합계` と負の `totnmrssm` を含む 10 行）、エラーの `01`・`02`・`05`・`06`・知らないコード（例 `99`）。2026-11-24 に追加: 小数の秒の付いた `updatedate` の詳細、XML として読めない本文（途中で切れたもの）、行要素のない整形式の本文（上の 6.）、HTTP 5xx・4xx・301。`KopisCallPolicyTest`: 間隔（2回目から待つ）、再試行 2・4・8 秒、Fatal は再試行しない、Retryable の再試行の後の失敗・Fatal がどちらも数に入る、成功で 0 に戻る、10 回目で `StepAbortedException`（原因は元の例外）、その後は呼ばずに投げる、`startStep()` で再び呼べる。
+- **テスト**（`KopisClientTest`・`KopisXmlReaderTest`。応答は `src/test/resources/external/kopis/`）: 実際の応答（2026-11-20 に実行 Claude が取ったもの。キーは伏せてある。実行 Claude から受け取る）を基に、次のファイルを用意する。目録（100 件のページ・最後のページ・`<dbs/>`）、詳細（`relates` が複数・`relates` なし・空白1文字の項目）、詳細の `04`、施設詳細、施設の `04`、順位（50 行・1 行・`<boxofs/>`）、受賞作、ジャンル別統計（`합계` と負の `totnmrssm` を含む 10 行）、エラーの `01`・`02`・`05`・`06`・知らないコード（例 `99`）。2026-11-24 に追加: 小数の秒の付いた `updatedate` の詳細、XML として読めない本文（途中で切れたもの）、行要素のない整形式の本文（上の 6.）、HTTP 5xx・4xx・301。2026-11-25 に追加: `blocked-400.html`（2026-11-24 の遮断の応答の本文。キー・URL を含めない。実行 Claude がログから作って渡す。残っていなければ `<html><head><title>Request Blocked</title></head><body>Request Blocked</body></html>` の形で作り、README に「実物ではない」と書く）、`blocked-200.html`（同じ本文を HTTP 200 で返すテスト用。中身は `blocked-400.html` と同じでよい）。`KopisCallPolicyTest` などで確かめることは 4.9 の「呼び出しの方針のテスト」（前の「10 回目で `StepAbortedException`」「`startStep()` で再び呼べる」のテストは消す）。
 
 ### 7.2 テストでの置き換え（`CLAUDE.md` の「テスト」）
 
@@ -1077,7 +1147,13 @@ catticket:
   kopis:
     base-url: http://www.kopis.or.kr/openApi/restful
     api-key: ${KOPIS_API_KEY:}          # 既存の kopis.api-key をここへ移す
-    interval: 500ms
+    interval: 7s                         # 05 の 3.5（2026-11-25）。根拠なく短くしない
+    call-limit:                          # 1回の実行の送信の上限（05 の 3.5）。ここは開発の値（既定）。本番は application-prod.yml
+      per-run: 20
+      s2: 4
+      s3: 2
+      s4: 2
+      s6: 1
   azure:
     translator-endpoint: https://api.cognitive.microsofttranslator.com
     translator-key: ${AZURE_TRANSLATOR_KEY:}
@@ -1105,6 +1181,25 @@ catticket:
 ```
 
 - 既存の設定（`spring.application.name`、`spring.config.import`（`.env` の読み込み）、`spring.datasource.username`・`password`、`mybatis`）は残す。上はこの文書で足す・変えるキー（`mybatis` は確認のため既存の値を再掲）。既存の最上位の `kopis.api-key` は `catticket.kopis.api-key` に移して消す。
+- **本番だけの設定 `application-prod.yml`**（2026-11-25。05 の 3.5 の「1回の実行の上限」。人間の決定 7152704798 の決定2）: `backend/src/main/resources/application-prod.yml` を作る。Spring のプロファイル `prod` のときだけ `application.yml` に重ねて読まれる。
+
+```yaml
+# 本番だけ（SPRING_PROFILES_ACTIVE=prod のとき）。05 の 3.5
+catticket:
+  kopis:
+    call-limit:
+      per-run: 1500
+      s2: 70
+      s3: 20
+      s4: 200
+      s6: 5
+```
+
+  - `CatticketProperties.Kopis` に `CallLimit callLimit`（record `CallLimit(int perRun, int s2, int s3, int s4, int s6)`）を足す。確かめは `KopisCallPolicy` のコンストラクタ（4.9）。
+  - **既定（プロファイルなし）は開発の値**。`bootRun`・テスト（`src/test/resources/config/application.yml` は上限を書かないので `application.yml` の開発の値になる）・ローカルの `docker compose --profile app`（`.env` に `SPRING_PROFILES_ACTIVE` がなければ）は開発の値になる。本番のサーバーだけ `SPRING_PROFILES_ACTIVE=prod`（8.2）。理由: 設定を忘れたときに大きく呼ばない側にするため（05 の 3.5）。
+  - **メインのチェックアウトの `.env` に `SPRING_PROFILES_ACTIVE` を書かない**（`.env` は worktree にコピーされ、どこでも本番の値になる。`TEST_DB_NAME` と同じ注意）。本番の値で試すときはコマンドの引数で渡す（5.1）。
+  - プロファイルは Spring Boot の標準の機能で、新しいライブラリ・依存ではない（1.3 にあたらない）。`application-prod.yml` には本番だけの値を置く（今は KOPIS の上限だけ。秘密の値は置かない）。
+  - プロファイル以外に環境変数で1つずつ上書きすることもできる（Spring Boot の標準。例: `CATTICKET_KOPIS_CALLLIMIT_PERRUN`）が、運用では使わない（値は設計書とこのファイルで管理する）。
 - 秘密の値（キー・パスワード）は既定値を空にし、`.env` → 環境変数で渡す（`CLAUDE.md` の「セキュリティ」）。ファイルに値を書かない。
 - `catticket.task` は手での実行のときだけコマンドの引数で渡す（5.1）。
 - `catticket.subway.*` は U-03 でファイル名が決まった（2026-11-19）ので、B-02 を作る PR（Issue #36）で上の値を `application.yml` に足す（それまでは置かない。`application.yml` の今のコメントを置き換える）。
@@ -1128,8 +1223,9 @@ catticket:
 | `CATTICKET_PUBLIC_BASE_URL` | `catticket.public-base-url` | メールのリンクの公開の URL（ADR 0010） | 新規 |
 | `CATTICKET_ADMIN_EMAIL`, `CATTICKET_ADMIN_PASSWORD` | `catticket.admin.*` | B-03 だけで使う（05 の 5。実行の後に消す） | 新規 |
 | `SESSION_COOKIE_SECURE` | `server.servlet.session.cookie.secure` | ローカルの http で `false`。本番は設定しない（既定 `true`） | 新規 |
+| `SPRING_PROFILES_ACTIVE` | Spring Boot（プロファイル） | **本番のサーバーだけ `prod`**（8.1 の `application-prod.yml`。KOPIS の上限が本番の値になる）。ローカル・CI・メインのチェックアウトの `.env` には書かない（既定は開発の値。2026-11-25） | 新規 |
 
-- `.env.example` への追加は実行 Claude の担当（11 の U-07）。
+- `.env.example` への追加は実行 Claude の担当（11 の U-07。`SPRING_PROFILES_ACTIVE` はコメントで「本番だけ」と書く。11 の U-18）。
 
 ## 9. 04 の 11.7 から渡された事項（A-02〜A-07）の決定
 
@@ -1158,7 +1254,7 @@ catticket:
 | F-05 | SC-01, SC-02 | API-04、B-02 | `station`, `venue` | `SurroundingController`・`SurroundingService`・`NearbyFilter`、`SubwayImportJob` |
 | F-06 | SC-01, SC-02 | API-04、B-02 | `coin_locker`, `station`, `venue` | `SurroundingService`、`SubwayRowConverter` |
 | F-07 | SC-01 | API-05、B-01, B-02 | `performance`, `venue`, `override`, `station`, `coin_locker` | `SurroundingService.getAroundLocation`、`PerformanceService.findPublicByVenueIds`、`PerformanceSummaryAssembler` |
-| F-08 | SC-01, SC-02 | API-01〜03、B-01 | `performance`, `venue`, `booking_site`, `override`, `*_run` | `DailyCollectJob`、`PerformanceCollectStep`、`CollectWindows`、`BatchRunRecorder` |
+| F-08 | SC-01, SC-02 | API-01〜03、B-01 | `performance`, `venue`, `booking_site`, `override`, `*_run` | `DailyCollectJob`、`PerformanceCollectStep`、`CollectWindows`、`BatchRunRecorder`、`KopisCallPolicy`（05 の 3.5） |
 | F-09 | SC-01, SC-02, SC-03, SC-11 | API-01〜03, 05, 20, 43、B-01 | `performance`, `ranking_entry`, `favorite`, `review` | `SharedSql.publicCondition`、`PerformanceStatus`、`CollectMapper`（削除しない） |
 | F-10 | 全画面 | 全 API（`lang`） | — | `LangQuery`、`LocalizedTextFactory` |
 | F-11 | 全画面 | 全 API、B-01（S7）, B-02 | `translation`, `translation_usage`, `performance`, `override`, `booking_site`, `venue`, `station`, `coin_locker` | `TranslationLookupService`、`LocalizedTextFactory`、`TranslationService`・`AzureTranslatorClient` |
@@ -1201,7 +1297,8 @@ catticket:
 - 4 のすべての Controller のメソッドは 03 の API に対応し、03 のすべての API（API-01〜06, 10〜13, 20〜22, 30〜38, 40〜45, 50〜56）に受け持つクラスがある（API-32 は `SecurityConfig` の `logout`）。03 にない API のメソッドは置いていない。
 - 5 のジョブは 05 の B-01〜B-04 だけ。運営者のための API・画面は置いていない（05 の 1.1）。
 - 要件 ID のない機能のクラス（通知、メールの再送、検索条件の保存など）は置いていない。共通の部品（`common.*`、`summary`）は上の表のいずれかの行で使う。
-- テーブルは V1 の 18 個とビュー `performance_effective` を使い、06 で新しいテーブル・列は要らない（db-designer に渡すものはない）。
+- テーブルは V1 の 18 個とビュー `performance_effective` を使い、06 で新しいテーブルは要らない。列は `batch_step_run` に S1 の基準日を1つ足す（2026-11-25。05 の 3.3 の 12.。db-designer に渡す: 11 の U-17）。要件 → テーブルの対応は変わらない（F-08・N-04 の `*_run`）。
+- 2026-11-25 に足したクラス・例外（`KopisBlockedException`・`KopisStoppedException`・`KopisStopReason`・`KopisCallLimitException`・`PreviousS1`・`CatticketProperties.Kopis.CallLimit`）は、どれも F-08・N-04 の B-01 の行（KOPIS の呼び出しの制限。05 の 3.5）のためで、要件 ID のない機能ではない。
 
 ## 11. 工程5の前に確かめること・未決事項
 
@@ -1239,8 +1336,11 @@ catticket:
 | U-13 | S4 が新しく保存した S3 の受賞作の `has_award` が、その日に立たない（コミット 274d3fa。S3 は S4 の前に終わり、`upsertPerformance` は `has_award` を書かない）。終了日が今日の公演は翌日の S3 の窓に入らず、いつまでも立たない（F-31 ① を満たさない） | **解消**（2026-11-24、Issue #38 のコミット ce393bd。architect が確認）。方針は 2026-11-24 に architect が決めた（05 の 3.2 の「S3 と S4 の受賞歴」）。直したこと: ① `PerformanceSaveService.saveFromKopis` に `boolean awarded` を足し、`awarded` なら保存の最後に同じトランザクションで `markAwarded(List.of(mt20id), now)`（戻り値 1 で `awardMarked`）② `KopisPerformanceImporter.importOne` に `boolean awarded` を足して渡す（S1 は `false`）③ `MissingPerformanceStep.run(ctx, rankingIds, awardIds)` にし、`awardIds.contains(id)` を渡す ④ `DailyCollectJob` は 5.3 のとおり2つの集合で渡す（S2・S3 のコードは変えない）。テスト: `PerformanceSaveService` の単体テストで `awarded` が真 → `upsertPerformance` の後に `markAwarded`（`InOrder`）、偽 → 呼ばない、保存しない公演 → 呼ばない。`MissingPerformanceStepTest` で受賞作だけ・順位だけ・両方の ID の `awarded`。`CollectMapperTest` で、新しく入れた公演に `markAwarded` → `has_award` が真 | 4.9、5.3、6.4 |
 | U-14 | `DistrictParser` の `rest.split("\s+", 2)`（コミット 274d3fa）: Java 15 以降、文字列の `\s` は半角の空白（U+0020）1文字のエスケープなので、正規表現は ` +` になる（タブなどで区切れない）。今の版の住所では結果は変わらない見込みで、軽微 | **解消**（2026-11-24、Issue #38 のコミット ce393bd。architect が確認）。`"\\s+"` に直し、`DistrictParserTest` にタブで区切った住所を足した | 4.9 |
 | U-15 | S7 の翻訳（コミット e495d44・4f92571）の直す点。① 未翻訳の読みの `COLLATE utf8mb4_bin`（PAD SPACE）は末尾の空白だけ違う原文をまとめる（軽微。漏れはしない）② 1つで Azure の1回の上限（5 万文字）を超える原文を送ると毎回同じところで失敗し、S7 が毎日止まって後ろの原文が訳されない（`TEXT` の列は ASCII なら 65,535 文字まで入る）③ キーが空・HTTP 4xx でも 2・4・8 秒の再試行をする（キーが空で約 14 秒むだ） | **解消**（2026-11-24、Issue #38 のコミット d281b89。architect が確認）。方針は 2026-11-24 に architect が決めた（4.10 の 1.・2.・7.）。直したこと: ① `TranslationMapper.xml` の `COLLATE utf8mb4_bin` をすべて `COLLATE utf8mb4_0900_bin` にする ② `TranslationService` で、束にする前に `charCount(text) > requestMaxChars` の原文を除き、`tooLong` を数えて内容 `{種類}|{コードポイントの数}|{Hashes.sha256Hex(text)}` を足す（`sent` には入れる）。`batches` の「1つで超える原文はそれだけで1回」はなくなる（超える原文は来ない） ③ `translation.client` に `TranslatorFatalException extends TranslatorException` を足し、`AzureTranslatorClient` はキーが空と HTTP 4xx（408・429 を除き、本文の `error.code` が `403001` のときはこれまでどおり `TranslatorQuotaExceededException`）でこれを投げる。`TranslationService.send` はこれを再試行せずに投げ直す。テスト: `TranslationMapperTest` で `abc` と `abc ` が別々に返る。`TranslationServiceTest` で 10,001 文字の原文は送らず `tooLong`・ほかの原文は送る・結果は `SUCCESS`、ちょうど 10,000 文字は送る、`TranslatorFatalException` は1回で止まり待たない（`Sleeper` が呼ばれない）。`AzureTranslatorClientTest` でキーが空・400・401 → `TranslatorFatalException`、408・5xx → `TranslatorException`（`TranslatorFatalException` でない）、429 → `TranslatorThrottledException`、403 + `403001` → `TranslatorQuotaExceededException` | 4.10 |
+| U-16 | **初回の収集を分ける間、要件を満たさない日がある**（2026-11-25、architect。05 の 3.5 の「初回を分ける」）。1回の実行の上限（人間の決定 7152704798 の決定1）のため、初回の収集は 4 日程度かかる。その間は窓の公演の一部が地図・検索に出ず、F-01 ①（収集の範囲の公演が表示される）・F-08 ②（追加・変更された公演が収集の後に反映される）を満たさない。何日も遮断・失敗した後の取り直しも同じ（数日）。人気順位などは毎日そろう（S2〜S6 の取り置き）が、公演の情報がまだない順位の行は F-29 ⑧ で除かれる。選択肢: **A.** 01 は変えず、本番の公開（工程7）の前に初回の収集を終える（運用手順に「公開の前に `daily-collect` を毎日実行し、S1 が `SUCCESS` になってから公開する」と書く）。公開の後の取り直しの数日は受け入れる。**B.** A に加え、01 に「初回・取り直しの間は一部の公演が遅れて表示される」ことを注記する（requirements-analyst）。**C.** 初回だけ上限を上げる（遮断のおそれがあり、勧めない）。architect の案は **A**（公開の後の取り直しが問題なら B）。どれを選んでも B-01 の作りは変わらないので、実装はこの設計のまま進めてよい | 人間の判断（PM が Issue に記録）。B なら requirements-analyst が 01 を直す。A・B とも運用手順は実行 Claude（工程7） | 05 の 3.5、01 の F-01・F-08 |
+| U-17 | **db-designer への引き継ぎ: `batch_step_run` に S1 の基準日の列を足す**（2026-11-25、architect。05 の 3.3 の 12.）。① 列（名前の案 `collect_base_date`）: `DATE`、NULL 可、既定 NULL、COMMENT 例「S1 の収集の基準日（続きの S1 では続きを始めた日。05 の 3.3 の 12.）。S1 以外は NULL」。② CHECK: `collect_base_date IS NULL OR step_name = 'S1'`。成功した S1 で NULL を禁じるかは db-designer が決める（V3 より前の成功の行は NULL なので、付けるなら `id` などで区切れないため付けない案を勧める）。③ 04 の DB-10 を直す: 「前回 S1 が成功した日」は、成功した S1 の最も新しい行の `COALESCE(collect_base_date, DATE(started_at))`。④ 新しい Flyway の `V3__*.sql`（V1・V2 は変えない）。⑤ インデックス: `findLatestS1Before`（`step_name = 'S1' AND job_run_id < ? ORDER BY id DESC LIMIT 1`）は行が少ないので今のインデックスでよい見込み。要るかは db-designer が判断する。⑥ 04 の 4.18・11.2.18・3. の対応表・`batch_step_run` の説明（03 の 5. の「バッチの実行の記録」に「収集の基準日」を足した）。列の名前を変えたら architect に知らせる（06 の 4.9・5.2 を直す） | db-designer（04・V3。backend-dev の実装の前） | 4.9、5.2、05 の 3.3 の 12. |
+| U-18 | 実行 Claude への引き継ぎ（2026-11-25）: ① `.env.example` に `SPRING_PROFILES_ACTIVE` をコメントで足す（「本番のサーバーだけ prod。ローカル・メインのチェックアウトの .env には書かない」）。② 運用手順（`docs/ops/`、工程7）に、本番で `SPRING_PROFILES_ACTIVE=prod` を設定すること、起動のログで KOPIS の上限の値を確かめること、遮断・上限で止まった日に手で再実行しないこと（05 の 3.8）、U-16 の A の手順を書く。③ `src/test/resources/external/kopis/blocked-400.html` の元（2026-11-24 の遮断の応答の本文。キー・URL を除く）を backend-dev に渡す（7.1） | 実行 Claude（①③ は backend-dev の実装の前、② は工程7） | 8.1、8.2、7.1 |
 
-- db-designer に渡すもの: なし（新しいテーブル・列・インデックスは要らない。U-05 の `EXPLAIN` でインデックスが要るとわかったら db-designer に渡す）。
+- db-designer に渡すもの: **U-17**（`batch_step_run` の列・CHECK・DB-10・V3）。ほかに新しいテーブル・インデックスは要らない（U-05 の `EXPLAIN` でインデックスが要るとわかったら db-designer に渡す）。
 
 ---
 
@@ -1248,7 +1348,7 @@ catticket:
 
 ### 06. 클래스 설계서
 
-- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10). PR #32의 reviewer 판정은 조건부 승인이며, 06에 대한 지적(U-01·U-04·U-06·U-07 갱신, 4.5·7.2·8.1·3.2 추가 기술)을 반영함(2026-11-10. 사람의 확인 대기). Issue #23의 결정 E-2·E-3(코멘트 6783513546)을 3.3·11에 반영(2026-11-11). Issue #36에서 역·물품보관함 파일 확인 결과와 사람의 결정(2026-11-19, Issue #36 코멘트)을 4.9·5.2·5.4·8.1·9의 A-07·11의 U-03에 반영(2026-11-19). 같은 Issue의 구현(커밋 061e657·9f8ea15)에서 알게 된 것(따옴표 안의 줄바꿈, 수동 실행의 기동 방법·devtools·`SecurityConfig`, `StepSummary`의 JSON, `error_message` 다듬기, `JobLock` 테스트용 메서드, U-11)을 3.4·5.1·5.2·5.4·11에 반영(2026-11-19), reviewer 확인 대기. Issue #38에서 `JobLock`의 `RELEASE_LOCK` 반환값 처리와 실패한 접속을 버리는 방법, 잡의 `error_message`에 처음 실패한 스텝의 이유를 쓰는 것을 5.2에 추가(2026-11-20. 결정 근거는 Issue #36 코멘트 7031400502), reviewer 확인 대기. Issue #38에서 KOPIS 실제 호출 확인 결과(05의 3.1~3.6·7)를 3.6의 `Genre`·4.9·5.3·6.4·7.1·11의 U-02에 반영(2026-11-20. 장르 목록, 결과 코드와 XML 읽는 법, S2의 미집계 기간, S6의 예매 수), reviewer 확인 대기. Issue #38의 사람의 결정 1·2(2026-11-20, 코멘트 7032205139. 01의 R-69·X-30)로 S5(상연 횟수)를 없애고 `showCount`·`ShowCountStep`·`totalShowCount`·S5용 Mapper 메서드를 뺐다(4.8·4.9·5.2·5.3·6.4·7.1·10·11의 U-02. S5는 결번이며 스텝 이름은 다시 매기지 않는다. 05의 3.6), reviewer 확인 대기. Issue #38의 KOPIS 클라이언트 구현(커밋 97ba154)에서 backend-dev가 정한 것(`KopisCallPolicy`의 `startStep()`과 실패 세는 법, 05의 3.5에 없는 실패의 처리, `KopisPerformanceDetail`의 `@JsonCreator`, `KopisEnvelope`·`KopisGenreStat`·`StepAbortedException`의 형태, `updatedate`의 소수 초)을 확인해 4.9·7.1에 쓰고, 고칠 점을 11의 U-12로 했다(2026-11-24), reviewer 확인 대기. Issue #38의 S1~S4·S6 구현(커밋 274d3fa·0c58ad4)에서 backend-dev가 정한 것(`saveFromKopis`의 인수, `KopisPerformanceImporter`, `findVenueByKopisId`, S2~S4의 입력, 세기만 하는 것, `DistrictParser`, `StepResult.windowEndDate`)을 확인해 4.9·5.2·5.3·6.4에 쓰고, U-11을 해소하고, 고칠 점을 U-13(S4의 수상 이력. 05의 3.2)·U-14로 했다(2026-11-24). Issue #38의 S7 구현(커밋 e495d44·4f92571)에서 backend-dev가 정한 것(읽는 건수, 재시도 세는 법, 속도 대기, 같은 원문 합치기, 빈 글, 내역, DB 예외, 대상이 없을 때)을 확인해 4.10에 쓰고, 고칠 점(콜레이션, 너무 긴 원문, 재시도하지 않는 오류)을 U-15로 했다(2026-11-24), reviewer 확인 대기. PR #46의 reviewer 경미 1(코멘트 7123152330)로 U-12~U-15를 해소(커밋 72d601f·ce393bd·d281b89. architect가 코드를 확인)로 하고, 4.9·4.10의 "지금 코드는…고친다"를 고친 뒤의 표현으로 바꿨다(2026-11-24)
+- 상태: 리뷰 완료(공정 4, Issue #20. 관문 4의 reviewer 판정은 조건부 승인(2026-11-09)이며, 관문 4 reviewer의 지적 중 06에 관련된 것(경미·제안)을 반영함. 사람의 승인 대기). Issue #23(PR #32, 공통 부품 구현)에서 사람이 정한 D-1~D-4(코멘트 6760227708)를 3.2·3.3·3.6·4.1·4.7·4.8·11에 반영(2026-11-10). PR #32의 reviewer 판정은 조건부 승인이며, 06에 대한 지적(U-01·U-04·U-06·U-07 갱신, 4.5·7.2·8.1·3.2 추가 기술)을 반영함(2026-11-10. 사람의 확인 대기). Issue #23의 결정 E-2·E-3(코멘트 6783513546)을 3.3·11에 반영(2026-11-11). Issue #36에서 역·물품보관함 파일 확인 결과와 사람의 결정(2026-11-19, Issue #36 코멘트)을 4.9·5.2·5.4·8.1·9의 A-07·11의 U-03에 반영(2026-11-19). 같은 Issue의 구현(커밋 061e657·9f8ea15)에서 알게 된 것(따옴표 안의 줄바꿈, 수동 실행의 기동 방법·devtools·`SecurityConfig`, `StepSummary`의 JSON, `error_message` 다듬기, `JobLock` 테스트용 메서드, U-11)을 3.4·5.1·5.2·5.4·11에 반영(2026-11-19), reviewer 확인 대기. Issue #38에서 `JobLock`의 `RELEASE_LOCK` 반환값 처리와 실패한 접속을 버리는 방법, 잡의 `error_message`에 처음 실패한 스텝의 이유를 쓰는 것을 5.2에 추가(2026-11-20. 결정 근거는 Issue #36 코멘트 7031400502), reviewer 확인 대기. Issue #38에서 KOPIS 실제 호출 확인 결과(05의 3.1~3.6·7)를 3.6의 `Genre`·4.9·5.3·6.4·7.1·11의 U-02에 반영(2026-11-20. 장르 목록, 결과 코드와 XML 읽는 법, S2의 미집계 기간, S6의 예매 수), reviewer 확인 대기. Issue #38의 사람의 결정 1·2(2026-11-20, 코멘트 7032205139. 01의 R-69·X-30)로 S5(상연 횟수)를 없애고 `showCount`·`ShowCountStep`·`totalShowCount`·S5용 Mapper 메서드를 뺐다(4.8·4.9·5.2·5.3·6.4·7.1·10·11의 U-02. S5는 결번이며 스텝 이름은 다시 매기지 않는다. 05의 3.6), reviewer 확인 대기. Issue #38의 KOPIS 클라이언트 구현(커밋 97ba154)에서 backend-dev가 정한 것(`KopisCallPolicy`의 `startStep()`과 실패 세는 법, 05의 3.5에 없는 실패의 처리, `KopisPerformanceDetail`의 `@JsonCreator`, `KopisEnvelope`·`KopisGenreStat`·`StepAbortedException`의 형태, `updatedate`의 소수 초)을 확인해 4.9·7.1에 쓰고, 고칠 점을 11의 U-12로 했다(2026-11-24), reviewer 확인 대기. Issue #38의 S1~S4·S6 구현(커밋 274d3fa·0c58ad4)에서 backend-dev가 정한 것(`saveFromKopis`의 인수, `KopisPerformanceImporter`, `findVenueByKopisId`, S2~S4의 입력, 세기만 하는 것, `DistrictParser`, `StepResult.windowEndDate`)을 확인해 4.9·5.2·5.3·6.4에 쓰고, U-11을 해소하고, 고칠 점을 U-13(S4의 수상 이력. 05의 3.2)·U-14로 했다(2026-11-24). Issue #38의 S7 구현(커밋 e495d44·4f92571)에서 backend-dev가 정한 것(읽는 건수, 재시도 세는 법, 속도 대기, 같은 원문 합치기, 빈 글, 내역, DB 예외, 대상이 없을 때)을 확인해 4.10에 쓰고, 고칠 점(콜레이션, 너무 긴 원문, 재시도하지 않는 오류)을 U-15로 했다(2026-11-24), reviewer 확인 대기. PR #46의 reviewer 경미 1(코멘트 7123152330)로 U-12~U-15를 해소(커밋 72d601f·ce393bd·d281b89. architect가 코드를 확인)로 하고, 4.9·4.10의 "지금 코드는…고친다"를 고친 뒤의 표현으로 바꿨다(2026-11-24). PR #46 reviewer의 중대 2(코멘트 7123152330)와 Issue #38 사람의 결정(코멘트 7123543509의 결정 3, 7152704798의 결정 1·2·5)으로 KOPIS 호출 방침(05의 3.5 개정)을 3.1·4.9(`KopisClient`의 차단 표시, `KopisCallPolicy` 다시 만들기, `StepAbortedException` 없앰, 스텝 쪽 처리, S1 이어 가기, 테스트 표)·5.2·5.3·7.1·8.1·8.2·10·11(U-16~U-18)에 반영했다(2026-11-25), 사람의 승인 대기. `batch_step_run`에 열을 하나 더해야 하므로 db-designer에게 넘긴다(U-17)
 - 담당: architect
 - 입력: `01-requirements.md`, `02-screens.md`, `03-api.md`(API 사양 상세), `04-tables.md`와 `backend/src/main/resources/db/migration/V1__create_schema.sql`, `05-batch.md`, ADR 0001~0016.
 - 대상: 백엔드(`backend/`, Spring Boot)만. Angular 클래스 설계는 대상 외(공정 5에서 frontend-dev가 `02`·`03`·`07`로 만든다).
@@ -1335,7 +1435,7 @@ catticket:
 
 | 클래스 | 패키지 | 역할 |
 |---|---|---|
-| `CatticketProperties` | `common.config` | `@ConfigurationProperties("catticket")` `record`(중첩 record: `Kopis`, `Azure`, `Recaptcha`, `Mail`, `Admin`, `Subway`, `Scheduler`, `publicBaseUrl`, `task`). 키는 8 |
+| `CatticketProperties` | `common.config` | `@ConfigurationProperties("catticket")` `record`(중첩 record: `Kopis`, `Azure`, `Recaptcha`, `Mail`, `Admin`, `Subway`, `Scheduler`, `publicBaseUrl`, `task`. `Kopis` 안에 `CallLimit`(2026-11-25. 8.1)). 키는 8 |
 | `ClockConfig` | `common.config` | `Clock` Bean(`Clock.system(ZoneId.of("Asia/Seoul"))`) |
 | `HttpClientConfig` | `common.config` | 외부 API별 `RestClient`(`@Qualifier("kopisRestClient")` 등. 7) |
 | `JacksonConfig` | `common.config` | `JsonMapperBuilderCustomizer`(3.3의 타입 엄격함) |
@@ -1811,27 +1911,68 @@ Service
 | `List<KopisGenreStat> genreStats(Period period)` | `boxStatsCate`(`stdate` = `period.start`·`eddate` = `period.end`. 지역 변수는 보내지 않는다(듣지 않음. 05의 3.2의 "S6 상세")). `합계` 행도 포함해 돌려주고, 빼는 것은 `GenreTrendCalculator` |
 
 - XML 읽는 법(루트 요소·행 요소 이름, 오류 구별 방법, 빈 응답, 값 다듬기)은 7.1의 "KOPIS XML 읽는 법". 결과 코드 처리(05의 3.5): `01`·`02`·`05`·`06`·그 밖의 모르는 코드 → `KopisFatalException`(재시도 안 함. 메시지는 `KOPIS {service} returncode={code} errmsg={errmsg}`), `03`·통신 실패·타임아웃·5xx → `KopisRetryableException`, `04` → 상세는 `Optional.empty()`, 목록은 0건.
-- 호출 간격(0.5초)·재시도(2·4·8초, 최대 3번)는 `KopisCallPolicy`가 갖는다(`Sleeper` 사용. 테스트에서는 기다리지 않음). 같은 스텝에서 재시도 후에도 실패한 호출이 연속 10번이 되면 `StepAbortedException`(05의 3.5).
 - **05의 3.5 표에 없는 실패**(2026-11-24, Issue #38 구현(커밋 97ba154)에서 backend-dev가 정하고 architect가 확인):
-  - HTTP 3xx·4xx → `KopisFatalException`(`KOPIS {service} HTTP {status}`). 3xx는 `https`로 불렀을 때의 301 등 만듦새의 오류(05의 3.5), 4xx는 요청의 오류이며, 둘 다 몇 번 불러도 같으므로. 429도 4xx로서 재시도하지 않는다(KOPIS는 429를 돌려준다고 공개하지 않았고, 돌아온다 해도 제한에 걸린 것이므로 계속 부르지 않는다. 이어지면 아래의 10번에서 멈춘다).
-  - 본문이 비었거나 XML로 읽을 수 없음(도중에 끊긴 응답, 점검 중 HTML 등), 트리는 됐지만 봉투 record로 읽을 수 없음 → `KopisRetryableException`(`KOPIS {service} unreadable response: …`). 통신 실패와 같이 일시적일 수 있으므로. 이어지면 10번에서 멈춘다.
+  - HTTP 3xx → `KopisFatalException`(`KOPIS {service} HTTP {status}`). `https`로 불렀을 때의 301 등 만듦새의 오류(05의 3.5)이며 몇 번 불러도 같으므로.
+  - **HTTP 4xx·차단 표시**(2026-11-25 개정. 05의 3.5의 "차단 표시". 전의 "4xx → `KopisFatalException`, 429도 재시도 안 함"을 대신한다): 아래 "`KopisClient`의 차단 표시".
+  - 본문이 비었거나 XML로 읽을 수 없음(도중에 끊긴 응답, 점검 중 HTML 등), 트리는 됐지만 봉투 record로 읽을 수 없음 → `KopisRetryableException`(`KOPIS {service} unreadable response: …`). 통신 실패와 같이 일시적일 수 있으므로. 이어지면 실행 안의 5번에서 멈춘다(아래 `KopisCallPolicy`). 단, 본문에 `Request Blocked`를 포함하는 것은 차단 표시(아래).
   - **XML로 읽혔지만 행 요소도 결과 코드도 없음**(예: 정형식의 점검 중 페이지 `<html>…</html>`) → `KopisRetryableException`(`KOPIS {service} unexpected response: no row element`). 판정: 7.1 "읽는 절차"의 6.. **0건으로 다루지 않는** 이유: S1 목록의 첫 페이지가 0건으로 보이면 그 구간을 다 가져왔다고 보고 `window_end_date`까지 기록해, 놓친 것이 다음 날에도 고쳐지지 않으므로(97ba154에서는 0건으로 하던 것을 72d601f에서 고쳤다. 11의 U-12).
   - API 키(`catticket.kopis.api-key`)가 빔 → 부르지 않고 `KopisFatalException`(`KOPIS api key is not set (catticket.kopis.api-key)`). `KopisCallPolicy`를 거치지 않으므로 연속 실패 수에 들어가지 않는다(스텝이 첫 번째에서 실패로 하면 된다). 7.2대로 기동 시에는 확인하지 않는다.
   - 로그·예외 메시지에는 URL의 키를 가린 형태만 낸다(`RestClientException`의 메시지는 URL을 포함하므로 쓰지 않고, 원인 I/O 예외의 클래스 이름과 메시지(키를 가린 것)를 쓴다).
-- **`KopisCallPolicy`의 규칙**(2026-11-24, 커밋 97ba154에서 backend-dev가 정하고 architect가 확인):
-  - singleton `@Component`. `KopisClient`의 모든 호출(API 키가 빌 때 제외)이 `<T> T call(Supplier<T>)`를 거친다. `call`은 `synchronized`(동시에 여러 개를 부르지 않음. 05의 3.5). 직전 호출이 있으면 `catticket.kopis.interval`(0.5초) 기다린 뒤 부른다(앱 기동 후 첫 호출은 기다리지 않음). 재시도는 `common.batch.Retry`에 `RETRY_WAITS`(2·4·8초)와 "`KopisRetryableException`이면 재시도"를 넘긴다.
-  - **"같은 스텝"의 구분**: `void startStep()`이 연속 실패 수를 0으로 되돌린다. **S1~S4·S6 스텝 클래스(4.9 표)는 `run`의 처음에 반드시 `startStep()`을 부른다**(부르지 않으면 앞 스텝의 수를 이어받아, 앞 스텝이 10번에서 멈췄을 때 다음 스텝도 한 번도 부르지 않고 멈춘다). 각 스텝의 단위 테스트에서 `run`이 처음에 `startStep()`을 부르는 것을 확인한다(`KopisCallPolicy`는 목. `InOrder`로 `KopisClient` 호출보다 앞). singleton에 수를 가져도 되는 이유: KOPIS를 부르는 것은 B-01뿐이고, B-01은 `JobLock`(`catticket-daily-collect`)으로 동시에 하나만 돌며 스텝도 순서대로 돌기 때문.
-  - **세는 법**: "실패한 호출" 1번 = `call`이 예외로 끝난 1번. 재시도 후에도 `KopisRetryableException`이었던 것과 `KopisFatalException`(재시도 안 함) 둘 다 센다(Fatal도 세는 것은 `02` 키 오류처럼 몇 번 불러도 실패할 때 스텝이 계속 부르지 않게 하기 위해). `call`이 값을 돌려주면 0으로 되돌린다(`04`의 `Optional.empty()`·0건도 성공).
-  - **멈추는 법**: 실패 수가 10에 이른 호출에서는 원래 예외를 원인으로 한 `StepAbortedException`(`KOPIS calls aborted after 10 consecutive failures; last: {원래 메시지}`)을 던진다. 그 뒤로는 `startStep()`까지 부르지 않고 바로 `StepAbortedException`을 던진다(기다림도 넣지 않음).
-  - **스텝 쪽 처리**(다음 회에 만드는 S1~S4·S6): `KopisRetryableException`·`KopisFatalException`은 스텝이 정한 단위(S1·S4는 공연 1건·공연장 1건·목록 1구간, S2는 조합, S3은 1구간, S6은 스텝 전체)로 잡아 "실패"로 세고, 스텝을 실패로 하고 다음 단위로 넘어가도 된다(05의 3.5의 "그 스텝을 실패로 한다"는 스텝의 결과를 실패로 하는 것이며, 그 자리에서 멈추는 것까지 요구하지 않는다). **`StepAbortedException`은 단위에서 잡지 않고** 스텝 밖(5.3의 `DailyCollectJob`의 `try`)까지 내보내 스텝을 멈춘다(`StepResult`의 실패. `errorMessage`는 `BatchRunRecorder.describe(e)`).
-- **`StepAbortedException`**은 `collect.client`에 둔다(`RuntimeException`. 던지는 것은 `KopisCallPolicy`이고 스텝은 잡지 않으므로 클라이언트와 같은 패키지로 한다).
+- **호출 방침 개정**(2026-11-25. 05의 3.5. PR #46 reviewer의 중대 2, Issue #38 사람의 결정 7123543509의 결정 3·7152704798의 결정 1·2): 간격 7초, 재시도 30·60초(최대 2번), 차단 표시와 실행 안에서 연속 5번 실패로 **실행 전체**의 KOPIS 호출을 멈춤, 한 번 실행의 상한은 `KopisCallPolicy`가 갖는다(`Sleeper` 사용. 테스트에서는 기다리지 않음). 전의 규칙(2026-11-24, 커밋 97ba154: 간격 0.5초, 2·4·8초로 최대 3번, `startStep()`으로 수를 되돌리고 스텝마다 10번에서 `StepAbortedException`)은 쓰지 않는다. **`StepAbortedException`은 없앤다**(아래 `KopisStoppedException`·`KopisCallLimitException`으로 바꾼다). HTTP 클라이언트(`HttpClientConfig`의 JDK `HttpClient`)는 바꾸지 않는다.
+
+**`KopisClient`의 차단 표시**(05의 3.5의 "차단 표시". 2026-11-25)
+
+응답 본문을 바이트로 받은 뒤(지금 구조대로 상태가 2xx가 아니어도 본문을 읽는다) 다음 순서로 판정한다.
+
+1. 본문을 UTF-8 문자열로 해서 `Request Blocked`를 포함함(대소문자 구별 안 함. `text.toLowerCase(Locale.ROOT).contains("request blocked")`) → 상태와 관계없이 `KopisBlockedException`(`KOPIS {service} blocked: HTTP {status} (Request Blocked)`).
+2. HTTP 403·429 → `KopisBlockedException`(`KOPIS {service} blocked: HTTP {status}`).
+3. 그 밖의 HTTP 4xx: 본문이 결과 코드 응답(7.1 "읽는 절차" 3.의 판정. `KopisXmlReader`에 결과 코드만 읽는 메서드 `Optional<KopisResult> readResultCode(String service, byte[] body)`를 더한다. 읽을 수 없음·빔·결과 코드 없음 → 빈 값)이면 그 결과 코드의 처리(위의 "결과 코드 처리". `KopisFatalException` 등). 빈 값이면 `KopisBlockedException`(`KOPIS {service} blocked: HTTP {status} (non-XML body)`).
+4. HTTP 5xx → `KopisRetryableException`(지금 그대로). 3xx → `KopisFatalException`(지금 그대로). 2xx → 지금의 읽는 법(7.1).
+- `KopisBlockedException`(`collect.client`, `RuntimeException`)은 `KopisRetryableException`·`KopisFatalException`의 자식으로 **하지 않는다**(스텝 단위의 `catch (KopisRetryableException | KopisFatalException e)`에 잡히지 않게 하기 위해). `KopisCallPolicy`가 받아 `KopisStoppedException`으로 바꾸므로 스텝에는 나오지 않는다.
+- 메시지에 키·URL을 넣지 않는다(지금 그대로). 본문은 넣지 않는다(HTML이 길고 로그로 알 수 있으면 충분. WARN 로그에 본문 앞 200자를 내도 된다. 키는 들어 있지 않다).
+
+**`KopisCallPolicy`**(`collect.client`. singleton `@Component`. `KopisClient`의 모든 호출(API 키가 빌 때 제외)이 `call`을 거친다. 공개 메서드는 모두 `synchronized`)
+
+상태는 실행(잡)마다 갖는다. singleton에 가져도 되는 이유는 전과 같다(KOPIS를 부르는 것은 B-01뿐이고, B-01은 `JobLock`(`catticket-daily-collect`)으로 동시에 하나만 돌며 스텝은 순서대로 돈다).
+
+| 메서드 | 내용 |
+|---|---|
+| `KopisCallPolicy(Retry retry, Sleeper sleeper, CatticketProperties props)` | `props.kopis().interval()`·`callLimit()`을 읽는다. `interval`이 null·음수, `callLimit`이 null, `perRun` ≤ 0, 스텝 상한이 음수 → `IllegalStateException`(기동을 실패시킨다). 뒤 스텝 상한의 합 ≥ `perRun`(S1의 할당이 0이 됨) → WARN. 기동 시 INFO: `KOPIS calls: interval={interval}, per-run={perRun}, S2={s2}, S3={s3}, S4={s4}, S6={s6} (S1 up to {perRun − 합})` |
+| `void startJob()` | 실행의 처음에 1번(5.3의 `DailyCollectJob`). 멈춘 표시(이유·메시지·멈춘 스텝), 실행의 전송 수, 연속 실패 수, 지금 스텝을 되돌린다. **이 밖에서는 되돌리지 않는다** |
+| `void startStep(String stepName)` | KOPIS 스텝의 처음에(`DailyCollectJob`이 부른다. 스텝 클래스는 부르지 않는다). `stepName`은 `S1`·`S2`·`S3`·`S4`·`S6`(그 밖 → `IllegalArgumentException`). 스텝의 전송 수를 0으로 하고 할당을 정한다(아래). 멈춘 표시·연속 실패 수는 되돌리지 않는다 |
+| `boolean stopped()` | 멈췄는지 |
+| `String stopMessage()` | 멈춘 이유: `{멈춘 스텝}: {KopisStoppedException의 메시지}`(멈추지 않았으면 null) |
+| `int allowance()` | 지금 스텝의 남은 횟수(할당 − 스텝의 전송 수. 0 이상) |
+| `int stepCalls()`·`int runCalls()`·`int perRun()` | 지금 스텝의 전송 수·지금 실행의 전송 수·한 번의 상한 |
+| `<T> T call(Supplier<T> attempt)` | 1번의 호출(아래 "`call`의 흐름") |
+
+- **상수**: `RETRY_WAITS` = 30초·60초(최대 2번), `MAX_CONSECUTIVE_FAILURES` = 5, KOPIS 스텝의 순서 `S1, S2, S3, S4, S6`. 간격은 설정 `catticket.kopis.interval`(7초), 상한은 설정 `catticket.kopis.call-limit`(8.1).
+- **할당**(05의 3.5의 "한 번 실행의 상한"): `allowance = max(0, min(cap(step), perRun − runCalls − Σ cap(뒤 스텝)))`. `cap(S1)`은 상한 없음(계산은 `long`으로, `cap(S1)`을 `perRun`으로 다루면 된다). 예(운영: `perRun` 1,500, S2 70·S3 20·S4 200·S6 5): S1 = 1,205. S1이 1,205번 쓴 뒤에는 S2 = 70, S3 = 20, S4 = 200, S6 = 5. S1이 100번만 써도 S2 = min(70, 1,500 − 100 − 225) = 70(남은 것은 넘기지 않는다). 개발(20, S2 4·S3 2·S4 2·S6 1): S1 = 11.
+- **`call`의 흐름**:
+  1. 멈춘 표시가 있음 → 보내지 않고 `KopisStoppedException`(`KOPIS calls stopped in this run: {stopMessage}`. 이유는 멈췄을 때와 같다). 기다리지 않는다.
+  2. 전송 전(재시도 전송 전도)에 스텝의 전송 수 ≥ 할당 → 보내지 않고 `KopisCallLimitException`(`KOPIS call limit reached in {step}: {stepCalls}/{할당} (run {runCalls}/{perRun})`). 연속 실패 수는 바꾸지 않는다(보내지 않았으므로 실패가 아니다).
+  3. 첫 번째 전송 전에, 앱 안에서 앞 전송이 있었으면 `interval` 기다린다(전과 같이 기동 후 첫 전송은 기다리지 않는다). 재시도 전송 전에는 `Retry`의 대기(30·60초)만(둘 다 7초 이상이라 간격을 지킨다).
+  4. 스텝과 실행의 전송 수에 1을 더하고 보낸다. 전체는 `retry.call(sending, RETRY_WAITS, e -> e instanceof KopisRetryableException)`이고, `sending`은 "2.의 확인 → 수를 더함 → `attempt.get()`"의 `Supplier`(재시도마다 2.를 확인한다).
+  5. 값이 돌아옴 → 연속 실패 수를 0으로 하고 돌려준다(`04`의 `Optional.empty()`·0건도 성공).
+  6. `KopisBlockedException` → 멈춘 표시를 붙인다(이유 `BLOCKED`, 멈춘 스텝 = 지금 스텝). ERROR 로그(`KOPIS blocked in {step}; stopping all KOPIS calls in this run: {메시지}`). 원래 예외를 원인으로 한 `KopisStoppedException`(`KOPIS blocked: {원래 메시지}`)을 던진다. 재시도하지 않는다(`Retry`의 판정은 `KopisRetryableException`뿐).
+  7. `KopisRetryableException`(재시도 후)·`KopisFatalException` → 연속 실패 수에 1을 더한다. 5가 되면 멈춘 표시를 붙이고(이유 `CONSECUTIVE_FAILURES`), ERROR 로그, 원래 예외를 원인으로 한 `KopisStoppedException`(`KOPIS calls stopped after 5 consecutive failures; last: {원래 메시지}`). 5 미만이면 원래 예외를 그대로 던진다(스텝의 단위가 `failed`로 센다).
+  8. `KopisCallLimitException`(재시도 도중에 2.에 걸림) → 그대로 던진다.
+- **예외**(`collect.client`, 모두 `RuntimeException`. `KopisRetryableException`·`KopisFatalException`의 자식으로 하지 않는다):
+  - `KopisBlockedException`(위).
+  - `KopisStoppedException`: `KopisStopReason reason()`(enum `KopisStopReason`: `BLOCKED`·`CONSECUTIVE_FAILURES`).
+  - `KopisCallLimitException`.
+- **스텝 쪽 처리**(S1~S4·S6. 전의 "`StepAbortedException`은 단위에서 잡지 않는다"를 대신한다):
+  - `KopisRetryableException`·`KopisFatalException`은 지금 그대로, 스텝이 정한 단위(S1·S4는 공연 1건·공연장 1건·목록 1구간, S2는 조합, S3은 1구간, S6은 스텝 전체)로 잡아 `failed`로 세고 다음 단위로 넘어간다.
+  - **`KopisStoppedException`·`KopisCallLimitException`은 단위에서 잡지 않는다**(`KopisPerformanceImporter`·`UnitFailures`도). 스텝 `run`의 **가장 바깥**에서 잡아, `KopisCallLimitException`이면 `summary.increment("callLimitReached")`, 그때까지의 건수를 남긴 채 `StepResult.failure(처리한 수, summary, BatchRunRecorder.describe(e))`를 돌려준다(S1은 `s1Failure`. 아래 표). WARN 로그를 낸다. 이것은 PR #46 reviewer의 제안 4(멈춘 스텝의 건수를 남김)를 받아들인 것.
+  - 그 밖의 예외(DB 실패 등)는 지금 그대로 잡지 않고 `DailyCollectJob`의 `try`까지 내보낸다(그 스텝의 `summary`는 남지 않는다).
+  - 스텝 클래스는 `startStep`을 부르지 않는다(`DailyCollectJob`이 부른다. 5.3). 전의 "`run`의 처음에 `startStep()`을 부른다" 규칙과 그 테스트는 없앤다.
 - API 키는 `catticket.kopis.api-key`(환경 변수 `KOPIS_API_KEY`). 쿼리의 `service`에 붙인다. 로그에 URL을 낼 때는 키를 가린다.
 
 스텝 클래스(`collect` 패키지. S1·S6은 `StepResult run(BatchContext ctx)`, S2·S3는 `StepResult run(BatchContext ctx, Set<String> ids)`(본 공연 ID를 `ids`에 더한다), S4는 `StepResult run(BatchContext ctx, Set<String> rankingIds, Set<String> awardIds)`. ID 주고받기는 5.3. 2026-11-24 확인)
 
 | 클래스 | 스텝 | 주요 메서드·내용 |
 |---|---|---|
-| `PerformanceCollectStep` | S1 | 창 계산(`CollectWindows.plan(today, lastSuccess)`: 6구간, (a)·(b). 05의 3.3) → 구간마다 목록의 모든 페이지(`MAX_PAGES` = 1000을 넘으면 그 구간을 실패. 05의 3.3의 1.) → 목록의 ID(중복을 빼고 찾은 순서)마다 `KopisPerformanceImporter.importOne(id, false, now, …)`(공연 1건에 트랜잭션 1개) → 모두 성공이면 `StepResult.success(saved, summary, plan.windowEnd())`(`window_end_date` 기록. 5.2) |
+| `PerformanceCollectStep` | S1 | (2026-11-25 개정. 05의 3.3의 1.·7.·12.) ① 창 계산(`CollectWindows.plan(today, batchRunMapper.findLastSuccessfulS1())`: 6구간, (a)·(b). 05의 3.3)과 기준일(`CollectWindows.baseDate(today, batchRunMapper.findLatestS1Before(ctx.jobRunId()))`) → ② **구간마다**: 목록의 모든 페이지(`MAX_PAGES` = 1000을 넘으면 그 구간을 실패. 05의 3.3의 1.) → 그 구간의 ID(중복을 빼고 찾은 순서. 이번 실행에서 이미 다룬 ID도 뺀다)를 `CollectMapper.findKopisIdsCollectedSince(ids, baseDate.atStartOfDay())`(`LOOKUP_CHUNK` = 500건씩)로 찾고, 돌아온 ID는 `alreadyCollected`로 세어 건너뛴다 → 나머지 ID마다 `KopisPerformanceImporter.importOne(id, false, now, …)`(공연 1건에 트랜잭션 1개) → 다음 구간 → ③ 모두 성공이면 `StepResult.s1Success(saved, summary, plan.windowEnd(), baseDate)`(`window_end_date`와 기준일 기록. 5.2). 단위 실패가 있으면 `StepResult.s1Failure(saved, summary, failures.message(), baseDate)`. `KopisStoppedException`·`KopisCallLimitException`은 `run`의 가장 바깥에서 잡아 `s1Failure(saved, summary, describe(e), baseDate)`(위 "스텝 쪽 처리") |
 | `RankingCollectStep` | S2 | 기간 종류 × 현재·직전의 6기간마다 ① 전체(`boxOffice(period, Optional.empty())`)를 조회 → 0건이면 **미집계**로 보고 그 기간은 아무것도 저장하지 않으며(장르도 조회하지 않는다) `StepSummary`의 `notYetAvailable`에 1을 더하고 `addDetail("notYetAvailable", "{DAILY|WEEKLY|MONTHLY}|{기간 첫날}")` → ② 1건 이상이면 전체 조합을 `RankingSaveService.replace(collectionKey, items, now)`, 이어서 `Genre` 9개를 순서대로 조회해 0건도 포함해 조합마다 `replace`(조합마다 트랜잭션 1개. 행 교체와 `ranking_collection` 추가·갱신. 05의 3.4). 전체 조회가 실패한 기간은 장르를 조회하지 않는다. 건수: `collected`(`replace`한 조합 수), `notYetAvailable`, `failed`(조회에 실패한 조합 수. 1 이상이면 스텝은 실패), `rows`(저장한 행 수), `skippedRow`(05의 3.4의 "저장하지 않는 행". `toEntries`에서 뺀다). `replace`한 조합의 행의 공연 ID를 `ids`(`rankingIds`)에 더한다 |
 | `AwardCollectStep` | S3 | 창(`CollectWindows.window(today)`)을 31일씩, 페이지 상한은 S1과 같음 → 1회 조회 결과마다 `markAwarded(kopisIds)`(세우기만) → 수상작의 공연 ID를 `ids`(`awardIds`)에 더한다(DB에 없는 ID도 더한다. S4가 쓴다). 건수: `listed`·`marked`·`skippedId`·`failed` |
 | `MissingPerformanceStep` | S4 | `rankingIds` ∪ `awardIds`(`rankingIds` 순서, 이어서 `awardIds`. 쓸 수 없는 ID는 뺀다) 중 DB에 없는 것(`findExistingKopisIds`를 `LOOKUP_CHUNK` = 500건씩) → ID마다 `KopisPerformanceImporter.importOne(id, awardIds.contains(id), now, …)`(S1과 같음. 수상작이면 저장과 같은 트랜잭션에서 수상 이력을 세운다. 05의 3.2의 "S3와 S4의 수상 이력". `awarded` 인수는 ce393bd에서 더했다: 11의 U-13). 건수: `candidates`·`missing`·`saved`·`awardMarked` 등 |
@@ -1853,7 +1994,7 @@ Service
   2. `ProviderValues.performance(detail)`로 먼저 확인한다(저장하지 않는 공연 때문에 시설상세를 부르지 않기 위해). 저장하지 않음 → 그 이유(05의 3.3의 11.)를 세고 끝. 같은 확인은 `saveFromKopis` 안에서 한 번 더 한다(그쪽이 기준. 이쪽은 호출을 줄이기 위해서만).
   3. `findVenueByKopisId(mt10id)`가 비었으면 `getVenue(mt10id)`. 예외 → `failures.record("venue {mt10id} of {mt20id}", e)`로 끝. 비었음(`04`) → `venueNotFound`로 끝.
   4. `saveFromKopis(detail, newVenue, awarded, now)`(공연장이 DB에 있을 때 `newVenue`는 null) → `SaveOutcome`의 notes를 센다.
-  - `StepAbortedException`은 잡지 않는다(스텝을 멈춘다. 위의 "스텝 쪽의 처리").
+  - `KopisStoppedException`·`KopisCallLimitException`은 잡지 않는다(스텝의 가장 바깥까지 내보낸다. 위의 "스텝 쪽 처리").
 - `UnitFailures`(`collect`, package-private): 스텝 안에서 실패한 단위를 센다. `record(unit, e)`가 `failed`에 1을 더하고, 내용에 단위를 더하고, WARN을 낸다. `message()` = `{수} failed; first: {첫 단위}: {describe(e)}`(`StepResult`의 `errorMessage`).
 - 계층 규칙과의 관계: 스텝·`KopisPerformanceImporter`는 Service와 같은 계층(배치 처리의 흐름)이며, `CollectMapper`의 읽기(잠금 없음)와 `markAwarded`(문장 1개)를 직접 불러도 된다. 쓰는 처리가 문장 2개 이상이 되는 것은 `@Transactional`의 Service(`PerformanceSaveService` 등)를 거친다.
 
@@ -1862,11 +2003,33 @@ Service
 - **`StepSummary`의 이름(S1~S4. 2026-11-24 확인)**: 실패로 세는 것은 `failed`뿐(1 이상이면 스텝은 실패). 나머지는 기록만(05의 3.3의 11.).
   - 저장 안 함(내용 있음): `detailNotFound`(`{mt20id}`), `venueNotFound`(`{mt20id}|{mt10id}`), `skippedId`, `skippedVenueId`, `skippedGenre`(`{mt20id}|{genrenm}`), `skippedInvalid`(`{mt20id}|{항목}`), `skippedVenueInvalid`(`{mt10id}|fcltynm`), S2의 `skippedRow`(`{조합}|{rnum}|{mt20id}`).
   - 저장함(기록만): `saved`, `venueSaved`, `truncated`(`{ID}|{항목}`), `posterUrlTooLong`, `bookingSiteNoUrl`, `bookingSiteUrlTooLong`, `venueNoDistrict`, `venueNoLocation`, `awardMarked`(S4. U-13).
-  - 흐름의 수: S1 `ranges`·`pages`·`listed`, S3 `listed`·`marked`, S4 `candidates`·`missing`.
+  - 흐름의 수: S1 `ranges`·`pages`·`listed`·`alreadyCollected`(기준일 이후에 수집해서 건너뛴 수. 05의 3.3의 12.. 2026-11-25), S3 `listed`·`marked`, S4 `candidates`·`missing`.
+  - 호출 수(2026-11-25. 05의 3.5): `kopisCalls`(그 스텝의 전송 수. `DailyCollectJob`이 넣는다. 5.3), `callLimitReached`(상한으로 멈추면 1. 스텝이 넣는다). 둘 다 기록만이고 `failed`에는 넣지 않는다(상한으로 멈춘 스텝은 `KopisCallLimitException`으로 실패가 된다).
   - 내용에 넣는 제공처 값은 50 코드 포인트로 자른다(`ProviderValues.detailValue`. null은 `null`).
 - **`DistrictParser`**(`collect`, Spring 비의존): `static Optional<SeoulDistrict> parse(String address)`. 규칙은 05의 3.3의 5.의 "구 정하는 법"(`서울특별시` 뒤의 첫 단어가 25구 이름과 완전히 일치. 사이의 공백은 없어도 된다). 단어 구분은 공백 문자(정규식 `\s+`. Java 문자열로는 `"\\s+"`로 쓴다. 274d3fa의 `"\s+"`는 Java 15 이후 문자열 이스케이프로 반각 공백 1문자가 되어 탭 등으로 구분하지 못했으므로 ce393bd에서 고쳤다: 11의 U-14).
 
 `CollectMapper`(`mapper/collect/CollectMapper.xml`): `Optional<CollectVenueRow> findVenueByKopisId(String kopisVenueId)`(`CollectVenueRow(long id, String address)`. 주소는 서울 판정(05의 3.3의 6.)에 쓴다. 2026-11-24 확인. 이전 이름 `findVenueIdByKopisId`는 쓰지 않는다), `void upsertVenue`, `Optional<Long> findPerformanceIdByKopisId`, `void upsertPerformance`(`INSERT … AS n ON DUPLICATE KEY UPDATE`. 관리자 수정은 별도 테이블이므로 건드리지 않음), `int deleteBookingSites(long performanceId, String source)`, `void insertBookingSites(…)`, `int markAwarded(Collection<String> kopisIds, LocalDateTime now)`, `Set<String> findExistingKopisIds(Collection<String>)`, `Optional<Long> findCollectionId(…)`·`void upsertRankingCollection(…)`·`int deleteRankingEntries(long collectionId)`·`void insertRankingEntries(…)`, `int deleteGenreTrends(Period)`·`void insertGenreTrends(…)`. 상연 횟수 메서드는 만들지 않는다(S5는 없음. 05의 3.6).
+- 2026-11-25에 더한다: `Set<String> findKopisIdsCollectedSince(@Param("kopisIds") Collection<String> kopisIds, @Param("since") LocalDateTime since)`(`SELECT kopis_performance_id FROM performance WHERE kopis_performance_id IN (…) AND collected_at >= #{since}`. S1 이어 가기. 05의 3.3의 12.). 빈 집합을 넘기면 SQL을 실행하지 않고 빈 값을 돌려준다(부르는 쪽에서 확인한다. `findExistingKopisIds`와 같음).
+
+**`CollectWindows.baseDate`**(2026-11-25. 05의 3.3의 12.. Spring 비의존): `static LocalDate baseDate(LocalDate today, Optional<PreviousS1> previous)`. 앞 S1이 없음 → `today`. 앞 S1의 `result`가 `SUCCESS` → `today`. 앞 S1의 `collectBaseDate`가 null → `today`. `collectBaseDate`가 `today`보다 뒤(시계 오류 등) → `today`. 그 밖(`FAILURE`, 또는 `result`가 null로 끝이 기록되지 않음) → `collectBaseDate`. `CollectPlan`은 바꾸지 않는다(기준일은 `PerformanceCollectStep`이 따로 갖는다).
+
+**호출 방침 테스트**(2026-11-25. backend-dev가 쓰는 단위 테스트와 `@MybatisTest`. 테스트에서는 기다리지 않는 `Sleeper`·`Clock.fixed`를 쓴다. 응답 파일은 7.1)
+
+| 테스트 클래스 | 확인할 것 |
+|---|---|
+| `KopisCallPolicyTest`(단위. `Retry`는 실물, `Sleeper`는 기다린 시간을 기록만) | ① 간격: 기동 후 첫 전송은 기다리지 않고, 2번째부터 전송마다 7초 기다린다. ② 재시도: `KopisRetryableException`은 30·60초 기다려 최대 3번 보내고(`stepCalls` = 3), 재시도 전에 7초 간격을 더하지 않는다. `KopisFatalException`은 재시도하지 않는다. ③ **차단 표시**: `KopisBlockedException` → 1번만 보내고 `KopisStoppedException`(`reason` = `BLOCKED`, 원인은 원래 예외). 그 뒤의 `call`은 `Supplier`를 부르지 않고 기다리지 않고 `KopisStoppedException`. `startStep("S3")` 뒤에도 멈춘 채. `startJob()` 뒤에는 부를 수 있다. ④ **연속 실패**: 실패 4번 뒤 성공으로 수가 0으로 돌아간다. S2에서 4번·`startStep("S3")` 뒤 1번 → 5번째에 `KopisStoppedException`(`CONSECUTIVE_FAILURES`. 스텝을 넘어 센다). 4번째까지는 원래 예외가 그대로 나온다. ⑤ **할당**: 운영 값(1,500·70·20·200·5)으로 S1 = 1,205, S1이 1,205번 쓴 뒤의 S2~S6이 각각 70·20·200·5, S1이 100번 뒤의 S2도 70. 개발 값(20·4·2·2·1)으로 S1 = 11. ⑥ **상한**: 할당을 다 쓴 다음 `call`은 보내지 않고 `KopisCallLimitException`(연속 실패 수는 바뀌지 않는다). 재시도 도중 할당에 걸리면 그 재시도를 보내지 않고 `KopisCallLimitException`. 다음 `startStep`에서 새 할당으로 부를 수 있다. ⑦ 한 번 실행의 전송 합계가 `perRun`을 넘지 않는다(S1~S6을 순서대로, 어느 스텝도 할당까지 쓴다). ⑧ 설정 오류(`perRun` 0, 음수 상한, `interval` null) → 생성자가 `IllegalStateException`. ⑨ 모르는 스텝 이름 → `IllegalArgumentException` |
+| `KopisClientTest`(`MockRestServiceServer`) | HTTP 400 + `blocked-400.html` → `KopisBlockedException`(메시지에 `Request Blocked`, 키 없음). 403·429(본문은 빔·XML 어느 쪽이든) → `KopisBlockedException`. 404 + HTML·400 + 빈 본문 → `KopisBlockedException`(`non-XML body`). 400 + 결과 코드 `01` XML → `KopisFatalException`(차단이 아님). 200 + `blocked-200.html`(같은 본문) → `KopisBlockedException`. 503 + `Request Blocked` → `KopisBlockedException`. 200 + `maintenance.html`(`Request Blocked` 없음) → `KopisRetryableException`(지금 그대로). 503(본문 없음) → `KopisRetryableException`. 301 → `KopisFatalException` |
+| `KopisXmlReaderTest` | `readResultCode`: 결과 코드 XML → 코드·`errmsg`. 성공 XML(행 있음·`<dbs/>`)·HTML·빔·도중에 끊긴 본문 → 빈 값 |
+| `DailyCollectJobTest`(단위. 스텝·`KopisCallPolicy`·`BatchRunRecorder`는 목) | ① `startJob()`이 S1보다 앞에 1번만 불리고, 각 KOPIS 스텝 앞에 `startStep("{이름}")`(`InOrder`). ② **차단으로 멈춤**: S2 실행 중에 멈췄다(S2 뒤 `stopped()`가 참) → S3·S4·S6의 `run`을 부르지 않고 각각 `finishStep`에 실패(`errorMessage`가 `skipped: KOPIS calls stopped in this run at S2: …`, `summary`가 `{"kopisCalls":0}`). S1에서 멈췄다 → S2~S6을 부르지 않는다. ③ **S7은 돈다**: 어느 경우든 `TranslationStep.run`을 부른다. 결과는 `PARTIAL_FAILURE`. ④ 할당이 0인 스텝 → `run`을 부르지 않고 실패(`skipped: no KOPIS call allowance left (…)`), 뒤 스텝은 부른다. ⑤ KOPIS 스텝 결과의 `summary`에 `kopisCalls` = `policy.stepCalls()`가 들어간다(스텝이 예외로 끝나 `summary`가 없을 때도 `kopisCalls`만의 `summary`를 만든다). ⑥ 멈추지 않았으면 지금처럼 모든 스텝을 순서대로 부른다 |
+| `PerformanceCollectStepTest`(단위) | ① **구간마다 저장**: 첫 구간의 목록 뒤, 두 번째 구간의 목록보다 앞에 첫 구간 공연의 `importOne`을 부른다(`InOrder`). ② **이어 가기**: `findKopisIdsCollectedSince`가 돌려준 ID는 `importOne`을 부르지 않고 `alreadyCollected`로 센다. 넘기는 `since`가 기준일 0시. 두 구간에 나온 같은 ID는 한 번만 다룬다. ③ **상한**: 목록·상세 도중에 `KopisCallLimitException` → `StepResult`는 실패, `windowEndDate`는 null, `collectBaseDate`는 기준일, `callLimitReached` = 1, 그때까지의 `saved`가 남는다. `KopisStoppedException`도 같다(`callLimitReached`는 없음). ④ **재개해서 끝남**: 앞 S1이 `FAILURE`·기준일 11-25, 오늘 11-27에 모두 성공 → `s1Success`의 `windowEndDate` = 11-27 + 180일, `collectBaseDate` = 11-25. ⑤ 앞 S1이 `SUCCESS` → 기준일은 오늘 |
+| `CollectWindowsTest`(단위) | `baseDate`: 앞이 없음·`SUCCESS`·기준일 null·기준일이 오늘보다 뒤 → 오늘. `FAILURE` + 기준일 → 그날. `result` null + 기준일 → 그날 |
+| `RankingCollectStepTest`·`AwardCollectStepTest`·`MissingPerformanceStepTest`·`GenreTrendStepTest`(단위) | `KopisStoppedException`·`KopisCallLimitException`을 도중의 단위에서 던지게 한다 → `run`이 예외를 내지 않고 실패 `StepResult`를 돌려주며, 그때까지의 건수(S2는 저장한 조합 수, S4는 `saved`)와 `callLimitReached`(상한일 때)가 `summary`에 남는다. S2·S3는 그때까지 본 ID를 `ids`에 더한 채. 전의 "`run`의 처음에 `startStep()`" 테스트는 지운다 |
+| `KopisPerformanceImporterTest`(단위) | `getPerformance`·`getVenue`가 `KopisStoppedException`·`KopisCallLimitException` → 잡지 않고 그대로 나온다(`failures`에 세지 않는다) |
+| `BatchRunMapperTest`(`@MybatisTest`) | ① `updateStepRun`이 `collect_base_date`를 쓴다(null이면 NULL). ② `findLastSuccessfulS1`의 `successDate`가 `collect_base_date`, 열이 NULL인 옛 행은 `DATE(started_at)`. ③ `findLatestS1Before(jobRunId)`: 그 실행보다 앞 S1의 가장 새 행(`id`가 최대)의 `result`·`collect_base_date`. `SUCCESS`·`FAILURE`·`result` NULL 행, 다른 스텝의 행·같은 실행의 행은 대상 외, 없음 → 빈 값 |
+| `BatchRunRecorderTest`(단위) | `finishStep`이 `StepResult.collectBaseDate`를 `updateStepRun`에 넘긴다 |
+| `StepResultTest`(단위) | `windowEndDate`가 있고 `collectBaseDate`가 null → `IllegalArgumentException`. 실패에 `windowEndDate`가 있음 → `IllegalArgumentException`(지금 그대로) |
+| `CollectMapperTest`(`@MybatisTest`) | `findKopisIdsCollectedSince`: `collected_at`이 `since`와 같거나 뒤인 ID만 돌아온다. 앞의 ID·DB에 없는 ID는 돌아오지 않는다 |
+| `KopisCallLimitConfigTest`(단위. Spring을 기동하지 않음) | `YamlPropertySourceLoader`로 `application.yml`을 읽고 `Binder`로 `catticket.kopis`를 묶는다 → `interval` = 7초, `call-limit`이 개발 값(20·4·2·2·1). `application-prod.yml`을 겹친다 → 운영 값(1,500·70·20·200·5). **프로파일 없는 기본값이 개발 값인 것**을 고정한다 |
 
 **4.10 번역(`translation`)**
 
@@ -1938,6 +2101,7 @@ Service
     - `WebApplicationType.NONE`에서는 `HttpSecurity`가 없으므로 `SecurityConfig.securityFilterChain`은 웹 앱일 때만 만든다(3.4).
   - `common.batch.TaskRunner`(`ApplicationRunner`, `ExitCodeGenerator`, `@ConditionalOnProperty("catticket.task")`): 이름으로 `BatchJob`을 골라 실행하고 종료 코드를 반환한다. 0 = 성공, 1 = 실패, 2 = 일부 실패, 3 = 잠금을 얻지 못함(같은 배치 실행 중), 64 = 모르는 이름.
   - 로컬: `cd backend && ./gradlew bootRun --args='--catticket.task=import-subway'`
+    - B-01을 로컬에서 돌리면 KOPIS 상한은 개발 값(1번 20회. 8.1)이 된다. 운영 값으로 시험할 때(Issue #38 결정 4의 실제 실행 등. 약 3시간 걸린다)만 `--args='--catticket.task=daily-collect --spring.profiles.active=prod'`로 한다(2026-11-25).
   - 서버: `docker compose --profile app run --rm app --catticket.task=import-subway`(Dockerfile의 `ENTRYPOINT`가 exec 형식(`["java", "-jar", "app.jar"]`)이어서 뒤의 인자가 앱에 전달될 것. Dockerfile은 실행 Claude 담당. 11의 U-07). 절차는 `docs/ops/`.
 
 **5.2 배치 공통 부품(`common.batch`)**
@@ -1950,8 +2114,8 @@ Service
 | `JobLock` | `GET_LOCK('catticket-{task}', 0)`. MyBatis `SqlSessionFactory.openSession()`으로 전용 접속을 열어 잡이 끝날 때까지 유지하고 `RELEASE_LOCK` 후 닫는다(이름 잠금은 접속(세션)에 붙고 커밋·롤백으로 풀리지 않으므로. MySQL 8.4 레퍼런스 "Locking Functions", 확인일 2026-11-09). `1` = 얻음, `0`·`NULL` = 못 얻음. `Optional<Held> tryAcquire(TaskName)`(`Held`는 `AutoCloseable`. `close`로 푼다). 테스트용으로 잠금 이름을 직접 받는 package-private `tryAcquire(String name)`을 둔다(다른 체크아웃의 테스트와 같은 이름의 잠금으로 부딪치지 않게. 테스트의 이름은 `catticket-test-`로 시작하는 등 운영 이름과 겹치지 않는 것으로 한다). 트랜잭션 안에서 부르지 않는다. **`RELEASE_LOCK`이 `1`이 아니었거나 예외였던 접속은 풀에 돌려주지 않고 버린다**(아래 "`JobLock` 해제와 접속 버리기") |
 | `JobLockMapper` | `Integer getLock(String name)`(`SELECT GET_LOCK(#{name}, 0)`), `Integer releaseLock(String name)` |
 | `BatchRunRecorder` | `long start(TaskName, LocalDateTime)`, `StepRun startStep(long jobRunId, String stepName, LocalDateTime)`, `finishStep(StepRun, StepResult, LocalDateTime)`, `finish(long jobRunId, JobResult, String errorMessage, LocalDateTime)`. 모두 `REQUIRES_NEW`(스텝 실패의 롤백으로 기록이 사라지지 않도록). `error_message`는 쓰기 전에 다듬는다(아래 "`error_message` 다듬기"). `finish`는 결과가 `FAILURE`·`PARTIAL_FAILURE`이고 `errorMessage`가 null일 때 처음 실패한 스텝의 이유를 쓴다(아래 "잡의 `error_message`"). `static String describe(Throwable)`: 예외를 "클래스 단순 이름: 메시지"(메시지가 없으면 클래스 이름만)로 한다 |
-| `BatchRunMapper` | `insertJobRun`, `updateJobRun`, `insertStepRun`, `updateStepRun`, `Optional<LastS1> findLastSuccessfulS1()`(`step_name = 'S1' AND result = 'SUCCESS' ORDER BY started_at DESC LIMIT 1`로 성공한 날과 `window_end_date`), `Optional<FailedStep> findFirstFailedStep(long jobRunId)`(아래 "잡의 `error_message`"). `FailedStep`(record): `String stepName`, `String errorMessage` |
-| `StepResult`(record) | `success`, `processedCount`, `StepSummary summary`, `errorMessage`, `LocalDate windowEndDate`(성공한 S1의 "이번 창의 마지막 날"만. 나머지는 null. 실패인데 null이 아니면 생성자가 `IllegalArgumentException`(04의 `chk_batch_step_run_window`). 11의 U-11, 2026-11-24 해소). 만드는 법: `success(n, summary)`, `success(n, summary, windowEndDate)`(S1), `failure(summary, msg)`, `failure(n, summary, msg)`. `BatchRunRecorder.finishStep`이 `updateStepRun`에 `windowEndDate`를 넘겨 `window_end_date`에 쓴다(null이면 NULL) |
+| `BatchRunMapper` | `insertJobRun`, `updateJobRun`, `insertStepRun`, `updateStepRun`, `Optional<LastS1> findLastSuccessfulS1()`(`step_name = 'S1' AND result = 'SUCCESS' ORDER BY started_at DESC LIMIT 1`로 성공한 날과 `window_end_date`. **2026-11-25부터 성공한 날은 `COALESCE(collect_base_date, DATE(started_at))`**(기준일. 05의 3.3의 12.. 열은 U-17에서 db-designer가 더한다)), `Optional<PreviousS1> findLatestS1Before(long jobRunId)`(2026-11-25. `SELECT result, collect_base_date FROM batch_step_run WHERE step_name = 'S1' AND job_run_id < #{jobRunId} ORDER BY id DESC LIMIT 1`. `PreviousS1`(record): `String result`(`SUCCESS`·`FAILURE`·null), `LocalDate collectBaseDate`), `Optional<FailedStep> findFirstFailedStep(long jobRunId)`(아래 "잡의 `error_message`"). `FailedStep`(record): `String stepName`, `String errorMessage`. `updateStepRun`은 `collect_base_date`도 쓴다(2026-11-25) |
+| `StepResult`(record) | `success`, `processedCount`, `StepSummary summary`, `errorMessage`, `LocalDate windowEndDate`(성공한 S1의 "이번 창의 마지막 날"만. 나머지는 null. 실패인데 null이 아니면 생성자가 `IllegalArgumentException`(04의 `chk_batch_step_run_window`). 11의 U-11, 2026-11-24 해소), **`LocalDate collectBaseDate`**(2026-11-25. S1의 기준일. 성공·실패 모두 S1만 넣고 나머지는 null. `windowEndDate`가 있는데 `collectBaseDate`가 null → `IllegalArgumentException`. 05의 3.3의 12.). 만드는 법: `success(n, summary)`, `failure(summary, msg)`, `failure(n, summary, msg)`, S1용 `s1Success(n, summary, windowEndDate, collectBaseDate)`·`s1Failure(n, summary, msg, collectBaseDate)`(전의 `success(n, summary, windowEndDate)`는 `s1Success`로 바꾼다). `BatchRunRecorder.finishStep`이 `updateStepRun`에 `windowEndDate`·`collectBaseDate`를 넘겨 `window_end_date`·`collect_base_date`에 쓴다(null이면 NULL) |
 | `StepSummary`(final 클래스. 스텝 안에서 세므로 가변) | 건수 `Map<String, Long> counts`(`LinkedHashMap`. 더한 순서를 유지)와 내용 `Map<String, List<String>> details`(B-02의 "건수와 내용"용. 이름마다 최대 50건, 그보다 많은 것은 넣지 않음(건수는 `counts`에 있음)). 메서드: `increment(String name)`, `add(String name, long n)`, `addDetail(String name, String value)`, `long get(String name)`(없으면 0). JSON: `counts`를 최상위 키에 더한 순서로 늘어놓고, `details`는 비어 있지 않으면 마지막에 `"details"` 아래에 둔다(`@JsonValue`로 `LinkedHashMap`을 만들어 반환. Jackson 3의 `@JsonAnyGetter`로는 펼친 키가 다른 항목 뒤에 놓여 `details`가 앞에 오므로 쓰지 않는다. 2026-11-19, Issue #36 구현에서 판명)(예: `{"saved":120,"skippedGenre":2}`, `{"lockerUnmatched":1,"details":{"lockerUnmatched":["7|이수|…"]}}`) |
 | `JobResult`(enum) | `SUCCESS`, `PARTIAL_FAILURE`, `FAILURE`, `LOCKED` |
 | `Retry` | `<T> T call(Supplier<T>, List<Duration> waits, Predicate<Exception> retryable)`(2·4·8초 등) |
@@ -1993,13 +2157,19 @@ Service
     - `JobLockTest`(`@MybatisTest`. 실제 MySQL)에 추가: ① `sqlSessionFactory.openSession()`의 `getConnection()` 클래스 이름이 `com.zaxxer.hikari`로 시작한다. ② 버리면 잠금이 풀린다: 테스트에서 `openSession()`하고 그 `JobLockMapper`로 이름 A(`catticket-test-…`)의 `GET_LOCK`을 얻는다 → 같은 session으로 `releaseAndClose(session, 이름B)`(B는 얻지 않았으므로 `NULL` → 버림) → 다른 `tryAcquire(A)`가 5초 안에 얻어진다(100 ms마다 시도. 물리 접속은 다른 스레드에서 닫히므로).
 - `catticket-{task}` 잠금 이름은 최장 31자(`catticket-purge-expired-signups`. MySQL 상한 64자 이내).
 - 스텝 이름(`batch_step_run.step_name`): B-01은 `S1`~`S4`·`S6`·`S7`(`S5`는 결번. 05의 3.6). B-02~B-04는 스텝 하나로 기록하고(04의 `batch_step_run.step_name`), 이름은 처리 이름과 같다(`import-subway`, `create-admin`, `purge-expired-signups`). B-04는 삭제 건수를 `processed_count`에 넣는다.
-- "지난번 S1이 성공한 날"은 `findLastSuccessfulS1`의 `started_at` 날짜(04의 DB-10).
+- "지난번 S1이 성공한 날"은 `findLastSuccessfulS1`의 값으로, 성공한 S1의 기준일(`collect_base_date`. NULL인 옛 행은 `started_at`의 날짜. 04의 DB-10을 U-17에서 고친다. 05의 3.3의 12.).
 
 **5.3 B-01 일간 수집(`collect.batch.DailyCollectJob`)**
 
 - `run()`: `BatchJobRunner.execute(DAILY_COLLECT, ctx -> …)` 안에서 S1~S4·S6·S7을 차례로 부른다(05의 3.2). 각 스텝은 `try`로 감싸고, 예외는 `StepResult` 실패로 하고 다음으로 진행한다. 하나라도 실패면 `PARTIAL_FAILURE`, 모두 성공이면 `SUCCESS`.
+- **KOPIS 호출 방침**(2026-11-25. 05의 3.2·3.5, 4.9의 `KopisCallPolicy`): 의존에 `KopisCallPolicy`를 더한다.
+  1. `runSteps`의 처음(S1 앞)에 `policy.startJob()`을 1번 부른다.
+  2. KOPIS 스텝(S1·S2·S3·S4·S6)은 모두 다음 순서로 한다(`runKopisStep(ctx, name, step)`): ① `recorder.startStep`(행을 만든다) → ② `policy.stopped()`가 참이면 `run`을 부르지 않고 `StepResult.failure(summary, "skipped: KOPIS calls stopped in this run at " + policy.stopMessage())`(`summary`는 `kopisCalls` = 0만) → ③ 아니면 `policy.startStep(name)`. `policy.allowance()`가 0이면 `run`을 부르지 않고 `StepResult.failure(summary, "skipped: no KOPIS call allowance left (" + runCalls + "/" + perRun + ")")` → ④ 아니면 지금처럼 `try`로 스텝의 `run`을 부른다 → ⑤ 결과의 `summary`에 `kopisCalls` = `policy.stepCalls()`를 더한다(`summary`가 null(예외로 끝남)이면 `kopisCalls`만의 `StepSummary`를 만들고 같은 실패 내용으로 `StepResult`를 다시 만든다) → ⑥ `recorder.finishStep`.
+  3. S7은 멈춘 표시·할당과 관계없이 지금처럼 부른다(KOPIS를 부르지 않는다).
+  4. 마지막에 INFO 로그 `KOPIS calls in this run: {runCalls}/{perRun}`(멈췄으면 `stopped: {stopMessage}`도).
+  - `skipped` 행의 `processed_count`는 NULL(`failure(summary, msg)`를 쓴다). `error_message`는 `BatchRunRecorder`가 다듬는다(5.2). 잡의 `error_message`는 지금처럼 처음 실패한 스텝(차단으로 멈춘 스텝, 또는 S1의 상한)이 된다.
 - 스텝 클래스는 4.9(S1~S4·S6)와 `translation.TranslationStep`(S7. `TranslationService.translatePending` 호출).
-- S4의 입력(S2·S3에서 본 공연 ID)은 `DailyCollectJob`이 메모리로 넘긴다(`StepResult`와 별도의 `Set<String>`). **두 집합으로 나눈다**(2026-11-24. 05의 3.2의 "S3와 S4의 수상 이력"): `run()` 안에서 `Set<String> rankingIds = new LinkedHashSet<>()`·`Set<String> awardIds = new LinkedHashSet<>()`를 만들어 `RankingCollectStep.run(ctx, rankingIds)`, `AwardCollectStep.run(ctx, awardIds)`, `MissingPerformanceStep.run(ctx, rankingIds, awardIds)`로 넘긴다. S2·S3가 실패·`StepAbortedException`으로 멈췄을 때도 그때까지 더한 ID로 S4를 한다(05의 3.2).
+- S4의 입력(S2·S3에서 본 공연 ID)은 `DailyCollectJob`이 메모리로 넘긴다(`StepResult`와 별도의 `Set<String>`). **두 집합으로 나눈다**(2026-11-24. 05의 3.2의 "S3와 S4의 수상 이력"): `run()` 안에서 `Set<String> rankingIds = new LinkedHashSet<>()`·`Set<String> awardIds = new LinkedHashSet<>()`를 만들어 `RankingCollectStep.run(ctx, rankingIds)`, `AwardCollectStep.run(ctx, awardIds)`, `MissingPerformanceStep.run(ctx, rankingIds, awardIds)`로 넘긴다. S2·S3가 실패·상한(`KopisCallLimitException`)으로 멈췄을 때도 그때까지 더한 ID로 S4를 한다(05의 3.2). KOPIS 호출을 멈췄을 때(`KopisStoppedException`)는 S4를 부르지 않는다(위의 2.).
 - 재실행(`daily-collect`)은 같은 클래스. 멱등성은 05의 3.2 표대로(추가·갱신·교체).
 - **S5는 없다**(결번. 사람의 결정 2, 2026-11-20, Issue #38 코멘트 7032205139. 05의 3.6). S4 다음은 S6. `batch_step_run`에 `S5` 행은 만들지 않는다. 앞으로 스텝을 더할 때는 `S8`부터 이름을 붙이고 `S5`를 다시 쓰지 않는다.
 
@@ -2173,7 +2343,7 @@ KOPIS XML 읽는 법(확인: 2026-11-20, Issue #38. 실행 Claude가 실제로 �
   - 수(`rnum`·`prfdtcnt`·`ntssnmrssm` 등): 정수 문자열. `boxStatsCate`의 `totnmrssm`·`ntssamountsm`은 음수가 될 수 있다(쓰지 않는다).
   - 요청 날짜(`stdate`·`eddate`·`afterdate`): `yyyyMMdd`.
 - **쓰는 항목**: 목록 `pblprfr`는 `mt20id`. 상세는 `mt20id`·`prfnm`·`prfpdfrom`·`prfpdto`·`prfcast`·`prfruntime`·`prfage`·`pcseguidance`·`dtguidance`·`poster`·`area`·`genrenm`·`openrun`·`updatedate`·`mt10id`·`relates`(04의 4.2·4.3 열에 대응. `prfstate`는 쓰지 않는다. ADR 0008 2.). 시설은 `mt10id`·`fcltynm`(공연장명)·`adres`·`la`·`lo`(04의 4.1). 순위는 `rnum`·`mt20id`(`cate`는 쓰지 않는다. 장르는 조회의 `catecode`로 정해진다). 수상작은 `mt20id`. 장르별 통계는 `catenm`·`ntssnmrssm`.
-- **테스트**(`KopisClientTest`·`KopisXmlReaderTest`. 응답은 `src/test/resources/external/kopis/`): 실제 응답(2026-11-20에 실행 Claude가 받은 것. 키는 가렸다. 실행 Claude에게서 받는다)을 바탕으로 다음 파일을 준비한다. 목록(100건 페이지·마지막 페이지·`<dbs/>`), 상세(`relates` 여러 개·`relates` 없음·공백 1글자 항목), 상세의 `04`, 시설상세, 시설의 `04`, 순위(50행·1행·`<boxofs/>`), 수상작, 장르별 통계(`합계`와 음수 `totnmrssm`을 포함한 10행), 오류 `01`·`02`·`05`·`06`·모르는 코드(예 `99`). 2026-11-24 추가: 소수 초가 붙은 `updatedate`의 상세, XML로 읽을 수 없는 본문(도중에 끊긴 것), 행 요소가 없는 정형식 본문(위 6.), HTTP 5xx·4xx·301. `KopisCallPolicyTest`: 간격(2번째부터 기다림), 재시도 2·4·8초, Fatal은 재시도 안 함, Retryable 재시도 후 실패·Fatal이 둘 다 수에 들어감, 성공으로 0으로 되돌림, 10번째에 `StepAbortedException`(원인은 원래 예외), 그 뒤에는 부르지 않고 던짐, `startStep()`으로 다시 부를 수 있음.
+- **테스트**(`KopisClientTest`·`KopisXmlReaderTest`. 응답은 `src/test/resources/external/kopis/`): 실제 응답(2026-11-20에 실행 Claude가 받은 것. 키는 가렸다. 실행 Claude에게서 받는다)을 바탕으로 다음 파일을 준비한다. 목록(100건 페이지·마지막 페이지·`<dbs/>`), 상세(`relates` 여러 개·`relates` 없음·공백 1글자 항목), 상세의 `04`, 시설상세, 시설의 `04`, 순위(50행·1행·`<boxofs/>`), 수상작, 장르별 통계(`합계`와 음수 `totnmrssm`을 포함한 10행), 오류 `01`·`02`·`05`·`06`·모르는 코드(예 `99`). 2026-11-24 추가: 소수 초가 붙은 `updatedate`의 상세, XML로 읽을 수 없는 본문(도중에 끊긴 것), 행 요소가 없는 정형식 본문(위 6.), HTTP 5xx·4xx·301. 2026-11-25 추가: `blocked-400.html`(2026-11-24 차단 응답의 본문. 키·URL을 넣지 않는다. 실행 Claude가 로그에서 만들어 넘긴다. 남아 있지 않으면 `<html><head><title>Request Blocked</title></head><body>Request Blocked</body></html>` 형태로 만들고 README에 "실물이 아님"이라고 쓴다), `blocked-200.html`(같은 본문을 HTTP 200으로 돌려주는 테스트용. 내용은 `blocked-400.html`과 같아도 된다). `KopisCallPolicyTest` 등에서 확인할 것은 4.9의 "호출 방침 테스트"(전의 "10번째에 `StepAbortedException`", "`startStep()`으로 다시 부를 수 있음" 테스트는 지운다).
 
 **7.2 테스트에서의 대체(`CLAUDE.md`의 "테스트")**
 
@@ -2191,7 +2361,7 @@ KOPIS XML 읽는 법(확인: 2026-11-20, Issue #38. 실행 Claude가 실제로 �
 
 #### 8. 설정
 
-**8.1 `application.yml` 키**: YAML 블록은 일본어 부분 8.1과 같다. 요점: `spring.datasource.url`에 기존 값(`createDatabaseIfNotExist=true`)과 A-05의 `connectionTimeZone=Asia/Seoul&forceConnectionTimeZoneToSession=true`, `spring.jackson.deserialization.accept-float-as-int: false`, `spring.mail.*`(smtp.gmail.com:587, STARTTLS 필수, UTF-8, 타임아웃 5000/10000/10000 ms), `server.forward-headers-strategy: native`, `server.servlet.session.timeout: 30m`과 Cookie(`http-only`, `secure: ${SESSION_COOKIE_SECURE:true}`, `same-site: lax`), `mybatis`(기존), `catticket.*`(`public-base-url`, `scheduler.enabled`, `kopis.*`(기본 URL·키·간격 500ms), `azure.*`(엔드포인트·키·지역·1회 10000자·분당 30000자·월 1800000자), `recaptcha.*`, `mail.from`·`daily-limit: 400`, `admin.*`, `subway.*`(파일 경로 4개·문자 코드 `MS949`. 값은 일본어 부분 8.1의 YAML 블록 그대로. U-03에서 확정)).
+**8.1 `application.yml` 키**: YAML 블록은 일본어 부분 8.1과 같다. 요점: `spring.datasource.url`에 기존 값(`createDatabaseIfNotExist=true`)과 A-05의 `connectionTimeZone=Asia/Seoul&forceConnectionTimeZoneToSession=true`, `spring.jackson.deserialization.accept-float-as-int: false`, `spring.mail.*`(smtp.gmail.com:587, STARTTLS 필수, UTF-8, 타임아웃 5000/10000/10000 ms), `server.forward-headers-strategy: native`, `server.servlet.session.timeout: 30m`과 Cookie(`http-only`, `secure: ${SESSION_COOKIE_SECURE:true}`, `same-site: lax`), `mybatis`(기존), `catticket.*`(`public-base-url`, `scheduler.enabled`, `kopis.*`(기본 URL·키·간격 7s(2026-11-25. 05의 3.5. 근거 없이 줄이지 않는다)·`call-limit`(1번 실행의 전송 상한. 여기는 개발 값(기본): `per-run: 20`, `s2: 4`, `s3: 2`, `s4: 2`, `s6: 1`)), `azure.*`(엔드포인트·키·지역·1회 10000자·분당 30000자·월 1800000자), `recaptcha.*`, `mail.from`·`daily-limit: 400`, `admin.*`, `subway.*`(파일 경로 4개·문자 코드 `MS949`. 값은 일본어 부분 8.1의 YAML 블록 그대로. U-03에서 확정)).
 
 - `catticket.subway.*`는 U-03에서 파일명이 정해졌으므로(2026-11-19), B-02를 만드는 PR(Issue #36)에서 위 값을 `application.yml`에 더한다(그때까지는 두지 않는다. `application.yml`의 지금 주석을 대체한다).
   - 파일명에 공백·괄호·한글이 있으므로 값은 `"`로 감싼다(YAML로 잘못 읽히지 않게). `application.yml`은 UTF-8로 읽힌다. `classpath:` 파일은 jar 안에서도 `Resource.getInputStream()`으로 읽는다(`getFile()`은 jar 안에서 쓸 수 없으므로 쓰지 않는다).
@@ -2199,6 +2369,12 @@ KOPIS XML 읽는 법(확인: 2026-11-20, Issue #38. 실행 Claude가 실제로 �
   - 테스트는 `catticket.subway.*`를 쓰지 않고 `src/test/resources/data/subway-sample/`의 파일을 `ClassPathResource`로 직접 넘긴다(7.2).
 
 - 기존 설정(`spring.application.name`, `spring.config.import`(`.env` 읽기), `spring.datasource.username`·`password`, `mybatis`)은 남긴다. 위는 이 문서에서 더하거나 바꾸는 키(`mybatis`는 확인을 위해 기존 값을 다시 실음). 기존 최상위 `kopis.api-key`는 `catticket.kopis.api-key`로 옮기고 지운다.
+- **운영 전용 설정 `application-prod.yml`**(2026-11-25. 05의 3.5의 "한 번 실행의 상한". 사람의 결정 7152704798의 결정 2): `backend/src/main/resources/application-prod.yml`을 만든다. Spring 프로파일 `prod`일 때만 `application.yml` 위에 겹쳐 읽힌다. 내용은 일본어 부분의 YAML 블록 그대로(`catticket.kopis.call-limit`: `per-run: 1500`, `s2: 70`, `s3: 20`, `s4: 200`, `s6: 5`).
+  - `CatticketProperties.Kopis`에 `CallLimit callLimit`(record `CallLimit(int perRun, int s2, int s3, int s4, int s6)`)를 더한다. 확인은 `KopisCallPolicy`의 생성자(4.9).
+  - **기본(프로파일 없음)은 개발 값**. `bootRun`·테스트(`src/test/resources/config/application.yml`은 상한을 쓰지 않으므로 `application.yml`의 개발 값이 된다)·로컬 `docker compose --profile app`(`.env`에 `SPRING_PROFILES_ACTIVE`가 없으면)은 개발 값이 된다. 운영 서버만 `SPRING_PROFILES_ACTIVE=prod`(8.2). 이유: 설정을 잊었을 때 크게 부르지 않는 쪽으로 하기 위해(05의 3.5).
+  - **메인 체크아웃의 `.env`에 `SPRING_PROFILES_ACTIVE`를 쓰지 않는다**(`.env`는 worktree에 복사되어 어디서나 운영 값이 된다. `TEST_DB_NAME`과 같은 주의). 운영 값으로 시험할 때는 명령 인수로 넘긴다(5.1).
+  - 프로파일은 Spring Boot 표준 기능이고 새 라이브러리·의존이 아니다(1.3에 해당하지 않음). `application-prod.yml`에는 운영 전용 값을 둔다(지금은 KOPIS 상한뿐. 비밀 값은 두지 않는다).
+  - 프로파일 외에 환경 변수로 하나씩 덮어쓸 수도 있다(Spring Boot 표준. 예: `CATTICKET_KOPIS_CALLLIMIT_PERRUN`)지만 운영에서는 쓰지 않는다(값은 설계서와 이 파일로 관리한다).
 - 비밀 값(키·비밀번호)은 기본값을 비우고 `.env` → 환경 변수로 넘긴다(`CLAUDE.md`의 "보안"). 파일에 값을 쓰지 않는다.
 - `catticket.task`는 수동 실행 때만 명령 인자로 넘긴다(5.1).
 
@@ -2218,8 +2394,9 @@ KOPIS XML 읽는 법(확인: 2026-11-20, Issue #38. 실행 Claude가 실제로 �
 | `CATTICKET_PUBLIC_BASE_URL` | `catticket.public-base-url` | 메일 링크의 공개 URL(ADR 0010) | 신규 |
 | `CATTICKET_ADMIN_EMAIL`, `CATTICKET_ADMIN_PASSWORD` | `catticket.admin.*` | B-03에서만 쓴다(05의 5. 실행 후 지운다) | 신규 |
 | `SESSION_COOKIE_SECURE` | `server.servlet.session.cookie.secure` | 로컬 http에서 `false`. 운영은 설정하지 않음(기본 `true`) | 신규 |
+| `SPRING_PROFILES_ACTIVE` | Spring Boot(프로파일) | **운영 서버만 `prod`**(8.1의 `application-prod.yml`. KOPIS 상한이 운영 값이 된다). 로컬·CI·메인 체크아웃의 `.env`에는 쓰지 않는다(기본은 개발 값. 2026-11-25) | 신규 |
 
-- `.env.example`에 추가하는 것은 실행 Claude 담당(11의 U-07).
+- `.env.example`에 추가하는 것은 실행 Claude 담당(11의 U-07. `SPRING_PROFILES_ACTIVE`는 주석으로 "운영만"이라고 쓴다. 11의 U-18).
 
 #### 9. 04의 11.7에서 넘겨받은 사항(A-02~A-07) 결정
 
@@ -2248,7 +2425,7 @@ KOPIS XML 읽는 법(확인: 2026-11-20, Issue #38. 실행 Claude가 실제로 �
 | F-05 | SC-01, SC-02 | API-04, B-02 | `station`, `venue` | `SurroundingController`·`SurroundingService`·`NearbyFilter`, `SubwayImportJob` |
 | F-06 | SC-01, SC-02 | API-04, B-02 | `coin_locker`, `station`, `venue` | `SurroundingService`, `SubwayRowConverter` |
 | F-07 | SC-01 | API-05, B-01, B-02 | `performance`, `venue`, `override`, `station`, `coin_locker` | `SurroundingService.getAroundLocation`, `PerformanceService.findPublicByVenueIds`, `PerformanceSummaryAssembler` |
-| F-08 | SC-01, SC-02 | API-01~03, B-01 | `performance`, `venue`, `booking_site`, `override`, `*_run` | `DailyCollectJob`, `PerformanceCollectStep`, `CollectWindows`, `BatchRunRecorder` |
+| F-08 | SC-01, SC-02 | API-01~03, B-01 | `performance`, `venue`, `booking_site`, `override`, `*_run` | `DailyCollectJob`, `PerformanceCollectStep`, `CollectWindows`, `BatchRunRecorder`, `KopisCallPolicy`(05의 3.5) |
 | F-09 | SC-01, SC-02, SC-03, SC-11 | API-01~03, 05, 20, 43, B-01 | `performance`, `ranking_entry`, `favorite`, `review` | `SharedSql.publicCondition`, `PerformanceStatus`, `CollectMapper`(삭제하지 않음) |
 | F-10 | 전 화면 | 전 API(`lang`) | — | `LangQuery`, `LocalizedTextFactory` |
 | F-11 | 전 화면 | 전 API, B-01(S7), B-02 | `translation`, `translation_usage`, `performance`, `override`, `booking_site`, `venue`, `station`, `coin_locker` | `TranslationLookupService`, `LocalizedTextFactory`, `TranslationService`·`AzureTranslatorClient` |
@@ -2291,7 +2468,8 @@ KOPIS XML 읽는 법(확인: 2026-11-20, Issue #38. 실행 Claude가 실제로 �
 - 4의 모든 Controller 메서드는 03의 API에 대응하고, 03의 모든 API(API-01~06, 10~13, 20~22, 30~38, 40~45, 50~56)에 맡는 클래스가 있다(API-32는 `SecurityConfig`의 `logout`). 03에 없는 API의 메서드는 두지 않았다.
 - 5의 잡은 05의 B-01~B-04뿐. 운영자를 위한 API·화면은 두지 않았다(05의 1.1).
 - 요건 ID가 없는 기능의 클래스(알림, 메일 재발송, 검색 조건 저장 등)는 두지 않았다. 공통 부품(`common.*`, `summary`)은 위 표의 어느 행에서 쓴다.
-- 테이블은 V1의 18개와 뷰 `performance_effective`를 쓰고, 06에서 새 테이블·열은 필요 없다(db-designer에게 넘길 것 없음).
+- 테이블은 V1의 18개와 뷰 `performance_effective`를 쓰고, 06에서 새 테이블은 필요 없다. 열은 `batch_step_run`에 S1의 기준일을 하나 더한다(2026-11-25. 05의 3.3의 12.. db-designer에게 넘긴다: 11의 U-17). 요건 → 테이블 대응은 바뀌지 않는다(F-08·N-04의 `*_run`).
+- 2026-11-25에 더한 클래스·예외(`KopisBlockedException`·`KopisStoppedException`·`KopisStopReason`·`KopisCallLimitException`·`PreviousS1`·`CatticketProperties.Kopis.CallLimit`)는 모두 F-08·N-04의 B-01 행(KOPIS 호출 제한. 05의 3.5)을 위한 것이며, 요건 ID가 없는 기능이 아니다.
 
 #### 11. 공정 5 전에 확인할 것·미결 사항
 
@@ -2329,5 +2507,8 @@ U-02의 장르 목록(`common.code.Genre`. 2026-11-20에 확정)
 | U-13 | S4가 새로 저장한 S3의 수상작의 `has_award`가 그날 서지 않는다(커밋 274d3fa. S3는 S4 전에 끝나고, `upsertPerformance`는 `has_award`를 쓰지 않는다). 종료일이 오늘인 공연은 다음 날 S3의 창에 들어가지 않아 언제까지나 서지 않는다(F-31 ①을 충족하지 못한다) | **해소**(2026-11-24, Issue #38의 커밋 ce393bd. architect가 확인). 방침은 2026-11-24에 architect가 정함(05의 3.2의 "S3와 S4의 수상 이력"). 고친 것: ① `PerformanceSaveService.saveFromKopis`에 `boolean awarded`를 더하고, `awarded`면 저장 끝에 같은 트랜잭션에서 `markAwarded(List.of(mt20id), now)`(반환값 1이면 `awardMarked`) ② `KopisPerformanceImporter.importOne`에 `boolean awarded`를 더해 넘긴다(S1은 `false`) ③ `MissingPerformanceStep.run(ctx, rankingIds, awardIds)`로 하고 `awardIds.contains(id)`를 넘긴다 ④ `DailyCollectJob`은 5.3대로 두 집합으로 넘긴다(S2·S3의 코드는 바꾸지 않는다). 테스트: `PerformanceSaveService` 단위 테스트에서 `awarded`가 참 → `upsertPerformance` 뒤에 `markAwarded`(`InOrder`), 거짓 → 부르지 않음, 저장하지 않는 공연 → 부르지 않음. `MissingPerformanceStepTest`에서 수상작만·순위만·둘 다인 ID의 `awarded`. `CollectMapperTest`에서 새로 넣은 공연에 `markAwarded` → `has_award`가 참 | 4.9, 5.3, 6.4 |
 | U-14 | `DistrictParser`의 `rest.split("\s+", 2)`(커밋 274d3fa): Java 15 이후 문자열의 `\s`는 반각 공백(U+0020) 1문자의 이스케이프이므로 정규식은 ` +`가 된다(탭 등으로 구분하지 못함). 지금 판의 주소로는 결과가 바뀌지 않을 것으로 보여 경미 | **해소**(2026-11-24, Issue #38의 커밋 ce393bd. architect가 확인). `"\\s+"`로 고치고 `DistrictParserTest`에 탭으로 구분한 주소를 더했다 | 4.9 |
 | U-15 | S7 번역(커밋 e495d44·4f92571)의 고칠 점. ① 미번역 읽기의 `COLLATE utf8mb4_bin`(PAD SPACE)은 끝의 공백만 다른 원문을 합친다(경미. 빠지지는 않음) ② 하나로 Azure의 1회 상한(5만 자)을 넘는 원문을 보내면 매번 같은 곳에서 실패해 S7이 매일 멈추고 뒤의 원문이 번역되지 않는다(`TEXT` 열은 ASCII면 65,535자까지 들어간다) ③ 키가 비었을 때·HTTP 4xx에도 2·4·8초 재시도를 한다(키가 비면 약 14초 낭비) | **해소**(2026-11-24, Issue #38의 커밋 d281b89. architect가 확인). 방침은 2026-11-24에 architect가 정했다(4.10의 1.·2.·7.). 고친 것: ① `TranslationMapper.xml`의 `COLLATE utf8mb4_bin`을 모두 `COLLATE utf8mb4_0900_bin`으로 ② `TranslationService`에서 묶기 전에 `charCount(text) > requestMaxChars`인 원문을 빼고, `tooLong`을 세고 내용 `{종류}|{코드 포인트 수}|{Hashes.sha256Hex(text)}`를 더한다(`sent`에는 넣는다). `batches`의 "하나로 넘는 원문은 그것만으로 1회"는 없어진다(넘는 원문은 오지 않음) ③ `translation.client`에 `TranslatorFatalException extends TranslatorException`을 더하고, `AzureTranslatorClient`는 키가 비었을 때와 HTTP 4xx(408·429 제외. 본문의 `error.code`가 `403001`이면 이전처럼 `TranslatorQuotaExceededException`)에서 이것을 던진다. `TranslationService.send`는 이것을 재시도하지 않고 다시 던진다. 테스트: `TranslationMapperTest`에서 `abc`와 `abc `가 따로 반환됨. `TranslationServiceTest`에서 10,001자 원문은 보내지 않고 `tooLong`·다른 원문은 보냄·결과는 `SUCCESS`, 딱 10,000자는 보냄, `TranslatorFatalException`은 1번에 멈추고 기다리지 않음(`Sleeper`가 불리지 않음). `AzureTranslatorClientTest`에서 키가 빔·400·401 → `TranslatorFatalException`, 408·5xx → `TranslatorException`(`TranslatorFatalException` 아님), 429 → `TranslatorThrottledException`, 403 + `403001` → `TranslatorQuotaExceededException` | 4.10 |
+| U-16 | **초기 수집을 나누는 동안 요건을 채우지 못하는 날이 있다**(2026-11-25, architect. 05의 3.5의 "첫 실행 나누기"). 한 번 실행의 상한(사람의 결정 7152704798의 결정 1) 때문에 초기 수집은 4일 정도 걸린다. 그동안 창의 공연 일부가 지도·검색에 나오지 않아 F-01 ①(수집 범위의 공연이 표시된다)·F-08 ②(추가·변경된 공연이 수집 후 반영된다)를 채우지 못한다. 며칠 동안 차단·실패한 뒤 다시 가져오는 것도 같다(며칠). 인기 순위 등은 매일 갖춰지지만(S2~S6의 몫을 남겨 둠), 공연 정보가 아직 없는 순위 행은 F-29 ⑧로 빠진다. 선택지: **A.** 01은 바꾸지 않고 운영 공개(공정 7) 전에 초기 수집을 끝낸다(운영 절차에 "공개 전에 `daily-collect`를 매일 실행하고, S1이 `SUCCESS`가 된 뒤 공개한다"고 쓴다). 공개 후 다시 가져오는 며칠은 받아들인다. **B.** A에 더해 01에 "초기·다시 가져오는 동안은 일부 공연이 늦게 표시된다"를 주기한다(requirements-analyst). **C.** 초기만 상한을 올린다(차단 우려가 있어 권하지 않음). architect의 안은 **A**(공개 후 다시 가져오는 것이 문제라면 B). 어느 것을 골라도 B-01의 구조는 바뀌지 않으므로 구현은 이 설계대로 진행해도 된다 | 사람의 판단(PM이 Issue에 기록). B면 requirements-analyst가 01을 고친다. A·B 모두 운영 절차는 실행 Claude(공정 7) | 05의 3.5, 01의 F-01·F-08 |
+| U-17 | **db-designer에게 넘김: `batch_step_run`에 S1 기준일 열을 더한다**(2026-11-25, architect. 05의 3.3의 12.). ① 열(이름 안 `collect_base_date`): `DATE`, NULL 허용, 기본 NULL, COMMENT 예 "S1의 수집 기준일(이어 가는 S1에서는 이어 가기를 시작한 날. 05의 3.3의 12.). S1 외에는 NULL". ② CHECK: `collect_base_date IS NULL OR step_name = 'S1'`. 성공한 S1에서 NULL을 금지할지는 db-designer가 정한다(V3 전의 성공 행은 NULL이라, 붙이려면 `id` 등으로 구분할 수 없으므로 붙이지 않는 안을 권한다). ③ 04의 DB-10을 고친다: "지난번 S1이 성공한 날"은 성공한 S1의 가장 새 행의 `COALESCE(collect_base_date, DATE(started_at))`. ④ 새 Flyway `V3__*.sql`(V1·V2는 바꾸지 않는다). ⑤ 인덱스: `findLatestS1Before`(`step_name = 'S1' AND job_run_id < ? ORDER BY id DESC LIMIT 1`)는 행이 적어 지금 인덱스로 될 것으로 본다. 필요한지는 db-designer가 판단한다. ⑥ 04의 4.18·11.2.18·3.의 대응표·`batch_step_run` 설명(03의 5.의 "배치 실행 기록"에 "수집 기준일"을 더했다). 열 이름을 바꾸면 architect에게 알린다(06의 4.9·5.2를 고친다) | db-designer(04·V3. backend-dev 구현 전) | 4.9, 5.2, 05의 3.3의 12. |
+| U-18 | 실행 Claude에게 넘김(2026-11-25): ① `.env.example`에 `SPRING_PROFILES_ACTIVE`를 주석으로 더한다("운영 서버만 prod. 로컬·메인 체크아웃의 .env에는 쓰지 않는다"). ② 운영 절차(`docs/ops/`, 공정 7)에 운영에서 `SPRING_PROFILES_ACTIVE=prod`를 설정할 것, 기동 로그에서 KOPIS 상한 값을 확인할 것, 차단·상한으로 멈춘 날에 손으로 재실행하지 않을 것(05의 3.8), U-16의 A 절차를 쓴다. ③ `src/test/resources/external/kopis/blocked-400.html`의 원본(2026-11-24 차단 응답의 본문. 키·URL을 뺀다)을 backend-dev에게 넘긴다(7.1) | 실행 Claude(①③은 backend-dev 구현 전, ②는 공정 7) | 8.1, 8.2, 7.1 |
 
-- db-designer에게 넘길 것: 없음(새 테이블·열·인덱스 불필요. U-05의 `EXPLAIN`에서 인덱스가 필요하다고 판명되면 db-designer에게 넘긴다).
+- db-designer에게 넘길 것: **U-17**(`batch_step_run`의 열·CHECK·DB-10·V3). 그 밖에 새 테이블·인덱스는 필요 없다(U-05의 `EXPLAIN`에서 인덱스가 필요하다고 판명되면 db-designer에게 넘긴다).
