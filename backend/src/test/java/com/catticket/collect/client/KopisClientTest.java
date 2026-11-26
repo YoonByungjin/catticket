@@ -64,7 +64,7 @@ class KopisClientTest {
 	private static final List<Duration> BACKOFF = List.of(Duration.ofSeconds(30), Duration.ofSeconds(60));
 
 	/** 遮断の印のテストで、割り当てに当たらない大きさ */
-	private static final CallLimit LIMIT = new CallLimit(1500, 70, 20, 200, 5);
+	private static final CallLimit LIMIT = new CallLimit(300, 70, 10, 30, 5);
 
 	private final List<Duration> slept = new ArrayList<>();
 

@@ -55,7 +55,7 @@ class KopisCallLimitConfigTest {
 		Kopis kopis = bind("application.yml", "application-prod.yml");
 
 		assertThat(kopis.interval()).isEqualTo(Duration.ofSeconds(7));
-		assertThat(kopis.callLimit()).isEqualTo(new CallLimit(1500, 70, 20, 200, 5));
+		assertThat(kopis.callLimit()).isEqualTo(new CallLimit(300, 70, 10, 30, 5));
 		// 本番の設定は上限だけを変える
 		assertThat(kopis.baseUrl()).isEqualTo("http://www.kopis.or.kr/openApi/restful");
 	}

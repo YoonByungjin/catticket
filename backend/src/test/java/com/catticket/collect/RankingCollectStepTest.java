@@ -154,7 +154,7 @@ class RankingCollectStepTest {
 	void callLimitFailsTheStepKeepingSavedGroupsAndSeenIds() {
 		// 週次の現在の期間は 3 つ目（日次の 2 期間 × 10 組を保存した後）
 		when(client.boxOffice(LAST_WEEK, Optional.empty()))
-			.thenThrow(new KopisCallLimitException("KOPIS call limit reached in S2: 20/20 (run 1220/1500)"));
+			.thenThrow(new KopisCallLimitException("KOPIS call limit reached in S2: 70/70 (run 255/300)"));
 
 		StepResult result = step.run(CTX, seen);
 
@@ -163,7 +163,7 @@ class RankingCollectStepTest {
 		assertThat(result.summary().get("collected")).isEqualTo(20);
 		assertThat(result.summary().get("callLimitReached")).isEqualTo(1);
 		assertThat(result.errorMessage()).isEqualTo(
-				"KopisCallLimitException: KOPIS call limit reached in S2: 20/20 (run 1220/1500)");
+				"KopisCallLimitException: KOPIS call limit reached in S2: 70/70 (run 255/300)");
 		assertThat(seen).containsExactly("PF1");
 		verify(client, times(21)).boxOffice(any(), any());
 	}

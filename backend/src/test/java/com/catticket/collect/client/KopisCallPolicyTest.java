@@ -30,7 +30,7 @@ class KopisCallPolicyTest {
 	private static final Duration WAIT_60 = Duration.ofSeconds(60);
 
 	/** 本番の値（05 の 3.5） */
-	static final CallLimit PROD = new CallLimit(1500, 70, 20, 200, 5);
+	static final CallLimit PROD = new CallLimit(300, 70, 10, 30, 5);
 
 	/** 開発の値（05 の 3.5） */
 	static final CallLimit DEV = new CallLimit(20, 4, 2, 2, 1);
@@ -269,8 +269,8 @@ class KopisCallPolicyTest {
 
 		@Test
 		void productionValuesReserveTheLaterSteps() {
-			assertThat(policy.allowance()).isEqualTo(1205);
-			for (int i = 0; i < 1205; i++) {
+			assertThat(policy.allowance()).isEqualTo(185);
+			for (int i = 0; i < 185; i++) {
 				policy.call(() -> "x");
 			}
 
@@ -280,13 +280,13 @@ class KopisCallPolicyTest {
 				policy.call(() -> "x");
 			}
 			policy.startStep("S3");
-			assertThat(policy.allowance()).isEqualTo(20);
-			for (int i = 0; i < 20; i++) {
+			assertThat(policy.allowance()).isEqualTo(10);
+			for (int i = 0; i < 10; i++) {
 				policy.call(() -> "x");
 			}
 			policy.startStep("S4");
-			assertThat(policy.allowance()).isEqualTo(200);
-			for (int i = 0; i < 200; i++) {
+			assertThat(policy.allowance()).isEqualTo(30);
+			for (int i = 0; i < 30; i++) {
 				policy.call(() -> "x");
 			}
 			policy.startStep("S6");
