@@ -1,5 +1,6 @@
 package com.catticket.ranking;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,10 +9,17 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.catticket.common.code.Lang;
 import com.catticket.common.code.PeriodType;
+import com.catticket.common.display.PerformanceSummary;
+import com.catticket.common.display.PerformanceSummaryRow;
+import com.catticket.common.time.DateTimes;
 import com.catticket.ranking.dto.RankingBadge;
+import com.catticket.ranking.dto.RankingItem;
+import com.catticket.ranking.dto.RankingResponse;
 import com.catticket.ranking.row.CollectionRow;
 import com.catticket.ranking.row.RankingEntryRow;
+import com.catticket.summary.PerformanceSummaryAssembler;
 
 /**
  * 人気順位（06 の 4.4）。
@@ -27,8 +35,38 @@ public class RankingService {
 
 	private final RankingMapper rankingMapper;
 
-	public RankingService(RankingMapper rankingMapper) {
+	private final PerformanceSummaryAssembler summaryAssembler;
+
+	private final Clock clock;
+
+	public RankingService(RankingMapper rankingMapper, PerformanceSummaryAssembler summaryAssembler, Clock clock) {
 		this.rankingMapper = rankingMapper;
+		this.summaryAssembler = summaryAssembler;
+		this.clock = clock;
+	}
+
+	/**
+	 * API-20（03 の API-20）。表示する期間（03 の 4.9）の、振り直した上位 10 位（03 の 9.1）。
+	 *
+	 * @param genre ALL かジャンルのコード（Controller で検証済み）
+	 * @return 表示できる期間がなければ period = null、items = []
+	 */
+	@Transactional(readOnly = true)
+	public RankingResponse getRanking(PeriodType type, String genre, Lang lang) {
+		LocalDate today = DateTimes.today(clock);
+		Optional<VisibleTop> top = findVisibleTop(type, genre, today);
+		if (top.isEmpty()) {
+			return new RankingResponse(type, genre, null, List.of());
+		}
+		List<VisibleTop.Ranked> entries = top.get().entries();
+		List<PerformanceSummaryRow> rows = entries.stream().map(e -> e.row().toSummaryRow()).toList();
+		// SC-03 のカードは評価を除く（03 の 7.2）ので withRating = false
+		List<PerformanceSummary> summaries = summaryAssembler.assemble(rows, lang, today, false);
+		List<RankingItem> items = new ArrayList<>(entries.size());
+		for (int i = 0; i < entries.size(); i++) {
+			items.add(new RankingItem(entries.get(i).rank(), summaries.get(i)));
+		}
+		return new RankingResponse(type, genre, top.get().period(), List.copyOf(items));
 	}
 
 	/**

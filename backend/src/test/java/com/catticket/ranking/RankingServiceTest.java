@@ -5,11 +5,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,14 +19,25 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
+import com.catticket.common.code.Lang;
 import com.catticket.common.code.PeriodType;
+import com.catticket.common.display.LocalizedText;
 import com.catticket.common.display.Period;
+import com.catticket.common.display.PerformanceStatus;
+import com.catticket.common.display.PerformanceSummary;
+import com.catticket.common.display.PerformanceSummaryRow;
+import com.catticket.common.display.VenueRef;
+import com.catticket.common.time.DateTimes;
 import com.catticket.ranking.dto.RankingBadge;
+import com.catticket.ranking.dto.RankingItem;
+import com.catticket.ranking.dto.RankingResponse;
 import com.catticket.ranking.row.CollectionRow;
 import com.catticket.ranking.row.RankingEntryRow;
+import com.catticket.summary.PerformanceSummaryAssembler;
 
 /**
- * RankingService.findRankingsOf（06 の 4.4、03 の 4.3・9.1）。
+ * RankingService.getRanking・findRankingsOf（06 の 4.4、03 の API-20・4.3・4.9・9.1）。
+ * 表示する期間の選び方は SQL（findLatestCompleted）なので RankingMapperTest で確かめる。
  */
 class RankingServiceTest {
 
@@ -38,7 +51,61 @@ class RankingServiceTest {
 
 	private final RankingMapper rankingMapper = mock(RankingMapper.class);
 
-	private final RankingService service = new RankingService(rankingMapper);
+	private final PerformanceSummaryAssembler assembler = mock(PerformanceSummaryAssembler.class);
+
+	/** 2026-11-27 12:00（Asia/Seoul） */
+	private final Clock clock = Clock.fixed(TODAY.atTime(12, 0).atZone(DateTimes.SEOUL).toInstant(),
+			DateTimes.SEOUL);
+
+	private final RankingService service = new RankingService(rankingMapper, assembler, clock);
+
+	@Test
+	void getRankingRenumbersVisibleRowsAndAssemblesCardsWithoutRating() {
+		// SQL が除いた後の行（提供元の 2, 3, 3, 6 位。1・4・5 位は非表示か公演の行がない）
+		when(rankingMapper.findLatestCompleted(PeriodType.WEEKLY, "GGGA", TODAY))
+			.thenReturn(Optional.of(new CollectionRow(21, WEEK.start(), WEEK.end())));
+		List<RankingEntryRow> rows = List.of(entry(2, "PF2"), entry(3, "PF3"), entry(3, "PF4"), entry(6, "PF6"));
+		when(rankingMapper.findTopVisible(21, 10)).thenReturn(rows);
+		List<PerformanceSummaryRow> summaryRows = rows.stream().map(RankingEntryRow::toSummaryRow).toList();
+		List<PerformanceSummary> cards = summaryRows.stream().map(RankingServiceTest::card).toList();
+		when(assembler.assemble(summaryRows, Lang.JA, TODAY, false)).thenReturn(cards);
+
+		RankingResponse response = service.getRanking(PeriodType.WEEKLY, "GGGA", Lang.JA);
+
+		assertThat(response.periodType()).isEqualTo(PeriodType.WEEKLY);
+		assertThat(response.genre()).isEqualTo("GGGA");
+		assertThat(response.period()).isEqualTo(WEEK);
+		assertThat(response.items()).extracting(RankingItem::rank).containsExactly(1, 2, 3, 4);
+		assertThat(response.items()).extracting(i -> i.performance().performanceId())
+			.containsExactly("PF2", "PF3", "PF4", "PF6");
+		// 「今日」は Clock から（06 の 3.1）、評価は計算しない（03 の 7.2）
+		verify(rankingMapper).findLatestCompleted(PeriodType.WEEKLY, "GGGA", TODAY);
+		verify(assembler).assemble(summaryRows, Lang.JA, TODAY, false);
+	}
+
+	@Test
+	void getRankingWithoutDisplayablePeriodReturnsNullPeriodAndEmptyItems() {
+		when(rankingMapper.findLatestCompleted(PeriodType.MONTHLY, "ALL", TODAY)).thenReturn(Optional.empty());
+
+		RankingResponse response = service.getRanking(PeriodType.MONTHLY, "ALL", Lang.KO);
+
+		assertThat(response).isEqualTo(new RankingResponse(PeriodType.MONTHLY, "ALL", null, List.of()));
+		verify(rankingMapper, never()).findTopVisible(anyLong(), anyInt());
+		verify(assembler, never()).assemble(any(), any(), any(), eq(false));
+	}
+
+	@Test
+	void getRankingWithZeroRowsPeriodKeepsPeriod() {
+		// 0 件でも収集が終わった期間（03 の 4.9）。period は出し、items は []
+		when(rankingMapper.findLatestCompleted(PeriodType.DAILY, "ALL", TODAY))
+			.thenReturn(Optional.of(new CollectionRow(11, DAY.start(), DAY.end())));
+		when(rankingMapper.findTopVisible(11, 10)).thenReturn(List.of());
+		when(assembler.assemble(List.of(), Lang.KO, TODAY, false)).thenReturn(List.of());
+
+		RankingResponse response = service.getRanking(PeriodType.DAILY, "ALL", Lang.KO);
+
+		assertThat(response).isEqualTo(new RankingResponse(PeriodType.DAILY, "ALL", DAY, List.of()));
+	}
 
 	@Test
 	void returnsOnlyCombinationsContainingThePerformanceInOrder() {
@@ -109,6 +176,14 @@ class RankingServiceTest {
 	private static RankingEntryRow entry(int providerRank, String performanceId) {
 		return new RankingEntryRow(providerRank, 100 + providerRank, performanceId, "공연", LocalDate.of(2026, 11, 1),
 				LocalDate.of(2026, 12, 31), "GGGA", "FC1", "극장", null, false);
+	}
+
+	private static PerformanceSummary card(PerformanceSummaryRow row) {
+		LocalizedText title = new LocalizedText(row.title(), row.title(), false);
+		return new PerformanceSummary(row.performanceId(), title,
+				new VenueRef(row.venueId(), new LocalizedText(row.venueName(), row.venueName(), false)),
+				row.startDate(), row.endDate(), row.genreCode(), PerformanceStatus.ONGOING, row.posterUrl(),
+				row.hasAward(), null);
 	}
 
 }
