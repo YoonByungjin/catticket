@@ -1,0 +1,106 @@
+// 07 の 4.4: 横長（左にポスター 72×96px、右に文字）。色はテーマのトークンだけを使う（ライト・ダーク共通）
+
+.ct-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--mat-sys-corner-medium);
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+}
+
+.ct-card {
+  flex-direction: row;
+  gap: 16px;
+  padding: 12px;
+}
+
+.ct-card__poster {
+  flex: 0 0 72px;
+  width: 72px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: var(--mat-sys-corner-small);
+}
+
+.ct-card__poster--none {
+  background: var(--ct-placeholder);
+}
+
+.ct-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+// 公演名は2行まで（07 の 4.4）
+.ct-card__title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-title-medium);
+}
+
+.ct-card__sub {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+}
+
+// 原文の併記は1行まで（07 の 6.）
+.ct-card__original {
+  overflow: hidden;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ct-card__labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+// 押せないラベル（07 の 3.）: 角丸 8px、label-medium
+.ct-label {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--mat-sys-corner-small);
+  font: var(--mat-sys-label-medium);
+  white-space: nowrap;
+}
+
+.ct-label--genre {
+  border: 1px solid var(--mat-sys-outline-variant);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.ct-label--ONGOING {
+  background: var(--ct-success-container);
+  color: var(--ct-success);
+}
+
+.ct-label--UPCOMING {
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-primary);
+}
+
+.ct-label--ENDED,
+.ct-label--original {
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.ct-label--award {
+  border: 1px solid var(--mat-sys-tertiary);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-tertiary);
+}

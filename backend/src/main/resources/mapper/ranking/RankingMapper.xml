@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.catticket.ranking.RankingMapper">
+
+  <resultMap id="collectionRow" type="com.catticket.ranking.row.CollectionRow">
+    <constructor>
+      <idArg column="id" name="id" javaType="_long"/>
+      <arg column="period_start" name="periodStart" javaType="java.time.LocalDate"/>
+      <arg column="period_end" name="periodEnd" javaType="java.time.LocalDate"/>
+    </constructor>
+  </resultMap>
+
+  <resultMap id="rankingEntryRow" type="com.catticket.ranking.row.RankingEntryRow">
+    <constructor>
+      <arg column="provider_rank" name="providerRank" javaType="_int"/>
+      <arg column="id" name="id" javaType="_long"/>
+      <arg column="performance_id" name="performanceId" javaType="string"/>
+      <arg column="title" name="title" javaType="string"/>
+      <arg column="start_date" name="startDate" javaType="java.time.LocalDate"/>
+      <arg column="end_date" name="endDate" javaType="java.time.LocalDate"/>
+      <arg column="genre_code" name="genreCode" javaType="string"/>
+      <arg column="venue_id" name="venueId" javaType="string"/>
+      <arg column="venue_name" name="venueName" javaType="string"/>
+      <arg column="poster_url" name="posterUrl" javaType="string"/>
+      <arg column="has_award" name="hasAward" javaType="_boolean"/>
+    </constructor>
+  </resultMap>
+
+  <!--
+    行があること = S2 がその組・その期間を最後まで終えたこと（03 の 4.9。0 件の期間も行がある）。
+    直近の終わった期間が未収集なら、自然に1つ前（それより前）の期間になる。
+  -->
+  <select id="findLatestCompleted" resultMap="collectionRow">
+    SELECT id, period_start, period_end
+    FROM ranking_collection
+    WHERE period_type = #{periodType}
+      AND genre_code = #{genreCode}
+      AND period_end &lt; #{today}
+    ORDER BY period_start DESC
+    LIMIT 1
+  </select>
+
+  <!--
+    INNER JOIN で公演に結びつかない行を落とし、非表示の公演も除く（03 の 9.1 の D-01）。
+    終わった公演は除かない（03 の 1.6 の「表示できる公演」）。
+  -->
+  <select id="findTopVisible" resultMap="rankingEntryRow">
+    SELECT re.provider_rank, <include refid="com.catticket.common.db.SharedSql.summaryColumns"/>
+    FROM ranking_entry re
+    JOIN performance_effective pe ON pe.kopis_performance_id = re.kopis_performance_id
+    JOIN venue v ON v.id = pe.venue_id
+    WHERE re.ranking_collection_id = #{collectionId}
+      AND pe.is_hidden = FALSE
+    ORDER BY re.provider_rank, re.kopis_performance_id
+    LIMIT #{limit}
+  </select>
+
+</mapper>

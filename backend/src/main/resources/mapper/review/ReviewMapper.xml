@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.catticket.review.ReviewMapper">
+
+  <resultMap id="ratingStatRow" type="com.catticket.review.row.RatingStatRow">
+    <constructor>
+      <arg column="performance_id" name="performanceId" javaType="_long"/>
+      <arg column="rating_sum" name="sum" javaType="_long"/>
+      <arg column="rating_count" name="count" javaType="_long"/>
+    </constructor>
+  </resultMap>
+
+  <!-- 平均はアプリで BigDecimal で求めるので、合計と件数だけを返す（03 の 7.2 の Rating） -->
+  <select id="sumAndCount" resultMap="ratingStatRow">
+    SELECT performance_id, SUM(rating) AS rating_sum, COUNT(*) AS rating_count
+    FROM review
+    WHERE performance_id IN
+    <foreach collection="performanceIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    GROUP BY performance_id
+  </select>
+
+</mapper>

@@ -1,0 +1,107 @@
+@use '../../../theme/breakpoints' as bp;
+
+// 07 の 2.4: 中身の最大の幅は PC 1200px・スマホ表示 640px で中央。左右の余白は PC 24px・スマホ表示 16px
+.ct-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+
+  @media #{bp.$handset} {
+    max-width: 640px;
+    padding: 24px 16px;
+  }
+}
+
+.ct-page__title {
+  margin: 0;
+  font: var(--mat-sys-headline-small);
+}
+
+.ct-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 24px;
+}
+
+.ct-period {
+  align-self: flex-start;
+
+  @media #{bp.$handset} {
+    align-self: stretch;
+  }
+}
+
+.ct-period__option {
+  flex: 1 1 0;
+}
+
+.ct-genre-select {
+  width: 100%;
+}
+
+// 07 の 4.6: 期間・ジャンルの選択の下、一覧の上に1行で
+.ct-aggregation {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.ct-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ct-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+// 07 の 2.1.1: 人気順位の表示は tertiary
+.ct-row__rank {
+  flex: 0 0 32px;
+  color: var(--mat-sys-tertiary);
+  font: var(--mat-sys-title-large);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.ct-row__card {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+// 07 の 4.3: カードと同じ形の灰色の枠を3つ。動きは付けない
+.ct-skeleton {
+  height: 122px;
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--ct-placeholder);
+}
+
+// 07 の 4.3: 一覧の場所の中央に
+.ct-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px 0;
+  text-align: center;
+}
+
+.ct-message__text {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-medium);
+}
+
+.ct-message__text--error {
+  color: var(--mat-sys-on-surface);
+}

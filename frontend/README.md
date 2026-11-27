@@ -25,7 +25,10 @@ Node.js は LTS（Angular 22 の対応: `^22.22.3 || ^24.15.0 || >=26.0.0`）。
 | `src/app/core/theme/` | `ThemeService`（ライト・ダーク表示） |
 | `src/app/core/notification/` | CM-03 通知（`MatSnackBar`） |
 | `src/app/layout/` | CM-01 ヘッダー、CM-02 フッター。出典の2行（`attribution/`）は SC-01 のスマホ表示の出典のダイアログでも使う |
-| `src/app/pages/` | SC-99 エラー、まだ中身のない画面の仮の画面 |
+| `src/app/core/api/` | API の共通の型（03 の 7.2・7.3） |
+| `src/app/core/code/` | ジャンルのコード（表示の文言は辞書の `genre.{コード}`） |
+| `src/app/shared/` | 複数の画面で使う部品: 公演のカード（02 の 3.7）、期間の表示（P-18）、外部データの文の表示（02 の 3.4） |
+| `src/app/pages/` | 各画面（`rankings/` は SC-03。API の呼び出しは画面ごとのサービス）、SC-99 エラー、まだ中身のない画面の仮の画面 |
 | `src/app/app.routes.ts` | 02 の画面一覧の URL |
 
 画面の文言は辞書に足し、テンプレートに直書きしない: `{{ 'header.login' | translate }}`。
@@ -61,7 +64,10 @@ Node.js는 LTS(Angular 22 지원: `^22.22.3 || ^24.15.0 || >=26.0.0`).
 | `src/app/core/theme/` | `ThemeService`(라이트·다크 표시) |
 | `src/app/core/notification/` | CM-03 알림(`MatSnackBar`) |
 | `src/app/layout/` | CM-01 헤더, CM-02 푸터. 출처 2줄(`attribution/`)은 SC-01 스마트폰 표시의 출처 다이얼로그에서도 쓴다 |
-| `src/app/pages/` | SC-99 오류, 아직 내용이 없는 화면의 임시 화면 |
+| `src/app/core/api/` | API 공통 타입(03의 7.2·7.3) |
+| `src/app/core/code/` | 장르 코드(표시 문구는 사전의 `genre.{코드}`) |
+| `src/app/shared/` | 여러 화면에서 쓰는 부품: 공연 카드(02의 3.7), 기간 표시(P-18), 외부 데이터 문장 표시(02의 3.4) |
+| `src/app/pages/` | 각 화면(`rankings/`는 SC-03. API 호출은 화면별 서비스), SC-99 오류, 아직 내용이 없는 화면의 임시 화면 |
 | `src/app/app.routes.ts` | 02 화면 목록의 URL |
 
 화면 문구는 사전에 추가하고 템플릿에 직접 쓰지 않는다: `{{ 'header.login' | translate }}`.
