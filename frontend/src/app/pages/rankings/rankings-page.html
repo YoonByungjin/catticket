@@ -1,0 +1,93 @@
+<div class="ct-page">
+  <h1 class="ct-page__title">{{ 'rankings.title' | translate }}</h1>
+
+  <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
+    <mat-tab [label]="'rankings.tab.ranking' | translate">
+      <div class="ct-tab">
+        <mat-button-toggle-group
+          class="ct-period"
+          [value]="selectedPeriod()"
+          (change)="selectPeriod($event.value)"
+          [attr.aria-label]="'rankings.period' | translate"
+          hideSingleSelectionIndicator
+        >
+          @for (option of periods; track option) {
+            <mat-button-toggle class="ct-period__option" [value]="option">{{
+              periodKey(option) | translate
+            }}</mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+
+        <!-- ジャンルの選び方: PC はチップ、スマホ表示はプルダウン（02 の 2.、07 の 3.） -->
+        @if (handset()) {
+          <mat-form-field class="ct-genre-select" appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'rankings.genre' | translate }}</mat-label>
+            <mat-select [value]="selectedGenre()" (selectionChange)="selectGenre($event.value)">
+              @for (option of genres; track option) {
+                <mat-option [value]="option">{{ genreLabel(option) }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        } @else {
+          <mat-chip-listbox class="ct-genre-chips" [attr.aria-label]="'rankings.genre' | translate">
+            @for (option of genres; track option) {
+              <!-- 選択中のチップを押して選択を外せないようにする（いつも1つ選ばれている） -->
+              <mat-chip-option
+                [value]="option"
+                [selected]="option === selectedGenre()"
+                [selectable]="option !== selectedGenre()"
+                (selectionChange)="onChipSelection($event)"
+                >{{ genreLabel(option) }}</mat-chip-option
+              >
+            }
+          </mat-chip-listbox>
+        }
+
+        @if (aggregationPeriod(); as aggregation) {
+          <p class="ct-aggregation">
+            {{ 'rankings.aggregationPeriod' | translate }}
+            <app-date-range [start]="aggregation.start" [end]="aggregation.end" />
+          </p>
+        }
+
+        @switch (state()) {
+          @case ('loading') {
+            <div class="ct-list ct-list--loading" aria-busy="true">
+              @for (n of [1, 2, 3]; track n) {
+                <div class="ct-skeleton"></div>
+              }
+            </div>
+          }
+          @case ('error') {
+            <div class="ct-message">
+              <p class="ct-message__text ct-message__text--error">
+                {{ 'state.loadError' | translate }}
+              </p>
+              <button mat-stroked-button type="button" (click)="reload()">
+                {{ 'state.reload' | translate }}
+              </button>
+            </div>
+          }
+          @case ('empty') {
+            <div class="ct-message">
+              <p class="ct-message__text">{{ 'rankings.empty' | translate }}</p>
+            </div>
+          }
+          @case ('ready') {
+            <ol class="ct-list">
+              @for (item of items(); track item.rank) {
+                <li class="ct-row">
+                  <span class="ct-row__rank" aria-hidden="true">{{ item.rank }}</span>
+                  <span class="cdk-visually-hidden">{{
+                    'rankings.rank' | translate: { rank: item.rank }
+                  }}</span>
+                  <app-performance-card class="ct-row__card" [performance]="item.performance" />
+                </li>
+              }
+            </ol>
+          }
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

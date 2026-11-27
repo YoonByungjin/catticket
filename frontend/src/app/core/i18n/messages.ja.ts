@@ -26,4 +26,36 @@ export const ja: Messages = {
   'error.performanceNotFound': '公演が見つかりません',
   'error.forbidden': 'この画面を表示する権限がありません',
   'error.goToMap': '地図へ移動',
+
+  'state.loadError': '読み込めませんでした',
+  'state.reload': 'もう一度読み込む',
+
+  'text.original': '原文',
+
+  'performance.status.ONGOING': '公演中',
+  'performance.status.UPCOMING': '公演予定',
+  'performance.status.ENDED': '終了',
+  'performance.award': '受賞作',
+
+  'genre.ALL': '全体',
+  'genre.AAAA': '演劇',
+  'genre.GGGA': 'ミュージカル',
+  'genre.CCCA': '西洋音楽(クラシック)',
+  'genre.CCCC': '韓国音楽(国楽)',
+  'genre.CCCD': '大衆音楽',
+  'genre.BBBC': '舞踊',
+  'genre.BBBE': '大衆舞踊',
+  'genre.EEEA': '複合',
+  'genre.EEEB': 'サーカス/マジック',
+
+  'rankings.title': '人気・トレンド',
+  'rankings.tab.ranking': '人気順位',
+  'rankings.period': '期間',
+  'rankings.period.daily': '日次',
+  'rankings.period.weekly': '週次',
+  'rankings.period.monthly': '月次',
+  'rankings.genre': 'ジャンル',
+  'rankings.aggregationPeriod': '集計期間',
+  'rankings.rank': '{rank}位',
+  'rankings.empty': 'この期間の順位データがありません',
 };

@@ -31,4 +31,42 @@ export const ko = {
   'error.performanceNotFound': '공연을 찾을 수 없습니다',
   'error.forbidden': '이 화면을 볼 권한이 없습니다',
   'error.goToMap': '지도로 이동',
+
+  // 状態の表示（02 の 3.6、07 の 4.3）
+  'state.loadError': '불러오지 못했습니다',
+  'state.reload': '다시 불러오기',
+
+  // 翻訳がない項目の印（02 の 3.4 の P-06、07 の 5.）
+  'text.original': '원문',
+
+  // 公演のカード（02 の 3.7、07 の 4.4）。状態は F-09 ③
+  'performance.status.ONGOING': '공연 중',
+  'performance.status.UPCOMING': '공연 예정',
+  'performance.status.ENDED': '종료',
+  'performance.award': '수상작',
+
+  // ジャンル（03 の 1.2: コードを画面の辞書で訳す）。韓国語は KOPIS のジャンルの名前（genrenm）
+  'genre.ALL': '전체',
+  'genre.AAAA': '연극',
+  'genre.GGGA': '뮤지컬',
+  'genre.CCCA': '서양음악(클래식)',
+  'genre.CCCC': '한국음악(국악)',
+  'genre.CCCD': '대중음악',
+  'genre.BBBC': '무용',
+  'genre.BBBE': '대중무용',
+  'genre.EEEA': '복합',
+  'genre.EEEB': '서커스/마술',
+
+  // SC-03 人気・トレンド（02 の SC-03、07 の 4.6）
+  'rankings.title': '인기·트렌드',
+  'rankings.tab.ranking': '인기 순위',
+  'rankings.period': '기간',
+  'rankings.period.daily': '일간',
+  'rankings.period.weekly': '주간',
+  'rankings.period.monthly': '월간',
+  'rankings.genre': '장르',
+  'rankings.aggregationPeriod': '집계 기간',
+  // 順位の数字の読み上げ（見えない文言）
+  'rankings.rank': '{rank}위',
+  'rankings.empty': '이 기간의 순위 데이터가 없습니다',
 } as const satisfies Record<string, string>;

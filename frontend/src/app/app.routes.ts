@@ -9,7 +9,11 @@ import { PlaceholderPage } from './pages/placeholder/placeholder-page';
 export const routes: Routes = [
   { path: '', pathMatch: 'full', component: PlaceholderPage, data: { screenId: 'SC-01' } },
   { path: 'performances/:performanceId', component: PlaceholderPage, data: { screenId: 'SC-02' } },
-  { path: 'rankings', component: PlaceholderPage, data: { screenId: 'SC-03' } },
+  // 画面は遅延読み込みにする（Issue #40 の決定）
+  {
+    path: 'rankings',
+    loadComponent: () => import('./pages/rankings/rankings-page').then((m) => m.RankingsPage),
+  },
   { path: 'login', component: PlaceholderPage, data: { screenId: 'SC-04' } },
   { path: 'signup', component: PlaceholderPage, data: { screenId: 'SC-05' } },
   { path: 'signup/verify', component: PlaceholderPage, data: { screenId: 'SC-06' } },

@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
@@ -18,6 +20,8 @@ describe('App shell and routes', () => {
         provideRouter(routes, withComponentInputBinding()),
         { provide: ViewportService, useValue: { handset } },
         { provide: BROWSER_STORAGE, useValue: null },
+        provideHttpClient(),
+        provideHttpClientTesting(),
       ],
     });
   });
@@ -35,7 +39,6 @@ describe('App shell and routes', () => {
   const screens: [string, string][] = [
     ['/', 'SC-01'],
     ['/performances/PF123456', 'SC-02'],
-    ['/rankings', 'SC-03'],
     ['/login', 'SC-04'],
     ['/signup', 'SC-05'],
     ['/signup/verify', 'SC-06'],
@@ -54,6 +57,21 @@ describe('App shell and routes', () => {
     await harness.navigateByUrl(url);
     const section = harness.routeNativeElement?.querySelector('[data-screen-id]');
     expect(section?.getAttribute('data-screen-id')).toBe(screenId);
+  });
+
+  it('lazy-loads SC-03 at /rankings (Issue #40 decision)', async () => {
+    const route = routes.find((r) => r.path === 'rankings');
+    expect(route?.loadComponent).toBeDefined();
+    expect(route?.component).toBeUndefined();
+
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/rankings');
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent?.trim()).toBe(
+      '인기·트렌드',
+    );
+    TestBed.inject(HttpTestingController)
+      .expectOne((r) => r.url === '/api/rankings')
+      .flush({ periodType: 'WEEKLY', genre: 'ALL', period: null, items: [] });
   });
 
   it('routes an unknown URL to SC-99 (page not found)', async () => {
@@ -78,7 +96,7 @@ describe('App shell and routes', () => {
     expect(items).toEqual(['지도', '인기·트렌드', '로그인', '회원가입']);
     expect(el.querySelector('.ct-menu-button')?.getAttribute('aria-expanded')).toBe('true');
 
-    await TestBed.inject(Router).navigateByUrl('/rankings');
+    await TestBed.inject(Router).navigateByUrl('/login');
     await fixture.whenStable();
     expect(el.querySelector('.ct-menu-button')?.getAttribute('aria-expanded')).toBe('false');
   });
@@ -123,7 +141,7 @@ describe('App shell and routes', () => {
       (el.querySelector('.ct-menu-button') as HTMLButtonElement).click();
       await fixture.whenStable();
       await new Promise((resolve) => setTimeout(resolve, gapMs));
-      await TestBed.inject(Router).navigateByUrl('/rankings');
+      await TestBed.inject(Router).navigateByUrl('/login');
       await fixture.whenStable();
       // 遅れて届く通知をすべて流してから確かめる
       await new Promise((resolve) => setTimeout(resolve, 20));

@@ -1,0 +1,45 @@
+@let p = performance();
+<a class="ct-card-link" [routerLink]="['/performances', p.performanceId]">
+  <mat-card appearance="outlined" class="ct-card">
+    @if (p.posterUrl) {
+      <img
+        class="ct-card__poster"
+        [src]="p.posterUrl"
+        [alt]="title().value"
+        width="72"
+        height="96"
+        loading="lazy"
+      />
+    } @else {
+      <div class="ct-card__poster ct-card__poster--none"></div>
+    }
+    <div class="ct-card__text">
+      <div class="ct-card__title">
+        {{ title().value }}
+        @if (title().untranslated) {
+          <span class="ct-label ct-label--original">{{ 'text.original' | translate }}</span>
+        }
+      </div>
+      @if (title().original) {
+        <div class="ct-card__original" lang="ko">{{ title().original }}</div>
+      }
+      <div class="ct-card__sub">
+        {{ venue().value }}
+        @if (venue().untranslated) {
+          <span class="ct-label ct-label--original">{{ 'text.original' | translate }}</span>
+        }
+      </div>
+      @if (venue().original) {
+        <div class="ct-card__original" lang="ko">{{ venue().original }}</div>
+      }
+      <app-date-range class="ct-card__sub" [start]="p.startDate" [end]="p.endDate" />
+      <div class="ct-card__labels">
+        <span class="ct-label ct-label--genre">{{ genreLabel() }}</span>
+        <span [class]="'ct-label ct-label--' + p.status">{{ statusKey() | translate }}</span>
+        @if (p.hasAward) {
+          <span class="ct-label ct-label--award">{{ 'performance.award' | translate }}</span>
+        }
+      </div>
+    </div>
+  </mat-card>
+</a>
