@@ -2,8 +2,11 @@
 
 - 状態: 基本設計 承認（2026-11-06、Issue #15 コメント 6678921752）。詳細設計: **レビュー済み（ゲート4 の reviewer: 条件付き承認。指摘（韓国語の 11.4）を反映済み）、人間の承認待ち**（工程4、Issue #20。11. に書いた。確認2（2026-11-09 の人間の決定）を反映し、Flyway の `V1__create_schema.sql` を書いて `test_catticket` に適用できることを確かめた）
 - 担当: db-designer
-- 工程4（Issue #20）: 1.〜10. は基本設計の内容のまま（参照のための番号を変えない。確認2 で変わった `booking_site.name` の NULL 可・会場の住所の翻訳・表示できない公演は、該当の行にも反映した）。型・長さ・照合順序・制約・インデックスの詳細と、Issue #20 の D-01〜D-05・D-09 のうち db-designer の分は 11. に書いた。**4.・6. と 11. が違うところは 11. が正**。**11. と `backend/src/main/resources/db/migration/V1__create_schema.sql` は一致させる**
-- 最終更新: 2026-11-09
+- 工程4（Issue #20）: 1.〜10. は基本設計の内容のまま（参照のための番号を変えない。確認2 で変わった `booking_site.name` の NULL 可・会場の住所の翻訳・表示できない公演は、該当の行にも反映した）。型・長さ・照合順序・制約・インデックスの詳細と、Issue #20 の D-01〜D-05・D-09 のうち db-designer の分は 11. に書いた。**4.・6. と 11. が違うところは 11. が正**。**11. と `backend/src/main/resources/db/migration/` のマイグレーション（V1〜V3。V1 の後の変更は 11.10・11.11）を適用した結果は一致させる**
+- 最終更新: 2026-11-26
+- Issue #38（2026-11-20）: 人間の決定1（コメント 7032205139。01 の R-69・X-30）で F-32 ②（開幕からの累計の上演回数）を廃止し、05 の S5 をなくした（欠番）ことを反映した。`performance.total_show_count` と CHECK `chk_performance_total_show_count` を外し、ビュー `performance_effective` から列を除いた（2.・3.・4.2・4.18・7.・8.・11.2.2・11.2.18・11.3）。DB は `V2__drop_total_show_count.sql` で変える（11.10）。reviewer の確認待ち
+- Issue #38（2026-11-25）: 人間の決定3（コメント 7153821340。06 の 11 の U-17）で、`batch_step_run` に S1 の収集の基準日 `collect_base_date` と CHECK `chk_batch_step_run_collect_base_date` を足し、「前回 S1 が成功した日」を `COALESCE(collect_base_date, DATE(started_at))` にした（05 の 3.3 の 12.・3.5。03 の 5. の「収集の基準日」）（2.・4.18・6.・7.・8.・9. の DB-10・11.2.18・11.4）。DB は `V3__add_collect_base_date.sql` で変える（11.11）。reviewer の確認待ち
+- Issue #38（2026-11-26）: 人間の決定1（コメント 7180014012）で 05 の 3.5 の1回の実行の上限が本番 1,500 → 300 回（S1 は最大 185 回）になったことを、11.11 の「理由」の値と初回の見込み（約 25 日）に反映した。テーブル・マイグレーションは変えない
 - 前提: [01. 要件定義書](01-requirements.md)（F-01〜F-36、N-01〜N-08。R-62〜R-64 を反映）、[02. 画面設計書](02-screens.md)、[03. API 設計書](03-api.md)（**5. のデータ項目**、**6. の対応表**）、[05. バッチ設計書](05-batch.md)、ADR 0006〜0016（特に 0007・0008・0009・0012・0013）
 - この設計書の 8. に、**要件 → テーブルの対応表**を 03 の 6. と同じ行（同じ要件 ID・同じ順番）で置く。2つの表を要件 ID で突き合わせると、要件 → 画面 → API → バッチ → テーブルの対応になる（Issue #15 コメント 6651238358 の 3.）
 - `DB-xx` はこの設計書の設計判断の番号（9.）。`P-xx` は 02 の判断（人間が決定済み）
@@ -31,7 +34,7 @@
 
 - ER 図、テーブル一覧、主なカラム（型は予定。決められるものは書く）、主キー・外部キー・一意制約・`CHECK`、主なインデックスとその理由、要件との対応。
 - 型の長さの最終値、照合順序（collation）、インデックスの最終形、Flyway のマイグレーション SQL は工程4で書く（Issue #15 の「注意」）。
-- 工程4 の詳細は 11.（Flyway の SQL は `V1__create_schema.sql`。11.9）。
+- 工程4 の詳細は 11.（Flyway の SQL は `V1__create_schema.sql`。11.9。その後の変更は `V2__drop_total_show_count.sql`（11.10）・`V3__add_collect_base_date.sql`（11.11））。
 
 ### 1.3 テーブルにしないもの
 
@@ -82,7 +85,6 @@ erDiagram
     date end_date
     varchar genre_code
     boolean is_open_run
-    int total_show_count "NULL 可"
     boolean has_award
     boolean is_seoul
     boolean is_hidden
@@ -104,7 +106,7 @@ erDiagram
   station {
     bigint id PK
     varchar external_station_code UK
-    varchar line
+    tinyint line
     varchar name_ko
     varchar name_ja "NULL 可"
     decimal latitude
@@ -199,6 +201,7 @@ erDiagram
     varchar step_name
     enum result "NULL 可"
     date window_end_date "NULL 可"
+    date collect_base_date "NULL 可"
   }
 ```
 
@@ -210,7 +213,7 @@ erDiagram
 | No. | テーブル | 役割 | 主キー | 外部キー | 一意制約 | 要件 ID | API | バッチ |
 |---|---|---|---|---|---|---|---|---|
 | 1 | `venue` | 会場（KOPIS の施設）。区・座標 | `id` | — | `kopis_venue_id` | F-01, F-02, F-03, F-05〜F-08, F-11, N-01 | API-01〜06, 50, 51 | B-01（S1, S4） |
-| 2 | `performance` | 公演（自動収集の値）と非表示 | `id` | `venue_id` → `venue` | `kopis_performance_id` | F-01〜F-03, F-07〜F-09, F-11, F-19〜F-21, F-26, F-27, F-29, F-31〜F-33, N-01, N-04 | API-01〜03, 05, 06, 10, 11, 20, 21, 43〜45, 50〜55 | B-01（S1, S3〜S5） |
+| 2 | `performance` | 公演（自動収集の値）と非表示 | `id` | `venue_id` → `venue` | `kopis_performance_id` | F-01〜F-03, F-07〜F-09, F-11, F-19〜F-21, F-26, F-27, F-29, F-31〜F-33, N-01, N-04 | API-01〜03, 05, 06, 10, 11, 20, 21, 43〜45, 50〜55 | B-01（S1, S3, S4） |
 | 3 | `booking_site` | 予約サイト（1つの公演に複数）。自動収集の分と管理者が修正した分 | `id` | `performance_id` → `performance` | (`performance_id`, `source`, `sort_order`) | F-03, F-04, F-08, F-11, F-26, N-01 | API-03, 51〜53 | B-01（S1, S4） |
 | 4 | `performance_override` | 管理者の修正（項目ごとに1行） | `id` | `performance_id` → `performance` | (`performance_id`, `field_name`) | F-01〜F-04, F-07, F-08, F-11, F-26, F-32, N-01, N-04 | API-01〜03, 05, 43, 50〜53 | B-01（上書きしない。S7 の翻訳の対象） |
 | 5 | `station` | 駅（ソウル交通公社 1〜8号線のソウルの駅。乗り換え駅は路線ごとに1行） | `id` | — | `external_station_code`、(`line`, `name_ko`) | F-05〜F-07, F-11, N-01, N-04 | API-04, 05 | B-02 |
@@ -264,7 +267,6 @@ erDiagram
 | `age_limit` | VARCHAR | 可 | NULL | — | 観覧年齢（原文） |
 | `poster_url` | VARCHAR | 可 | NULL | — | ポスターの URL |
 | `is_open_run` | BOOLEAN | 不可 | FALSE | — | オープンランかどうか（`openrun`） |
-| `total_show_count` | INT | 可 | NULL | CHECK（0 以上） | 開幕からの累計の上演回数（R-49。05 の 3.6）。まだ取れていなければ NULL |
 | `has_award` | BOOLEAN | 不可 | FALSE | — | 受賞歴があるか（S3 が立てるだけで消さない。05 の 3.2） |
 | `is_seoul` | BOOLEAN | 不可 | — | — | ソウルの公演か（05 の 3.3 の 6.） |
 | `is_hidden` | BOOLEAN | 不可 | FALSE | — | 管理者が非表示にしたか（F-27）。B-01 は書き換えない |
@@ -303,7 +305,7 @@ erDiagram
 | カラム | 型（予定） | NULL | 既定 | 制約 | 説明 |
 |---|---|---|---|---|---|
 | `external_station_code` | VARCHAR | 不可 | — | UNIQUE | 外部の駅コード（座標のファイルの「고유역번호(외부역코드)」。乗り換え駅は路線ごとに別のコード） |
-| `line` | VARCHAR | 不可 | — | UNIQUE（`line`, `name_ko`） | 路線（例: `1호선`。書き方はファイルを取得して工程4で決める） |
+| `line` | TINYINT | 不可 | — | UNIQUE（`line`, `name_ko`）、CHECK（1〜8） | 路線（1〜8。11.5 の D-09） |
 | `name_ko` | VARCHAR | 不可 | — | 同上 | 駅名（韓国語） |
 | `name_ja` | VARCHAR | 可 | NULL | — | 駅名（日本語の公式表記。ADR 0009）。ない駅は `translation` の機械翻訳を使う |
 | `latitude` | DECIMAL(9,6) | 不可 | — | — | 緯度 |
@@ -452,7 +454,7 @@ erDiagram
 | カラム | 型（予定） | NULL | 既定 | 制約 | 説明 |
 |---|---|---|---|---|---|
 | `job_run_id` | BIGINT | 不可 | — | FK → `batch_job_run.id`。UNIQUE（`job_run_id`, `step_name`） | どの実行のステップか |
-| `step_name` | VARCHAR | 不可 | — | — | ステップ（B-01 は `S1`〜`S7`。B-02〜B-04 は1つのステップとして記録する。B-04 は削除した件数を `processed_count` に入れる） |
+| `step_name` | VARCHAR | 不可 | — | — | ステップ（B-01 は `S1`〜`S4`・`S6`・`S7`。S5 は欠番（05 の 3.6）。B-02〜B-04 は1つのステップとして記録する。B-04 は削除した件数を `processed_count` に入れる） |
 | `started_at` | DATETIME | 不可 | — | — | 開始日時 |
 | `finished_at` | DATETIME | 可 | NULL | — | 終了日時 |
 | `result` | ENUM(`SUCCESS`, `FAILURE`) | 可 | NULL | — | 結果。実行中は NULL |
@@ -460,8 +462,10 @@ erDiagram
 | `summary` | TEXT | 可 | NULL | — | 件数の内訳（区を決められなかった会場の数、座標のない会場の数、取り込まなかった駅・コインロッカーの数と内容など。05 の 3.3・4.3） |
 | `error_message` | TEXT | 可 | NULL | — | エラーの内容 |
 | `window_end_date` | DATE | 可 | NULL | — | S1 が成功したときの収集の窓の末日（05 の 3.3 の 3.(b)・7.）。S1 以外は NULL |
+| `collect_base_date` | DATE | 可 | NULL | S1 以外は NULL（CHECK） | S1 の収集の基準日（2026-11-25 追加。05 の 3.3 の 12.）。S1 の行に成功・失敗とも記録する。前の S1 が成功でなければその基準日を引き継ぎ、そうでなければ今日。続きの S1 は、基準日の 0 時より後に収集した公演を飛ばす |
 
-- 「前回 S1 が成功した日」（`afterdate` に使う）は、`step_name = 'S1'` かつ `result = 'SUCCESS'` の最も新しい行の `started_at` の日付（Asia/Seoul）として求める（DB-10）。
+- 「前回 S1 が成功した日」（`afterdate` に使う）は、`step_name = 'S1'` かつ `result = 'SUCCESS'` の最も新しい行の **`COALESCE(collect_base_date, DATE(started_at))`**（基準日。基準日のない V3 より前の行は `started_at` の日付（Asia/Seoul））として求める（DB-10。2026-11-25 に変更）。次の実行の `afterdate` はこの日の前日になる（05 の 3.3 の 12.）。
+- 続きの S1 が引き継ぐ基準日は、今回の実行より前の実行の S1 の最も新しい行（`step_name = 'S1' AND job_run_id < ?` を `id` の降順で1行）の `result` と `collect_base_date` から決める（06 の 4.9 の `findLatestS1Before`）。
 
 ## 5. 外部キーと削除の扱い
 
@@ -501,7 +505,7 @@ erDiagram
 | `app_user` | (`status`) | B-04 で認証前（`PENDING`）の行だけを読む（05 の 6.2 の 3.）。有効な行が大半で、認証前の行は少ない見込みなので、絞り込みに効く |
 | `mail_send_log` | (`created_at`) | 直近 24 時間の送信数を数える（03 の 4.8） |
 | `batch_job_run` | (`job_name`, `started_at`) | 処理ごとの最新の実行を見る（運用） |
-| `batch_step_run` | (`step_name`, `result`, `started_at`) | 前回 S1 が成功した日と窓の末日を求める（05 の 3.3） |
+| `batch_step_run` | (`step_name`, `result`, `started_at`) | 前回 S1 が成功した日（基準日）と窓の末日を求める（05 の 3.3。続きの基準日の引き継ぎは行が少なく、主キーの逆順で足りる。11.11） |
 
 - `ranking_collection` の一意制約は (`period_type`, `genre_code`, `period_start`) の順にし、「期間の種類・ジャンルごとの最新の完了した期間」（03 の 4.9）を同じインデックスで引けるようにする。
 - 空間インデックス（`POINT`・`SPATIAL`）は使わない（DB-12）。
@@ -512,7 +516,7 @@ erDiagram
 
 | 03 の 5. のデータ | 割り当て先 |
 |---|---|
-| 公演 | `performance`（KOPIS の公演 ID → `kopis_performance_id`、会場 → `venue_id`、公演名 → `title`、開始日・終了日 → `start_date`・`end_date`、ジャンル → `genre_code`、出演者 → `cast_text`、チケット価格 → `ticket_price`、公演時間の案内 → `schedule_text`、上演時間 → `runtime`、観覧年齢 → `age_limit`、ポスター → `poster_url`、オープンラン → `is_open_run`、累計の上演回数 → `total_show_count`、受賞歴 → `has_award`、ソウルか → `is_seoul`、KOPIS の最終更新日時 → `kopis_updated_at`、収集した日時 → `collected_at`、非表示 → `is_hidden`） |
+| 公演 | `performance`（KOPIS の公演 ID → `kopis_performance_id`、会場 → `venue_id`、公演名 → `title`、開始日・終了日 → `start_date`・`end_date`、ジャンル → `genre_code`、出演者 → `cast_text`、チケット価格 → `ticket_price`、公演時間の案内 → `schedule_text`、上演時間 → `runtime`、観覧年齢 → `age_limit`、ポスター → `poster_url`、オープンラン → `is_open_run`、受賞歴 → `has_award`、ソウルか → `is_seoul`、KOPIS の最終更新日時 → `kopis_updated_at`、収集した日時 → `collected_at`、非表示 → `is_hidden`） |
 | 予約サイト | `booking_site`（公演 → `performance_id`、名前 → `name`、URL → `url`、並び順 → `sort_order`。自動収集か修正かを `source` で分ける。DB-02） |
 | 管理者の修正 | `performance_override`（公演 → `performance_id`、項目 → `field_name`、修正した値 → `override_value`、修正した日時 → `updated_at`）。予約サイトの修正した値は `booking_site` の `ADMIN` の行 |
 | 会場 | `venue`（施設 ID → `kopis_venue_id`、会場名 → `name`、住所 → `address`、区 → `district`、緯度・経度 → `latitude`・`longitude`） |
@@ -528,7 +532,7 @@ erDiagram
 | お気に入り | `favorite`（ユーザー・公演、登録日時 → `created_at`。(`user_id`, `performance_id`) で一意） |
 | レビュー | `review`（ユーザー・公演、評価 → `rating`、本文 → `body`、投稿日時 → `created_at`、更新日時 → `updated_at`。(`user_id`, `performance_id`) で一意） |
 | メールの送信の記録 | `mail_send_log`（送った日時 → `created_at`、用途 → `purpose`） |
-| バッチの実行の記録 | `batch_job_run`（ジョブ、開始・終了日時、結果、エラーの内容）と `batch_step_run`（ステップ、開始・終了日時、結果、件数 → `processed_count`・`summary`、エラーの内容）。前回の収集が成功した日は `batch_step_run` から求める（DB-10）。「今回の窓の末日」（03 の 5.。05 の 3.3 の 3.(b)・7.）は `batch_step_run.window_end_date` |
+| バッチの実行の記録 | `batch_job_run`（ジョブ、開始・終了日時、結果、エラーの内容）と `batch_step_run`（ステップ、開始・終了日時、結果、件数 → `processed_count`・`summary`、エラーの内容）。前回の収集が成功した日は `batch_step_run` から求める（DB-10）。「今回の窓の末日」（03 の 5.。05 の 3.3 の 3.(b)・7.）は `batch_step_run.window_end_date`。「収集の基準日」（03 の 5.。05 の 3.3 の 12.）は `batch_step_run.collect_base_date` |
 
 03 の 5. にない項目で、この設計書が持つもの:
 
@@ -550,7 +554,7 @@ erDiagram
 | F-05 | `station`, `venue` | 会場の座標と駅の座標の距離（500m 以下） |
 | F-06 | `coin_locker`, `station`, `venue` | コインロッカーが属する駅の座標で距離を判定し、位置の文章を返す |
 | F-07 | `performance`, `venue`, `performance_override`, `station`, `coin_locker` | 現在地から 500m 以内の公開中の公演（会場ごと）・駅・コインロッカー |
-| F-08 | `performance`, `venue`, `booking_site`, `performance_override`, `batch_job_run`, `batch_step_run` | 毎日の収集で追加・更新する（修正した項目・非表示は書き換えない）。前回の成功の日と窓の末日を記録する |
+| F-08 | `performance`, `venue`, `booking_site`, `performance_override`, `batch_job_run`, `batch_step_run` | 毎日の収集で追加・更新する（修正した項目・非表示は書き換えない）。前回の成功の日と窓の末日を記録する。初回のように途中で止まった S1 は、収集の基準日（`collect_base_date`）で次の実行に続ける |
 | F-09 | `performance`, `ranking_entry`, `favorite`, `review` | 公演を削除しない（外部キーは RESTRICT）。終わったかは `end_date` で判定。順位・お気に入り・レビューは終わった公演も対象 |
 | F-10 | — | ブラウザに記憶する（03 の 6. と同じ。1.3） |
 | F-11 | `translation`, `translation_usage`, `performance`, `performance_override`, `booking_site`, `venue`, `station`, `coin_locker` | 翻訳する原文（05 の 3.7 の S7 の対象: 公演の項目・管理者の修正した値・予約サイトの名前（NULL の行は対象外）・会場名・会場の住所（03 の 5.1 の H-11）・駅名・コインロッカーの位置の文章）は各テーブルにあり、その原文のハッシュで `translation` を引く。公演名・会場名・駅名は原文も返す（②）。駅名は `station.name_ja`（公式表記）を優先。月の上限は `translation_usage` |
@@ -574,7 +578,7 @@ erDiagram
 | F-29 | `ranking_collection`, `ranking_entry`, `performance` | 収集が終わっている直近の期間（R-62）の順位を、表示できない公演（非表示の公演と、`performance` に結びつかない順位の行。R-65・D-01）を除いて振り直す |
 | F-30 | `review` | 評価の平均・件数を照会のたびに計算する。保存しないので、投稿・編集・削除（API-11〜13）の結果は次の照会にそのまま反映される（③） |
 | F-31 | `performance` | `has_award` |
-| F-32 | `performance`, `performance_override` | `is_open_run`（修正できる）、`total_show_count` |
+| F-32 | `performance`, `performance_override` | `is_open_run`（修正できる）。② の上演回数は廃止（R-69）なので列を持たない |
 | F-33 | `ranking_collection`, `ranking_entry`, `performance` | 現在の期間と1つ前の期間の順位を比べる。1つ前の期間の完了の記録がなければ P-17。表示できない公演は F-29 と同じく除く。上がった公演が0件なら現在の上位を返す（R-66。API-21 の `NO_RISE`。テーブルは変わらない） |
 | F-34 | `genre_trend` | 最新の集計期間の割合と基準 |
 | F-35 | — | ログアウト・自動ログアウトはセッション（アプリのメモリ。ADR 0013 決定2〜4）で行い、テーブルを使わない（03 の 6. と同じ。1.3。10.1 の Q-03） |
@@ -609,7 +613,7 @@ erDiagram
 | DB-07 | 管理者は1行だけであることを DB で保証する（`role = 'ADMIN'` のときだけ値を持つ式に一意制約を付ける。MySQL 8 の式インデックス。形は工程4） | F-25 ①（管理者アカウント1つ）を、B-03 の確認（05 の 5. の 3.）だけに頼らない | アプリの確認だけ: `CLAUDE.md` の「制約は DB でも定義する」に合わない |
 | DB-08 | ロック中かどうかは `locked_at`（NULL でなければロック中）で持つ | 「ロック中かどうか」に加えて、いつロックしたかが運用の確認に使える。解除で NULL と失敗回数 0 にする | 真偽の列 `is_locked`: 日時が残らない |
 | DB-09 | **正規化を崩すもの**: `ranking_collection.period_end`・`genre_trend.period_end`（初日と期間の種類から計算できる）、`genre_trend.share`（予約数から計算できる）、`genre_trend.basis`（同じ期間の行でみな同じ値） | `period_end`: 03 の 5. が初日・末日を求め、API が集計期間をそのまま返す。暦の週・月の末日の計算を SQL ごとに書かない。`share`: 05 の S6 が収集のときに計算して保存する設計。期間ごとに全部入れ替えるので、値がずれない。`basis`: S6 は1回の照会で1つの期間を取るので、同じ期間の行はいつも同じ値になる。期間の親テーブルを作るほどの利点がない | 計算で求める・親テーブルを作る |
-| DB-10 | 「前回 S1 が成功した日」は列に持たず、`batch_step_run` の成功した S1 の行から求める。窓の末日は計算できないので `window_end_date` に持つ | 同じ事実を2か所に持たない。S1 が失敗したときは成功の行ができないので、05 の 3.3 の 7.（失敗したら記録を更新しない）と同じ動きになる | 状態を1行で持つテーブル: 実行の記録と同じ内容を重ねて持つ |
+| DB-10 | 「前回 S1 が成功した日」は列に持たず、`batch_step_run` の成功した S1 の行から求める。窓の末日は計算できないので `window_end_date` に持つ。**2026-11-25 から**、成功した日は成功した S1 の最も新しい行の `COALESCE(collect_base_date, DATE(started_at))` とし、基準日は S1 の行ごとに `collect_base_date` に持つ（11.11） | 同じ事実を2か所に持たない。S1 が失敗したときは成功の行ができないので、05 の 3.3 の 7.（失敗したら記録を更新しない）と同じ動きになる。基準日は前の S1 から引き継ぐ値で、行の `started_at` からは計算できない（初回を数日に分けると、成功した行の開始日と違う）ので列に持つ。ふだんの日は `DATE(started_at)` と同じ値になるが、別の事実（どの時点からの収集か）として行ごとに1回だけ記録する | 状態を1行で持つテーブル: 実行の記録と同じ内容を重ねて持つ。／基準日を `window_end_date` のように成功の行だけに持つ: 失敗した S1 から基準日を引き継げない |
 | DB-11 | メールの送信の記録に宛先・ユーザーを持たない | 上限の数え方（03 の 4.8）に要らない。退会したユーザーのメールアドレスを残さない（F-18） | 宛先を持つ: 個人情報が退会の後も残る |
 | DB-12 | 座標は `DECIMAL(9,6)` で持ち、空間のデータ型・インデックスを使わない | 提供元の値が小数第6位（ADR 0009）で、`DECIMAL` なら丸めの誤差なしにそのまま持てる。距離はハバーサインの式で計算する（03 の 4.5）。駅は約 270 行、会場は約千行で、範囲での絞り込みは通常のインデックスで足りる | `POINT` + `SPATIAL INDEX`: SRID・軸の順番などの扱いが増え、この規模では利点が小さい。`DOUBLE`: 2進数の丸めの誤差がある |
 
@@ -633,7 +637,7 @@ erDiagram
 - 管理者の修正を反映した値を読む方法（ビューにするか、クエリごとに結ぶか）と、その値で絞るときのインデックス（DB-01・6.）。
 - `ranking_entry` の一意制約を (`ranking_collection_id`, `provider_rank`) にも付けるか（`boxoffice` が同じ順位を複数返すことがあるかを、ADR 0008 の「注意点」の確認で見る）。
 - **`performance` に結びつかない順位の行**（S4 が失敗した・まだ補っていない公演）の扱い（03 の 4.9、DB-04）。F-29 ⑤⑧（提供元のデータのまま、非表示の公演だけを除いて振り直す）との関係を見て決める。画面に見える振る舞い（順位の番号・件数）が変わる場合は、工程4で人間に確認する（ゲート3 の軽微6。人間の決定: Issue #15 コメント 6678516145）。テーブルの形（DB-04）は変わらない。
-- `station.line` の値の書き方、`coin_locker` の結びつけの規則（05 の 4.4。ファイルを取得して決める）。
+- `coin_locker` の結びつけの規則（05 の 4.4。ファイルを取得して決める）。
 - 管理者の `nickname` に入れる値（B-03。画面には出ない）。
 - 古い記録（`mail_send_log`、`batch_*`、有効なアカウントの使った・期限の切れた `auth_token`）を消すかどうか。消す機能は要件にないので、今は消さない（量は小さい）。期限の切れた認証前の行とそのトークンは B-04 が消す（05 の 6.）。
 - B-04 と認証の完了（API-34）が期限の直前に同時に動いたときの行のロックの取り方（05 の 6.3。06 で決める。テーブルの形は変わらない）。
@@ -659,7 +663,7 @@ erDiagram
 | 名前 | 一意制約 `uk_{テーブル}_{内容}`、インデックス `idx_{テーブル}_{内容}`、外部キー `fk_{テーブル}_{参照先}`、CHECK `chk_{テーブル}_{内容}`。**CHECK と外部キーの名前はスキーマの中で一意でなければならない**ので、必ずテーブル名から始める（MySQL 8.4 公式「CHECK Constraints」、確認日 2026-11-06） |
 | 外部キーと CHECK | MySQL は、`ON DELETE`・`ON UPDATE` の動きを持つ外部キーの列に CHECK を付けられない（公式。同上）。そのため外部キーの列（`*_id`）には CHECK を付けない |
 | ON UPDATE | 外部キーはすべて `ON UPDATE RESTRICT`（主キーは変えない。5.） |
-| マイグレーション | 1つ目のファイル `V1__create_schema.sql` に、外部キーの参照の順（`venue` → `performance` → …）で全テーブル（18）とビュー（1）を作る（書いた。2026-11-09）。1つのファイルにしたのは、最初のスキーマはまとめて1度だけ適用し、途中までの状態に意味がないため（MySQL の DDL はトランザクションで戻せないので、失敗したら Flyway の履歴が失敗になり、DB を作り直して直す）。**適用した後はこのファイルを編集しない**。変更は `V2__…` から新しいファイルで行う |
+| マイグレーション | 1つ目のファイル `V1__create_schema.sql` に、外部キーの参照の順（`venue` → `performance` → …）で全テーブル（18）とビュー（1）を作る（書いた。2026-11-09）。1つのファイルにしたのは、最初のスキーマはまとめて1度だけ適用し、途中までの状態に意味がないため（MySQL の DDL はトランザクションで戻せないので、失敗したら Flyway の履歴が失敗になり、DB を作り直して直す）。**適用した後はこのファイルを編集しない**。変更は `V2__…` から新しいファイルで行う（V2: 11.10） |
 
 ### 11.2 テーブル定義
 
@@ -696,7 +700,6 @@ erDiagram
 | `age_limit` | VARCHAR(200) | 可 | NULL | 既定 | — | 観覧年齢（原文） |
 | `poster_url` | VARCHAR(2000) | 可 | NULL | 既定 | — | ポスターの URL |
 | `is_open_run` | BOOLEAN | 不可 | FALSE | — | — | オープンランか |
-| `total_show_count` | INT | 可 | NULL | — | `chk_performance_total_show_count` (`total_show_count >= 0`) | 開幕からの累計の上演回数 |
 | `has_award` | BOOLEAN | 不可 | FALSE | — | — | 受賞歴があるか |
 | `is_seoul` | BOOLEAN | 不可 | （なし） | — | — | ソウルの公演か |
 | `is_hidden` | BOOLEAN | 不可 | FALSE | — | — | 管理者が非表示にしたか |
@@ -920,7 +923,7 @@ erDiagram
 | 列 | 型 | NULL | 既定 | 照合 | 制約 | COMMENT |
 |---|---|---|---|---|---|---|
 | `job_run_id` | BIGINT | 不可 | — | — | `fk_batch_step_run_job_run` → `batch_job_run(id)` ON DELETE CASCADE | どの実行のステップか |
-| `step_name` | VARCHAR(50) | 不可 | — | 既定 | 一意制約 | ステップ（S1〜S7 など） |
+| `step_name` | VARCHAR(50) | 不可 | — | 既定 | 一意制約 | ステップ（B-01 は S1〜S4・S6・S7。S5 は欠番） |
 | `started_at` | DATETIME | 不可 | — | — | — | 開始日時 |
 | `finished_at` | DATETIME | 可 | NULL | — | 下の CHECK | 終了日時 |
 | `result` | ENUM('SUCCESS','FAILURE') | 可 | NULL | — | 下の CHECK | 結果 |
@@ -928,9 +931,10 @@ erDiagram
 | `summary` | TEXT | 可 | NULL | 既定 | — | 件数の内訳 |
 | `error_message` | TEXT | 可 | NULL | 既定 | — | エラーの内容 |
 | `window_end_date` | DATE | 可 | NULL | — | 下の CHECK | S1 が成功したときの収集の窓の末日 |
+| `collect_base_date` | DATE | 可 | NULL | — | 下の CHECK | S1 の収集の基準日（続きの S1 では続きを始めた日。05 の 3.3 の 12.）。S1 以外は NULL |
 
 - 一意制約: `uk_batch_step_run_job_step` (`job_run_id`, `step_name`)。外部キーのインデックスを兼ねる。インデックス: `idx_batch_step_run_step_result_started` (`step_name`, `result`, `started_at`)。
-- CHECK: `chk_batch_step_run_finished` `((finished_at IS NULL) = (result IS NULL))`、`chk_batch_step_run_window` `(window_end_date IS NULL OR (step_name = 'S1' AND result = 'SUCCESS'))`。
+- CHECK: `chk_batch_step_run_finished` `((finished_at IS NULL) = (result IS NULL))`、`chk_batch_step_run_window` `(window_end_date IS NULL OR (step_name = 'S1' AND result = 'SUCCESS'))`、`chk_batch_step_run_collect_base_date` `(collect_base_date IS NULL OR step_name = 'S1')`（V3。11.11）。
 - `summary` には、05 が「記録に残す」とする件数を書く（S1: 区を決められなかった会場の数・座標のない会場の数・URL がなく保存しなかった予約サイトの数（05 の 3.3 の 5.・9.）、B-02: 取り込まなかった駅・コインロッカーの数と内容（05 の 4.3）など）。書き方（文の形）は 05・06 で決める。件数ごとの列は置かない（種類がステップごとに違い、API が読まない運用の記録のため）。
 
 ### 11.3 ビュー `performance_effective`（管理者の修正を反映した公演の値。D-09・03 の 5.1 の H-01）
@@ -954,7 +958,7 @@ SELECT
   CASE WHEN o_age.id     IS NULL THEN p.age_limit     ELSE o_age.override_value                    END AS age_limit,
   CASE WHEN o_open.id    IS NULL THEN p.is_open_run   ELSE (o_open.override_value = 'true')        END AS is_open_run,
   (o_sites.id IS NOT NULL) AS has_booking_site_override,
-  p.poster_url, p.total_show_count, p.has_award, p.is_seoul, p.is_hidden
+  p.poster_url, p.has_award, p.is_seoul, p.is_hidden
 FROM performance p
 LEFT JOIN performance_override o_title ON o_title.performance_id = p.id AND o_title.field_name = 'title'
 LEFT JOIN performance_override o_start ON o_start.performance_id = p.id AND o_start.field_name = 'start_date'
@@ -1014,7 +1018,7 @@ LEFT JOIN performance_override o_sites ON o_sites.performance_id = p.id AND o_si
 | `mail_send_log` | `idx_mail_send_log_created` | `created_at` | INDEX | 直近 24 時間の数（03 の 4.8） |
 | `batch_job_run` | `idx_batch_job_run_name_started` | `job_name`, `started_at` | INDEX | 処理ごとの最新の実行（運用） |
 | `batch_step_run` | `uk_batch_step_run_job_step` | `job_run_id`, `step_name` | UNIQUE | 外部キーを兼ねる |
-| `batch_step_run` | `idx_batch_step_run_step_result_started` | `step_name`, `result`, `started_at` | INDEX | 前回 S1 が成功した日と窓の末日（05 の 3.3） |
+| `batch_step_run` | `idx_batch_step_run_step_result_started` | `step_name`, `result`, `started_at` | INDEX | 前回 S1 が成功した日（基準日）と窓の末日（05 の 3.3） |
 
 **基本設計（6.）から外したもの・変えたもの**
 
@@ -1209,6 +1213,34 @@ A-01・A-08 は解消した。A-02〜A-07 はテーブルの形（型・列・�
 - 制約の動きを、ROLLBACK するトランザクションの中で確かめた（データは残していない）: メールアドレスの大文字・小文字の重複（1062）、有効な行のニックネームの重複（1062）と認証前の行の許可、管理者の2行目（1062）、管理者の認証前（CHECK）、`booking_site` の `ADMIN` の名前 NULL・空文字の名前・空の URL（CHECK）と `COLLECTED` の名前 NULL の許可、`performance_override` の日付・真偽・項目の形（CHECK）、`ranking_collection` の週の初日が月曜でない（CHECK）、`ranking_entry` の公演のない行の許可（D-01）、`translation` の大文字のハッシュ（CHECK）、`translation_usage` の1日でない月（CHECK）、`batch_*` の終了と結果、S1 以外の窓の末日（CHECK）、`review` の評価・空の本文（CHECK）、予約サイト・レビューのある公演の削除（RESTRICT）、ユーザーの削除でレビューが消える（CASCADE）。
 - ビュー `performance_effective`: 修正した公演開始日・真偽・予約サイトの印が反映された。`EXPLAIN` で `performance` は `uk_performance_kopis_performance_id`、11 の `performance_override` の結合はすべて `uk_performance_override_performance_field` の `const`（MERGE で展開されている）。
 
+### 11.10 Issue #38 の変更（V2、2026-11-20）
+
+- 理由: 人間の決定1（2026-11-20、Issue #38 コメント 7032205139）。KOPIS から開幕からの累計の上演回数を得られないため、F-32 ② を廃止した（01 の R-69・X-30）。05 は S5（上演回数の収集）をなくし、名前を振り直さず欠番にした（05 の 3.6。B-01 のステップは `S1`〜`S4`・`S6`・`S7`）。
+- ファイル: `backend/src/main/resources/db/migration/V2__drop_total_show_count.sql`。V1 は適用済みなので編集しない（11.1 の「マイグレーション」）。中身は次の順:
+  1. ビュー `performance_effective` を `CREATE OR REPLACE` で作り直す（11.3 の定義から `p.total_show_count` を除いただけ。`ALGORITHM = MERGE`・`SQL SECURITY INVOKER` は同じ）。列を消す前に作り直し、消えた列を参照したビューが残らないようにした。
+  2. `ALTER TABLE performance DROP CHECK chk_performance_total_show_count, DROP COLUMN total_show_count`（CHECK が参照する列は消せないので、同じ文で CHECK を先に消す）。
+  3. `batch_step_run.step_name` の COMMENT を `'ステップ（B-01 は S1〜S4・S6・S7。S5 は欠番）'` に変える（`MODIFY COLUMN`。型・NULL・照合順序は V1 と同じ）。
+- V1 で `total_show_count` を参照していたのは、列・CHECK `chk_performance_total_show_count`・ビュー `performance_effective` の3か所だけ（インデックス・ほかのビューはない）。backend のコード（Java・Mapper の XML）とテストは `total_show_count` を参照していない（2026-11-20 に grep で確認）。
+- 欠番の S5 の行は `batch_step_run` に入らない。`step_name` に CHECK で値の一覧は付けない（B-02〜B-04 の名前もあり、V1 と同じ）。
+- 適用の確認（2026-11-20）: `cd backend && ./gradlew test` が **BUILD SUCCESSFUL**（テスト 223、失敗 0）。テスト用 DB は `test_catticket_kopis_collect`（この worktree）。`bash scripts/db-inspect.sh history`: `2 | 2 | drop total show count | success = 1`。`create performance` に `total_show_count` と `chk_performance_total_show_count` がなく、`create performance_effective` に `total_show_count` がなく `ALGORITHM=MERGE`・`SQL SECURITY INVOKER` のまま、`create batch_step_run` の `step_name` の COMMENT が新しい文になったことを確かめた。
+- 11.9 の数（列 151、CHECK 34）は V1 の時点の記録。V2 で列と CHECK が1つずつ減った。
+
+### 11.11 Issue #38 の変更（V3、2026-11-25）
+
+- 理由: 人間の決定3（2026-11-25、Issue #38 コメント 7153821340。06 の 11 の U-17）。KOPIS の呼び出しの上限（05 の 3.5。1回の実行で本番 300 回、そのうち S1 は最大 185 回。2026-11-26 に 1,500 回から下げた）のため、初回の S1 は何日にも分かれる（05 の見込みで約 25 日）。S1 が止まったら次の実行は続きから取り、基準日の 0 時より後に収集した公演を飛ばす。基準日は S1 の行ごとに成功・失敗とも記録し、成功したら「前回 S1 が成功した日」にする（05 の 3.3 の 12.）。03 の 5. の「バッチの実行の記録」に「収集の基準日」が足された（コミット 8e0eaf1）。
+- ファイル: `backend/src/main/resources/db/migration/V3__add_collect_base_date.sql`。V1・V2 は適用済みなので編集しない（11.1 の「マイグレーション」）。中身は1つの `ALTER TABLE batch_step_run`:
+  1. `ADD COLUMN collect_base_date DATE NULL DEFAULT NULL COMMENT 'S1 の収集の基準日（続きの S1 では続きを始めた日。05 の 3.3 の 12.）。S1 以外は NULL' AFTER window_end_date`（列の名前・型は 06 の U-17 の案のまま）。
+  2. `ADD CONSTRAINT chk_batch_step_run_collect_base_date CHECK (collect_base_date IS NULL OR step_name = 'S1')`。
+- **`window_end_date` と CHECK が違う理由**: 窓の末日は成功した S1 だけが持つ（`result = 'SUCCESS'` まで縛る）が、基準日は失敗した S1・実行中の S1 も持つ（次の実行が失敗した S1 から引き継ぐため。05 の 3.3 の 12.）ので、`step_name` だけを縛る。
+- **成功した S1 で NOT NULL にしない**（06 の U-17 の ② の勧めのとおり）: V3 より前の成功の行は NULL で、V3 の後の行と区切る列がない（`id` の値で区切ると環境ごとに違う）。NULL の行は `DATE(started_at)` で読む（DB-10）。NULL の行をこの V3 で埋めることもしない（V3 より前の S1 は続きの仕組みがなく、基準日は `DATE(started_at)` と同じ意味なので、`COALESCE` で足りる）。基準日を必ず書くのはアプリ（06 の 4.9・5.2 の `updateStepRun`）。
+- **インデックスは足さない**: 「前回 S1 が成功した日」（`step_name = 'S1' AND result = 'SUCCESS' ORDER BY started_at DESC LIMIT 1`）は今の `idx_batch_step_run_step_result_started` を `ref`（`const,const`）で使う。`findLatestS1Before`（`step_name = 'S1' AND job_run_id < ? ORDER BY id DESC LIMIT 1`）は主キーの逆順の走査で、最初に当たる S1 の行で止まる（1回の実行のステップは最大 6 行、実行は1日1〜2回なので、読む行は数行）。
+- 適用の確認（2026-11-25）: `cd backend && ./gradlew test` が **BUILD SUCCESSFUL**（テスト 552、失敗 0）。テスト用 DB は `test_catticket_kopis_collect`（この worktree）。`bash scripts/db-inspect.sh history`: `3 | 3 | add collect base date | success = 1`。`bash scripts/db-inspect.sh create batch_step_run` で、`window_end_date` の次に `collect_base_date date DEFAULT NULL` と COMMENT、`chk_batch_step_run_collect_base_date` があることを確かめた。
+- 動きの確認（2026-11-25。開発 PC の一時の JDBC のプログラムで、ROLLBACK するトランザクションの中で行った。データは残していない。プログラムはリポジトリに入れていない）:
+  - CHECK: S1 の行（実行中・失敗・成功）に基準日を入れられる。S2 の行・B-02 の行に基準日を入れる `INSERT`、S2 の行に基準日を入れる `UPDATE`、基準日のある S1 の行の `step_name` を S3 に変える `UPDATE` は、いずれもエラー 3819（`chk_batch_step_run_collect_base_date`）。基準日 NULL の S2 の行は入る。
+  - 「前回 S1 が成功した日」: V3 より前の形の成功の行（11-20 開始、基準日 NULL）だけのとき `2026-11-20`。その後に失敗の S1（11-22・11-23、基準日 11-22）を足しても `2026-11-20` のまま。11-24 開始の成功の S1（基準日 11-22、窓の末日 2027-05-23）を足すと `2026-11-22` と `2027-05-23`。
+  - `findLatestS1Before`: 11-24 の実行の前は `FAILURE`・`2026-11-22`、11-25 の実行の前は `SUCCESS`・`2026-11-22`。`EXPLAIN` は上のインデックスの項目のとおり。
+- 11.9 の数（列 151、CHECK 34）は V1 の時点の記録。V3 で列と CHECK が1つずつ増えた（V2 で1つずつ減ったので、V1 の数と同じ）。
+
 ---
 
 ## 한국어
@@ -1217,8 +1249,11 @@ A-01・A-08 は解消した。A-02〜A-07 はテーブルの形（型・列・�
 
 - 상태: 기본설계 승인(2026-11-06, Issue #15 코멘트 6678921752). 상세설계: **리뷰 완료(게이트 4 reviewer: 조건부 승인. 지적(한국어 11.4)을 반영함), 사람의 승인 대기**(공정 4, Issue #20. 11.에 썼다. 확인 2(2026-11-09 사람의 결정)를 반영하고, Flyway `V1__create_schema.sql`을 써서 `test_catticket`에 적용되는 것을 확인했다)
 - 담당: db-designer
-- 공정 4(Issue #20): 1.~10.은 기본설계 내용 그대로(참조용 번호를 바꾸지 않음. 확인 2에서 바뀐 `booking_site.name`의 NULL 가능·공연장 주소 번역·표시할 수 없는 공연은 해당 행에도 반영했다). 타입·길이·콜레이션·제약·인덱스의 상세와, Issue #20의 D-01~D-05·D-09 중 db-designer 몫은 11.에 썼다. **4.·6.과 11.이 다른 곳은 11.이 기준**. **11.과 `backend/src/main/resources/db/migration/V1__create_schema.sql`은 일치시킨다**
-- 최종 갱신: 2026-11-09
+- 공정 4(Issue #20): 1.~10.은 기본설계 내용 그대로(참조용 번호를 바꾸지 않음. 확인 2에서 바뀐 `booking_site.name`의 NULL 가능·공연장 주소 번역·표시할 수 없는 공연은 해당 행에도 반영했다). 타입·길이·콜레이션·제약·인덱스의 상세와, Issue #20의 D-01~D-05·D-09 중 db-designer 몫은 11.에 썼다. **4.·6.과 11.이 다른 곳은 11.이 기준**. **11.과 `backend/src/main/resources/db/migration/`의 마이그레이션(V1~V3. V1 이후의 변경은 11.10·11.11)을 적용한 결과는 일치시킨다**
+- 최종 갱신: 2026-11-26
+- Issue #38(2026-11-20): 사람의 결정 1(코멘트 7032205139. 01의 R-69·X-30)로 F-32 ②(개막부터의 누계 상연 횟수)를 폐지하고 05의 S5를 없앤(결번) 것을 반영했다. `performance.total_show_count`와 CHECK `chk_performance_total_show_count`를 빼고, 뷰 `performance_effective`에서 열을 제외했다(2.·3.·4.2·4.18·7.·8.·11.2.2·11.2.18·11.3). DB는 `V2__drop_total_show_count.sql`로 바꾼다(11.10). reviewer 확인 대기
+- Issue #38(2026-11-25): 사람의 결정 3(코멘트 7153821340. 06의 11의 U-17)으로 `batch_step_run`에 S1의 수집 기준일 `collect_base_date`와 CHECK `chk_batch_step_run_collect_base_date`를 더하고, "지난번 S1이 성공한 날"을 `COALESCE(collect_base_date, DATE(started_at))`로 했다(05의 3.3의 12.·3.5. 03의 5.의 "수집 기준일")(2.·4.18·6.·7.·8.·9.의 DB-10·11.2.18·11.4). DB는 `V3__add_collect_base_date.sql`로 바꾼다(11.11). reviewer 확인 대기
+- Issue #38(2026-11-26): 사람의 결정 1(코멘트 7180014012)로 05의 3.5의 한 번 실행 상한이 운영 1,500 → 300회(S1은 최대 185회)가 된 것을 11.11의 "이유"의 값과 첫 수집 예상(약 25일)에 반영했다. 테이블·마이그레이션은 바꾸지 않는다
 - 전제: [01. 요건정의서](01-requirements.md)(F-01~F-36, N-01~N-08. R-62~R-64 반영), [02. 화면 설계서](02-screens.md), [03. API 설계서](03-api.md)(**5.의 데이터 항목**, **6.의 대응표**), [05. 배치 설계서](05-batch.md), ADR 0006~0016(특히 0007·0008·0009·0012·0013)
 - 이 설계서의 8.에 **요건 → 테이블 대응표**를 03의 6.과 같은 행(같은 요건 ID·같은 순서)으로 둔다. 두 표를 요건 ID로 맞대면 요건 → 화면 → API → 배치 → 테이블의 대응이 된다(Issue #15 코멘트 6651238358의 3.)
 - `DB-xx`는 이 설계서의 설계 판단 번호(9.). `P-xx`는 02의 판단(사람이 결정함)
@@ -1246,7 +1281,7 @@ A-01・A-08 は解消した。A-02〜A-07 はテーブルの形（型・列・�
 
 - ER 다이어그램, 테이블 목록, 주요 컬럼(타입은 예정. 정할 수 있는 것은 쓴다), 기본 키·외래 키·유일 제약·`CHECK`, 주요 인덱스와 그 이유, 요건과의 대응.
 - 타입 길이의 최종 값, 콜레이션, 인덱스의 최종 형태, Flyway 마이그레이션 SQL은 공정 4에서 쓴다(Issue #15의 "주의").
-- 공정 4의 상세는 11.(Flyway SQL은 `V1__create_schema.sql`. 11.9).
+- 공정 4의 상세는 11.(Flyway SQL은 `V1__create_schema.sql`. 11.9. 그 뒤의 변경은 `V2__drop_total_show_count.sql`(11.10)·`V3__add_collect_base_date.sql`(11.11)).
 
 #### 1.3 테이블로 만들지 않는 것
 
@@ -1297,7 +1332,6 @@ erDiagram
     date end_date
     varchar genre_code
     boolean is_open_run
-    int total_show_count "NULL 가능"
     boolean has_award
     boolean is_seoul
     boolean is_hidden
@@ -1319,7 +1353,7 @@ erDiagram
   station {
     bigint id PK
     varchar external_station_code UK
-    varchar line
+    tinyint line
     varchar name_ko
     varchar name_ja "NULL 가능"
     decimal latitude
@@ -1414,6 +1448,7 @@ erDiagram
     varchar step_name
     enum result "NULL 가능"
     date window_end_date "NULL 가능"
+    date collect_base_date "NULL 가능"
   }
 ```
 
@@ -1425,7 +1460,7 @@ erDiagram
 | No. | 테이블 | 역할 | 기본 키 | 외래 키 | 유일 제약 | 요건 ID | API | 배치 |
 |---|---|---|---|---|---|---|---|---|
 | 1 | `venue` | 공연장(KOPIS 시설). 구·좌표 | `id` | — | `kopis_venue_id` | F-01, F-02, F-03, F-05~F-08, F-11, N-01 | API-01~06, 50, 51 | B-01(S1, S4) |
-| 2 | `performance` | 공연(자동 수집 값)과 숨김 | `id` | `venue_id` → `venue` | `kopis_performance_id` | F-01~F-03, F-07~F-09, F-11, F-19~F-21, F-26, F-27, F-29, F-31~F-33, N-01, N-04 | API-01~03, 05, 06, 10, 11, 20, 21, 43~45, 50~55 | B-01(S1, S3~S5) |
+| 2 | `performance` | 공연(자동 수집 값)과 숨김 | `id` | `venue_id` → `venue` | `kopis_performance_id` | F-01~F-03, F-07~F-09, F-11, F-19~F-21, F-26, F-27, F-29, F-31~F-33, N-01, N-04 | API-01~03, 05, 06, 10, 11, 20, 21, 43~45, 50~55 | B-01(S1, S3, S4) |
 | 3 | `booking_site` | 예매처(한 공연에 여러 개). 자동 수집분과 관리자가 수정한 분 | `id` | `performance_id` → `performance` | (`performance_id`, `source`, `sort_order`) | F-03, F-04, F-08, F-11, F-26, N-01 | API-03, 51~53 | B-01(S1, S4) |
 | 4 | `performance_override` | 관리자 수정(항목마다 1행) | `id` | `performance_id` → `performance` | (`performance_id`, `field_name`) | F-01~F-04, F-07, F-08, F-11, F-26, F-32, N-01, N-04 | API-01~03, 05, 43, 50~53 | B-01(덮어쓰지 않음. S7 번역 대상) |
 | 5 | `station` | 역(서울교통공사 1~8호선의 서울 역. 환승역은 노선마다 1행) | `id` | — | `external_station_code`, (`line`, `name_ko`) | F-05~F-07, F-11, N-01, N-04 | API-04, 05 | B-02 |
@@ -1479,7 +1514,6 @@ erDiagram
 | `age_limit` | VARCHAR | 가능 | NULL | — | 관람 연령(원문) |
 | `poster_url` | VARCHAR | 가능 | NULL | — | 포스터 URL |
 | `is_open_run` | BOOLEAN | 불가 | FALSE | — | 오픈런 여부(`openrun`) |
-| `total_show_count` | INT | 가능 | NULL | CHECK(0 이상) | 개막부터의 누계 상연 횟수(R-49. 05의 3.6). 아직 못 받았으면 NULL |
 | `has_award` | BOOLEAN | 불가 | FALSE | — | 수상 이력 여부(S3가 세우기만 하고 지우지 않음. 05의 3.2) |
 | `is_seoul` | BOOLEAN | 불가 | — | — | 서울 공연인지(05의 3.3의 6.) |
 | `is_hidden` | BOOLEAN | 불가 | FALSE | — | 관리자가 숨겼는지(F-27). B-01은 고쳐 쓰지 않는다 |
@@ -1518,7 +1552,7 @@ erDiagram
 | 컬럼 | 타입(예정) | NULL | 기본값 | 제약 | 설명 |
 |---|---|---|---|---|---|
 | `external_station_code` | VARCHAR | 불가 | — | UNIQUE | 외부 역 코드(좌표 파일의 "고유역번호(외부역코드)". 환승역은 노선마다 다른 코드) |
-| `line` | VARCHAR | 불가 | — | UNIQUE(`line`, `name_ko`) | 노선(예: `1호선`. 표기는 파일을 받아 공정 4에서 정한다) |
+| `line` | TINYINT | 불가 | — | UNIQUE(`line`, `name_ko`), CHECK(1~8) | 노선(1~8. 11.5의 D-09) |
 | `name_ko` | VARCHAR | 불가 | — | 위와 같음 | 역명(한국어) |
 | `name_ja` | VARCHAR | 가능 | NULL | — | 역명(일본어 공식 표기. ADR 0009). 없는 역은 `translation`의 기계 번역을 쓴다 |
 | `latitude` | DECIMAL(9,6) | 불가 | — | — | 위도 |
@@ -1667,7 +1701,7 @@ erDiagram
 | 컬럼 | 타입(예정) | NULL | 기본값 | 제약 | 설명 |
 |---|---|---|---|---|---|
 | `job_run_id` | BIGINT | 불가 | — | FK → `batch_job_run.id`. UNIQUE(`job_run_id`, `step_name`) | 어느 실행의 스텝인지 |
-| `step_name` | VARCHAR | 불가 | — | — | 스텝(B-01은 `S1`~`S7`. B-02~B-04는 하나의 스텝으로 기록한다. B-04는 삭제한 건수를 `processed_count`에 넣는다) |
+| `step_name` | VARCHAR | 불가 | — | — | 스텝(B-01은 `S1`~`S4`·`S6`·`S7`. S5는 결번(05의 3.6). B-02~B-04는 하나의 스텝으로 기록한다. B-04는 삭제한 건수를 `processed_count`에 넣는다) |
 | `started_at` | DATETIME | 불가 | — | — | 시작 일시 |
 | `finished_at` | DATETIME | 가능 | NULL | — | 종료 일시 |
 | `result` | ENUM(`SUCCESS`, `FAILURE`) | 가능 | NULL | — | 결과. 실행 중에는 NULL |
@@ -1675,8 +1709,10 @@ erDiagram
 | `summary` | TEXT | 가능 | NULL | — | 건수 내역(구를 정하지 못한 공연장 수, 좌표 없는 공연장 수, 가져오지 않은 역·물품보관함의 수와 내용 등. 05의 3.3·4.3) |
 | `error_message` | TEXT | 가능 | NULL | — | 오류 내용 |
 | `window_end_date` | DATE | 가능 | NULL | — | S1이 성공했을 때 수집 창의 마지막 날(05의 3.3의 3.(b)·7.). S1 이외는 NULL |
+| `collect_base_date` | DATE | 가능 | NULL | S1 이외는 NULL(CHECK) | S1의 수집 기준일(2026-11-25 추가. 05의 3.3의 12.). S1 행에 성공·실패 모두 기록한다. 앞의 S1이 성공이 아니면 그 기준일을 이어받고, 아니면 오늘. 이어 가는 S1은 기준일 0시 이후에 수집한 공연을 건너뛴다 |
 
-- "지난번 S1이 성공한 날"(`afterdate`에 씀)은 `step_name = 'S1'` 그리고 `result = 'SUCCESS'`인 가장 최근 행의 `started_at` 날짜(Asia/Seoul)로 구한다(DB-10).
+- "지난번 S1이 성공한 날"(`afterdate`에 씀)은 `step_name = 'S1'` 그리고 `result = 'SUCCESS'`인 가장 최근 행의 **`COALESCE(collect_base_date, DATE(started_at))`**(기준일. 기준일이 없는 V3 이전 행은 `started_at`의 날짜(Asia/Seoul))로 구한다(DB-10. 2026-11-25 변경). 다음 실행의 `afterdate`는 이 날의 전날이 된다(05의 3.3의 12.).
+- 이어 가는 S1이 이어받는 기준일은, 이번 실행보다 앞선 실행의 S1 중 가장 새 행(`step_name = 'S1' AND job_run_id < ?`를 `id` 내림차순으로 1행)의 `result`와 `collect_base_date`로 정한다(06의 4.9의 `findLatestS1Before`).
 
 ### 5. 외래 키와 삭제 처리
 
@@ -1716,7 +1752,7 @@ erDiagram
 | `app_user` | (`status`) | B-04에서 인증 전(`PENDING`) 행만 읽기(05의 6.2의 3.). 유효한 행이 대부분이고 인증 전 행은 적을 것으로 보이므로 거르기에 효과가 있다 |
 | `mail_send_log` | (`created_at`) | 최근 24시간 발송 수 세기(03의 4.8) |
 | `batch_job_run` | (`job_name`, `started_at`) | 처리별 최신 실행 보기(운영) |
-| `batch_step_run` | (`step_name`, `result`, `started_at`) | 지난번 S1이 성공한 날과 창의 마지막 날 구하기(05의 3.3) |
+| `batch_step_run` | (`step_name`, `result`, `started_at`) | 지난번 S1이 성공한 날(기준일)과 창의 마지막 날 구하기(05의 3.3. 이어 가기의 기준일 인계는 행이 적어 기본 키 역순으로 충분. 11.11) |
 
 - `ranking_collection`의 유일 제약은 (`period_type`, `genre_code`, `period_start`) 순서로 해서, "기간 종류·장르별 최신 완료 기간"(03의 4.9)을 같은 인덱스로 찾을 수 있게 한다.
 - 공간 인덱스(`POINT`·`SPATIAL`)는 쓰지 않는다(DB-12).
@@ -1727,7 +1763,7 @@ erDiagram
 
 | 03의 5. 데이터 | 할당 위치 |
 |---|---|
-| 공연 | `performance`(KOPIS 공연 ID → `kopis_performance_id`, 공연장 → `venue_id`, 공연명 → `title`, 시작일·종료일 → `start_date`·`end_date`, 장르 → `genre_code`, 출연진 → `cast_text`, 티켓 가격 → `ticket_price`, 공연 시간 안내 → `schedule_text`, 상연 시간 → `runtime`, 관람 연령 → `age_limit`, 포스터 → `poster_url`, 오픈런 → `is_open_run`, 누계 상연 횟수 → `total_show_count`, 수상 이력 → `has_award`, 서울 여부 → `is_seoul`, KOPIS 최종 수정 일시 → `kopis_updated_at`, 수집한 일시 → `collected_at`, 숨김 → `is_hidden`) |
+| 공연 | `performance`(KOPIS 공연 ID → `kopis_performance_id`, 공연장 → `venue_id`, 공연명 → `title`, 시작일·종료일 → `start_date`·`end_date`, 장르 → `genre_code`, 출연진 → `cast_text`, 티켓 가격 → `ticket_price`, 공연 시간 안내 → `schedule_text`, 상연 시간 → `runtime`, 관람 연령 → `age_limit`, 포스터 → `poster_url`, 오픈런 → `is_open_run`, 수상 이력 → `has_award`, 서울 여부 → `is_seoul`, KOPIS 최종 수정 일시 → `kopis_updated_at`, 수집한 일시 → `collected_at`, 숨김 → `is_hidden`) |
 | 예매처 | `booking_site`(공연 → `performance_id`, 이름 → `name`, URL → `url`, 순서 → `sort_order`. 자동 수집인지 수정인지를 `source`로 나눈다. DB-02) |
 | 관리자 수정 | `performance_override`(공연 → `performance_id`, 항목 → `field_name`, 수정한 값 → `override_value`, 수정한 일시 → `updated_at`). 예매처의 수정한 값은 `booking_site`의 `ADMIN` 행 |
 | 공연장 | `venue`(시설 ID → `kopis_venue_id`, 공연장명 → `name`, 주소 → `address`, 구 → `district`, 위도·경도 → `latitude`·`longitude`) |
@@ -1743,7 +1779,7 @@ erDiagram
 | 즐겨찾기 | `favorite`(사용자·공연, 등록 일시 → `created_at`. (`user_id`, `performance_id`)로 유일) |
 | 리뷰 | `review`(사용자·공연, 평점 → `rating`, 본문 → `body`, 작성 일시 → `created_at`, 수정 일시 → `updated_at`. (`user_id`, `performance_id`)로 유일) |
 | 메일 발송 기록 | `mail_send_log`(보낸 일시 → `created_at`, 용도 → `purpose`) |
-| 배치 실행 기록 | `batch_job_run`(잡, 시작·종료 일시, 결과, 오류 내용)과 `batch_step_run`(스텝, 시작·종료 일시, 결과, 건수 → `processed_count`·`summary`, 오류 내용). 지난번 수집이 성공한 날은 `batch_step_run`에서 구한다(DB-10). "이번 창의 마지막 날"(03의 5.. 05의 3.3의 3.(b)·7.)은 `batch_step_run.window_end_date` |
+| 배치 실행 기록 | `batch_job_run`(잡, 시작·종료 일시, 결과, 오류 내용)과 `batch_step_run`(스텝, 시작·종료 일시, 결과, 건수 → `processed_count`·`summary`, 오류 내용). 지난번 수집이 성공한 날은 `batch_step_run`에서 구한다(DB-10). "이번 창의 마지막 날"(03의 5.. 05의 3.3의 3.(b)·7.)은 `batch_step_run.window_end_date`. "수집 기준일"(03의 5.. 05의 3.3의 12.)은 `batch_step_run.collect_base_date` |
 
 03의 5.에 없는 항목으로 이 설계서가 두는 것:
 
@@ -1765,7 +1801,7 @@ erDiagram
 | F-05 | `station`, `venue` | 공연장 좌표와 역 좌표의 거리(500m 이하) |
 | F-06 | `coin_locker`, `station`, `venue` | 물품보관함이 속한 역의 좌표로 거리를 판정하고 위치 문장을 돌려준다 |
 | F-07 | `performance`, `venue`, `performance_override`, `station`, `coin_locker` | 현재 위치에서 500m 안의 공개 중인 공연(공연장별)·역·물품보관함 |
-| F-08 | `performance`, `venue`, `booking_site`, `performance_override`, `batch_job_run`, `batch_step_run` | 매일 수집에서 추가·갱신한다(수정한 항목·숨김은 고쳐 쓰지 않음). 지난번 성공한 날과 창의 마지막 날을 기록한다 |
+| F-08 | `performance`, `venue`, `booking_site`, `performance_override`, `batch_job_run`, `batch_step_run` | 매일 수집에서 추가·갱신한다(수정한 항목·숨김은 고쳐 쓰지 않음). 지난번 성공한 날과 창의 마지막 날을 기록한다. 첫 수집처럼 도중에 멈춘 S1은 수집 기준일(`collect_base_date`)로 다음 실행에서 이어 간다 |
 | F-09 | `performance`, `ranking_entry`, `favorite`, `review` | 공연을 삭제하지 않는다(외래 키는 RESTRICT). 끝났는지는 `end_date`로 판정. 순위·즐겨찾기·리뷰는 끝난 공연도 대상 |
 | F-10 | — | 브라우저에 기억한다(03의 6.과 같음. 1.3) |
 | F-11 | `translation`, `translation_usage`, `performance`, `performance_override`, `booking_site`, `venue`, `station`, `coin_locker` | 번역할 원문(05의 3.7의 S7 대상: 공연 항목·관리자가 수정한 값·예매처 이름(NULL 행은 대상 외)·공연장명·공연장 주소(03의 5.1의 H-11)·역명·물품보관함 위치 문장)은 각 테이블에 있고, 그 원문 해시로 `translation`을 찾는다. 공연명·공연장명·역명은 원문도 돌려준다(②). 역명은 `station.name_ja`(공식 표기)를 우선. 월 상한은 `translation_usage` |
@@ -1789,7 +1825,7 @@ erDiagram
 | F-29 | `ranking_collection`, `ranking_entry`, `performance` | 수집이 끝난 가장 최근 기간(R-62)의 순위를, 표시할 수 없는 공연(숨김 공연과 `performance`에 연결되지 않는 순위 행. R-65·D-01)을 빼고 다시 매긴다 |
 | F-30 | `review` | 평점 평균·건수를 조회할 때마다 계산한다. 저장하지 않으므로 작성·수정·삭제(API-11~13)의 결과는 다음 조회에 그대로 반영된다(③) |
 | F-31 | `performance` | `has_award` |
-| F-32 | `performance`, `performance_override` | `is_open_run`(수정 가능), `total_show_count` |
+| F-32 | `performance`, `performance_override` | `is_open_run`(수정 가능). ②의 상연 횟수는 폐지(R-69)되어 열을 두지 않는다 |
 | F-33 | `ranking_collection`, `ranking_entry`, `performance` | 현재 기간과 하나 전 기간의 순위를 비교한다. 하나 전 기간의 완료 기록이 없으면 P-17. 표시할 수 없는 공연은 F-29와 같이 뺀다. 오른 공연이 0건이면 현재 상위를 돌려준다(R-66. API-21의 `NO_RISE`. 테이블은 바뀌지 않음) |
 | F-34 | `genre_trend` | 최신 집계 기간의 비중과 기준 |
 | F-35 | — | 로그아웃·자동 로그아웃은 세션(앱 메모리. ADR 0013 결정 2~4)으로 하며 테이블을 쓰지 않는다(03의 6.과 같음. 1.3. 10.1의 Q-03) |
@@ -1824,7 +1860,7 @@ erDiagram
 | DB-07 | 관리자가 1행뿐임을 DB로 보장한다(`role = 'ADMIN'`일 때만 값을 갖는 식에 유일 제약. MySQL 8의 식 인덱스. 형태는 공정 4) | F-25 ①(관리자 계정 1개)을 B-03의 확인(05의 5.의 3.)에만 의존하지 않는다 | 앱 확인만: `CLAUDE.md`의 "제약은 DB에도 정의한다"와 맞지 않는다 |
 | DB-08 | 잠김 여부는 `locked_at`(NULL이 아니면 잠김)으로 둔다 | "잠김 여부"에 더해 언제 잠갔는지 운영 확인에 쓸 수 있다. 해제하면 NULL과 실패 횟수 0으로 한다 | 참거짓 열 `is_locked`: 일시가 남지 않는다 |
 | DB-09 | **정규화를 깨는 것**: `ranking_collection.period_end`·`genre_trend.period_end`(첫날과 기간 종류로 계산 가능), `genre_trend.share`(예매 수로 계산 가능), `genre_trend.basis`(같은 기간 행은 모두 같은 값) | `period_end`: 03의 5.가 첫날·마지막 날을 요구하고, API가 집계 기간을 그대로 돌려준다. 달력 주·월의 마지막 날 계산을 SQL마다 쓰지 않는다. `share`: 05의 S6가 수집할 때 계산해 저장하는 설계. 기간 단위로 전부 교체하므로 값이 어긋나지 않는다. `basis`: S6는 한 번의 조회로 한 기간을 받으므로 같은 기간 행은 항상 같은 값이 된다. 기간의 부모 테이블을 만들 만큼의 이점이 없다 | 계산으로 구한다·부모 테이블을 만든다 |
-| DB-10 | "지난번 S1이 성공한 날"은 열로 두지 않고 `batch_step_run`의 성공한 S1 행에서 구한다. 창의 마지막 날은 계산할 수 없으므로 `window_end_date`에 둔다 | 같은 사실을 두 곳에 두지 않는다. S1이 실패하면 성공 행이 생기지 않으므로 05의 3.3의 7.(실패하면 기록을 갱신하지 않는다)과 같은 동작이 된다 | 상태를 1행으로 두는 테이블: 실행 기록과 같은 내용을 겹쳐 둔다 |
+| DB-10 | "지난번 S1이 성공한 날"은 열로 두지 않고 `batch_step_run`의 성공한 S1 행에서 구한다. 창의 마지막 날은 계산할 수 없으므로 `window_end_date`에 둔다. **2026-11-25부터** 성공한 날은 성공한 S1의 가장 새 행의 `COALESCE(collect_base_date, DATE(started_at))`로 하고, 기준일은 S1 행마다 `collect_base_date`에 둔다(11.11) | 같은 사실을 두 곳에 두지 않는다. S1이 실패하면 성공 행이 생기지 않으므로 05의 3.3의 7.(실패하면 기록을 갱신하지 않는다)과 같은 동작이 된다. 기준일은 앞의 S1에서 이어받는 값이라 행의 `started_at`으로 계산할 수 없으므로(첫 수집을 며칠로 나누면 성공한 행의 시작일과 다르다) 열에 둔다. 평소에는 `DATE(started_at)`과 같은 값이 되지만, 다른 사실(어느 시점부터의 수집인지)로서 행마다 한 번만 기록한다 | 상태를 1행으로 두는 테이블: 실행 기록과 같은 내용을 겹쳐 둔다. / 기준일을 `window_end_date`처럼 성공 행에만 둔다: 실패한 S1에서 기준일을 이어받을 수 없다 |
 | DB-11 | 메일 발송 기록에 수신자·사용자를 두지 않는다 | 상한 세는 법(03의 4.8)에 필요 없다. 탈퇴한 사용자의 이메일 주소를 남기지 않는다(F-18) | 수신자를 둔다: 탈퇴 후에도 개인정보가 남는다 |
 | DB-12 | 좌표는 `DECIMAL(9,6)`로 두고 공간 데이터 타입·인덱스를 쓰지 않는다 | 제공처 값이 소수 여섯째 자리(ADR 0009)이고, `DECIMAL`이면 반올림 오차 없이 그대로 둘 수 있다. 거리는 하버사인 공식으로 계산한다(03의 4.5). 역은 약 270행, 공연장은 약 천 행이라 범위 거르기는 일반 인덱스로 충분하다 | `POINT` + `SPATIAL INDEX`: SRID·축 순서 등 다룰 것이 늘고 이 규모에서는 이점이 작다. `DOUBLE`: 2진수 반올림 오차가 있다 |
 
@@ -1848,7 +1884,7 @@ erDiagram
 - 관리자 수정을 반영한 값을 읽는 방법(뷰로 할지, 쿼리마다 연결할지)과 그 값으로 거를 때의 인덱스(DB-01·6.).
 - `ranking_entry`의 유일 제약을 (`ranking_collection_id`, `provider_rank`)에도 붙일지(`boxoffice`가 같은 순위를 여러 개 돌려주는 경우가 있는지를 ADR 0008 "주의점" 확인에서 본다).
 - **`performance`와 연결되지 않는 순위 행**(S4가 실패했거나 아직 보충하지 않은 공연)의 처리(03의 4.9, DB-04). F-29 ⑤⑧(제공처 데이터 그대로, 숨긴 공연만 빼고 다시 매긴다)과의 관계를 보고 정한다. 화면에 보이는 동작(순위 번호·건수)이 바뀌는 경우는 공정 4에서 사람에게 확인한다(게이트 3의 경미 6. 사람의 결정: Issue #15 코멘트 6678516145). 테이블 형태(DB-04)는 바뀌지 않는다.
-- `station.line` 값의 표기, `coin_locker` 연결 규칙(05의 4.4. 파일을 받아 정한다).
+- `coin_locker` 연결 규칙(05의 4.4. 파일을 받아 정한다).
 - 관리자의 `nickname`에 넣을 값(B-03. 화면에는 나오지 않음).
 - 오래된 기록(`mail_send_log`, `batch_*`, 유효한 계정의 사용했거나 기한이 지난 `auth_token`)을 지울지. 지우는 기능은 요건에 없으므로 지금은 지우지 않는다(양이 작다). 기한이 지난 인증 전 행과 그 토큰은 B-04가 지운다(05의 6.).
 - B-04와 인증 완료(API-34)가 기한 직전에 동시에 돌 때의 행 잠금 방법(05의 6.3. 06에서 정한다. 테이블 형태는 바뀌지 않는다).
@@ -1874,7 +1910,7 @@ erDiagram
 | 이름 | 유일 제약 `uk_{테이블}_{내용}`, 인덱스 `idx_{테이블}_{내용}`, 외래 키 `fk_{테이블}_{참조 대상}`, CHECK `chk_{테이블}_{내용}`. **CHECK와 외래 키 이름은 스키마 안에서 유일해야 하므로** 반드시 테이블 이름으로 시작한다(MySQL 8.4 공식 "CHECK Constraints", 확인일 2026-11-06) |
 | 외래 키와 CHECK | MySQL은 `ON DELETE`·`ON UPDATE` 동작을 가진 외래 키 열에 CHECK를 붙일 수 없다(공식. 위와 같음). 그래서 외래 키 열(`*_id`)에는 CHECK를 붙이지 않는다 |
 | ON UPDATE | 외래 키는 모두 `ON UPDATE RESTRICT`(기본 키는 바꾸지 않음. 5.) |
-| 마이그레이션 | 첫 파일 `V1__create_schema.sql`에 외래 키 참조 순서(`venue` → `performance` → …)로 모든 테이블(18)과 뷰(1)를 만든다(썼다. 2026-11-09). 한 파일로 한 것은 첫 스키마는 한 번에 한 번만 적용하고, 중간까지의 상태에 의미가 없기 때문이다(MySQL DDL은 트랜잭션으로 되돌릴 수 없으므로, 실패하면 Flyway 이력이 실패가 되고 DB를 다시 만들어 고친다). **적용한 뒤에는 이 파일을 수정하지 않는다**. 변경은 `V2__…`부터 새 파일로 한다 |
+| 마이그레이션 | 첫 파일 `V1__create_schema.sql`에 외래 키 참조 순서(`venue` → `performance` → …)로 모든 테이블(18)과 뷰(1)를 만든다(썼다. 2026-11-09). 한 파일로 한 것은 첫 스키마는 한 번에 한 번만 적용하고, 중간까지의 상태에 의미가 없기 때문이다(MySQL DDL은 트랜잭션으로 되돌릴 수 없으므로, 실패하면 Flyway 이력이 실패가 되고 DB를 다시 만들어 고친다). **적용한 뒤에는 이 파일을 수정하지 않는다**. 변경은 `V2__…`부터 새 파일로 한다(V2: 11.10) |
 
 #### 11.2 테이블 정의
 
@@ -1911,7 +1947,6 @@ erDiagram
 | `age_limit` | VARCHAR(200) | 가능 | NULL | 기본 | — | 観覧年齢（原文）(관람 연령(원문)) |
 | `poster_url` | VARCHAR(2000) | 가능 | NULL | 기본 | — | ポスターの URL(포스터 URL) |
 | `is_open_run` | BOOLEAN | 불가 | FALSE | — | — | オープンランか(오픈런인지) |
-| `total_show_count` | INT | 가능 | NULL | — | `chk_performance_total_show_count` (`total_show_count >= 0`) | 開幕からの累計の上演回数(개막부터의 누적 상연 횟수) |
 | `has_award` | BOOLEAN | 불가 | FALSE | — | — | 受賞歴があるか(수상 이력이 있는지) |
 | `is_seoul` | BOOLEAN | 불가 | (없음) | — | — | ソウルの公演か(서울 공연인지) |
 | `is_hidden` | BOOLEAN | 불가 | FALSE | — | — | 管理者が非表示にしたか(관리자가 숨겼는지) |
@@ -2135,7 +2170,7 @@ erDiagram
 | 열 | 타입 | NULL | 기본값 | 콜레이션 | 제약 | COMMENT |
 |---|---|---|---|---|---|---|
 | `job_run_id` | BIGINT | 불가 | — | — | `fk_batch_step_run_job_run` → `batch_job_run(id)` ON DELETE CASCADE | どの実行のステップか(어느 실행의 스텝인지) |
-| `step_name` | VARCHAR(50) | 불가 | — | 기본 | 유일 제약 | ステップ（S1〜S7 など）(스텝) |
+| `step_name` | VARCHAR(50) | 불가 | — | 기본 | 유일 제약 | ステップ（B-01 は S1〜S4・S6・S7。S5 は欠番）(스텝. B-01은 S1~S4·S6·S7. S5는 결번) |
 | `started_at` | DATETIME | 불가 | — | — | — | 開始日時(시작 일시) |
 | `finished_at` | DATETIME | 가능 | NULL | — | 아래 CHECK | 終了日時(종료 일시) |
 | `result` | ENUM('SUCCESS','FAILURE') | 가능 | NULL | — | 아래 CHECK | 結果(결과) |
@@ -2143,9 +2178,10 @@ erDiagram
 | `summary` | TEXT | 가능 | NULL | 기본 | — | 件数の内訳(건수 내역) |
 | `error_message` | TEXT | 가능 | NULL | 기본 | — | エラーの内容(오류 내용) |
 | `window_end_date` | DATE | 가능 | NULL | — | 아래 CHECK | S1 が成功したときの収集の窓の末日(S1 성공 시 수집 창의 마지막 날) |
+| `collect_base_date` | DATE | 가능 | NULL | — | 아래 CHECK | S1 の収集の基準日（続きの S1 では続きを始めた日。05 の 3.3 の 12.）。S1 以外は NULL(S1의 수집 기준일(이어 가는 S1에서는 이어 가기를 시작한 날. 05의 3.3의 12.). S1 이외는 NULL) |
 
 - 유일 제약: `uk_batch_step_run_job_step` (`job_run_id`, `step_name`). 외래 키 인덱스를 겸한다. 인덱스: `idx_batch_step_run_step_result_started` (`step_name`, `result`, `started_at`).
-- CHECK: `chk_batch_step_run_finished` `((finished_at IS NULL) = (result IS NULL))`, `chk_batch_step_run_window` `(window_end_date IS NULL OR (step_name = 'S1' AND result = 'SUCCESS'))`.
+- CHECK: `chk_batch_step_run_finished` `((finished_at IS NULL) = (result IS NULL))`, `chk_batch_step_run_window` `(window_end_date IS NULL OR (step_name = 'S1' AND result = 'SUCCESS'))`, `chk_batch_step_run_collect_base_date` `(collect_base_date IS NULL OR step_name = 'S1')`(V3. 11.11).
 - `summary`에는 05가 "기록에 남긴다"고 한 건수를 쓴다(S1: 구를 정하지 못한 공연장 수·좌표 없는 공연장 수·URL이 없어 저장하지 않은 예매처 수(05의 3.3의 5.·9.), B-02: 가져오지 않은 역·물품보관함의 수와 내용(05의 4.3) 등). 쓰는 방식(글의 형태)은 05·06에서 정한다. 건수별 열은 두지 않는다(종류가 스텝마다 다르고, API가 읽지 않는 운영 기록이므로).
 
 #### 11.3 뷰 `performance_effective`(관리자 수정을 반영한 공연 값. D-09·03의 5.1의 H-01)
@@ -2199,7 +2235,7 @@ SQL은 일본어 쪽 11.3과 같다(`CREATE ALGORITHM = MERGE SQL SECURITY INVOK
 | `mail_send_log` | `idx_mail_send_log_created` | `created_at` | INDEX | 최근 24시간의 수(03의 4.8) |
 | `batch_job_run` | `idx_batch_job_run_name_started` | `job_name`, `started_at` | INDEX | 처리별 최신 실행(운영) |
 | `batch_step_run` | `uk_batch_step_run_job_step` | `job_run_id`, `step_name` | UNIQUE | 외래 키를 겸한다 |
-| `batch_step_run` | `idx_batch_step_run_step_result_started` | `step_name`, `result`, `started_at` | INDEX | 지난번 S1이 성공한 날과 창의 마지막 날(05의 3.3) |
+| `batch_step_run` | `idx_batch_step_run_step_result_started` | `step_name`, `result`, `started_at` | INDEX | 지난번 S1이 성공한 날(기준일)과 창의 마지막 날(05의 3.3) |
 
 **기본설계(6.)에서 뺀 것·바꾼 것**
 
@@ -2381,3 +2417,31 @@ A-01·A-08은 해소했다. A-02~A-07은 테이블 형태(타입·열·제약)�
 - `information_schema`를 읽기 전용 JDBC로 확인했다(개발 PC의 임시 프로그램. 저장소에는 넣지 않았다): 열 151, COMMENT가 비었거나 깨진 열과 테이블 0, CHECK 34, 외래 키 11(5.의 표대로), `utf8mb4_bin` 열은 D-03의 기계 값 8열뿐, 그 밖의 문자열 열은 모두 `utf8mb4_0900_as_ci`.
 - 제약의 동작을 ROLLBACK하는 트랜잭션 안에서 확인했다(데이터는 남기지 않았다): 이메일 주소 대소문자 중복(1062), 유효 행의 닉네임 중복(1062)과 인증 전 행의 허용, 관리자 두 번째 행(1062), 관리자의 인증 전(CHECK), `booking_site`의 `ADMIN` 이름 NULL·빈 이름·빈 URL(CHECK)과 `COLLECTED` 이름 NULL의 허용, `performance_override`의 날짜·참거짓·항목 형태(CHECK), `ranking_collection`의 주 첫날이 월요일이 아님(CHECK), `ranking_entry`의 공연 없는 행의 허용(D-01), `translation`의 대문자 해시(CHECK), `translation_usage`의 1일이 아닌 월(CHECK), `batch_*`의 종료와 결과, S1 이외의 창 마지막 날(CHECK), `review`의 평점·빈 본문(CHECK), 예매처·리뷰가 있는 공연의 삭제(RESTRICT), 사용자 삭제로 리뷰가 지워짐(CASCADE).
 - 뷰 `performance_effective`: 수정한 공연 시작일·참거짓·예매처 표시가 반영되었다. `EXPLAIN`에서 `performance`는 `uk_performance_kopis_performance_id`, 11개의 `performance_override` 결합은 모두 `uk_performance_override_performance_field`의 `const`(MERGE로 펼쳐져 있다).
+
+#### 11.10 Issue #38의 변경(V2, 2026-11-20)
+
+- 이유: 사람의 결정 1(2026-11-20, Issue #38 코멘트 7032205139). KOPIS에서 개막부터의 누계 상연 횟수를 얻을 수 없으므로 F-32 ②를 폐지했다(01의 R-69·X-30). 05는 S5(상연 횟수 수집)를 없애고 이름을 다시 매기지 않고 결번으로 했다(05의 3.6. B-01의 스텝은 `S1`~`S4`·`S6`·`S7`).
+- 파일: `backend/src/main/resources/db/migration/V2__drop_total_show_count.sql`. V1은 적용되었으므로 수정하지 않는다(11.1의 "마이그레이션"). 내용은 다음 순서:
+  1. 뷰 `performance_effective`를 `CREATE OR REPLACE`로 다시 만든다(11.3의 정의에서 `p.total_show_count`만 뺐다. `ALGORITHM = MERGE`·`SQL SECURITY INVOKER`는 같다). 열을 지우기 전에 다시 만들어, 지워진 열을 참조하는 뷰가 남지 않게 했다.
+  2. `ALTER TABLE performance DROP CHECK chk_performance_total_show_count, DROP COLUMN total_show_count`(CHECK가 참조하는 열은 지울 수 없으므로 같은 문에서 CHECK를 먼저 지운다).
+  3. `batch_step_run.step_name`의 COMMENT를 `'ステップ（B-01 は S1〜S4・S6・S7。S5 は欠番）'`로 바꾼다(`MODIFY COLUMN`. 타입·NULL·콜레이션은 V1과 같다).
+- V1에서 `total_show_count`를 참조한 것은 열·CHECK `chk_performance_total_show_count`·뷰 `performance_effective`의 3곳뿐(인덱스·다른 뷰는 없음). backend 코드(Java·Mapper XML)와 테스트는 `total_show_count`를 참조하지 않는다(2026-11-20 grep으로 확인).
+- 결번 S5의 행은 `batch_step_run`에 들어가지 않는다. `step_name`에 CHECK로 값 목록은 붙이지 않는다(B-02~B-04의 이름도 있어 V1과 같다).
+- 적용 확인(2026-11-20): `cd backend && ./gradlew test`가 **BUILD SUCCESSFUL**(테스트 223, 실패 0). 테스트용 DB는 `test_catticket_kopis_collect`(이 worktree). `bash scripts/db-inspect.sh history`: `2 | 2 | drop total show count | success = 1`. `create performance`에 `total_show_count`와 `chk_performance_total_show_count`가 없고, `create performance_effective`에 `total_show_count`가 없으며 `ALGORITHM=MERGE`·`SQL SECURITY INVOKER` 그대로이고, `create batch_step_run`의 `step_name` COMMENT가 새 문장이 된 것을 확인했다.
+- 11.9의 수(열 151, CHECK 34)는 V1 시점의 기록. V2에서 열과 CHECK가 하나씩 줄었다.
+
+#### 11.11 Issue #38의 변경(V3, 2026-11-25)
+
+- 이유: 사람의 결정 3(2026-11-25, Issue #38 코멘트 7153821340. 06의 11의 U-17). KOPIS 호출 상한(05의 3.5. 한 번 실행에 운영 300회, 그중 S1은 최대 185회. 2026-11-26에 1,500회에서 낮췄다) 때문에 첫 S1은 여러 날로 나뉜다(05의 예상으로 약 25일). S1이 멈추면 다음 실행은 이어서 가져오고, 기준일 0시 이후에 수집한 공연을 건너뛴다. 기준일은 S1 행마다 성공·실패 모두 기록하고, 성공하면 "지난번 S1이 성공한 날"로 삼는다(05의 3.3의 12.). 03의 5.의 "배치 실행 기록"에 "수집 기준일"이 더해졌다(커밋 8e0eaf1).
+- 파일: `backend/src/main/resources/db/migration/V3__add_collect_base_date.sql`. V1·V2는 적용되었으므로 수정하지 않는다(11.1의 "마이그레이션"). 내용은 하나의 `ALTER TABLE batch_step_run`:
+  1. `ADD COLUMN collect_base_date DATE NULL DEFAULT NULL COMMENT 'S1 の収集の基準日（続きの S1 では続きを始めた日。05 の 3.3 の 12.）。S1 以外は NULL' AFTER window_end_date`(열 이름·타입은 06의 U-17 안 그대로).
+  2. `ADD CONSTRAINT chk_batch_step_run_collect_base_date CHECK (collect_base_date IS NULL OR step_name = 'S1')`.
+- **`window_end_date`와 CHECK가 다른 이유**: 창의 마지막 날은 성공한 S1만 가진다(`result = 'SUCCESS'`까지 묶는다). 기준일은 실패한 S1·실행 중인 S1도 가지므로(다음 실행이 실패한 S1에서 이어받기 때문. 05의 3.3의 12.) `step_name`만 묶는다.
+- **성공한 S1에서 NOT NULL로 하지 않는다**(06의 U-17 ②의 권고대로): V3 이전의 성공 행은 NULL이고, V3 이후 행과 구분할 열이 없다(`id` 값으로 구분하면 환경마다 다르다). NULL 행은 `DATE(started_at)`으로 읽는다(DB-10). NULL 행을 이 V3에서 채우지도 않는다(V3 이전의 S1에는 이어 가기가 없어 기준일은 `DATE(started_at)`과 같은 뜻이므로 `COALESCE`로 충분하다). 기준일을 반드시 쓰는 것은 앱(06의 4.9·5.2의 `updateStepRun`).
+- **인덱스는 더하지 않는다**: "지난번 S1이 성공한 날"(`step_name = 'S1' AND result = 'SUCCESS' ORDER BY started_at DESC LIMIT 1`)은 지금의 `idx_batch_step_run_step_result_started`를 `ref`(`const,const`)로 쓴다. `findLatestS1Before`(`step_name = 'S1' AND job_run_id < ? ORDER BY id DESC LIMIT 1`)는 기본 키 역순 스캔으로, 처음 만나는 S1 행에서 멈춘다(한 번 실행의 스텝은 최대 6행, 실행은 하루 1~2번이므로 읽는 행은 몇 행).
+- 적용 확인(2026-11-25): `cd backend && ./gradlew test`가 **BUILD SUCCESSFUL**(테스트 552, 실패 0). 테스트용 DB는 `test_catticket_kopis_collect`(이 worktree). `bash scripts/db-inspect.sh history`: `3 | 3 | add collect base date | success = 1`. `bash scripts/db-inspect.sh create batch_step_run`으로 `window_end_date` 다음에 `collect_base_date date DEFAULT NULL`과 COMMENT, `chk_batch_step_run_collect_base_date`가 있는 것을 확인했다.
+- 동작 확인(2026-11-25. 개발 PC의 임시 JDBC 프로그램으로, ROLLBACK하는 트랜잭션 안에서 했다. 데이터는 남기지 않았다. 프로그램은 저장소에 넣지 않았다):
+  - CHECK: S1 행(실행 중·실패·성공)에 기준일을 넣을 수 있다. S2 행·B-02 행에 기준일을 넣는 `INSERT`, S2 행에 기준일을 넣는 `UPDATE`, 기준일이 있는 S1 행의 `step_name`을 S3로 바꾸는 `UPDATE`는 모두 오류 3819(`chk_batch_step_run_collect_base_date`). 기준일 NULL의 S2 행은 들어간다.
+  - "지난번 S1이 성공한 날": V3 이전 형태의 성공 행(11-20 시작, 기준일 NULL)만 있을 때 `2026-11-20`. 그 뒤에 실패한 S1(11-22·11-23, 기준일 11-22)을 더해도 `2026-11-20` 그대로. 11-24 시작의 성공한 S1(기준일 11-22, 창의 마지막 날 2027-05-23)을 더하면 `2026-11-22`와 `2027-05-23`.
+  - `findLatestS1Before`: 11-24 실행 전은 `FAILURE`·`2026-11-22`, 11-25 실행 전은 `SUCCESS`·`2026-11-22`. `EXPLAIN`은 위의 인덱스 항목대로.
+- 11.9의 수(열 151, CHECK 34)는 V1 시점의 기록. V3에서 열과 CHECK가 하나씩 늘었다(V2에서 하나씩 줄었으므로 V1의 수와 같다).

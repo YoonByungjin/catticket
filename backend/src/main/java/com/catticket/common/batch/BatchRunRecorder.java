@@ -63,7 +63,7 @@ public class BatchRunRecorder {
 	public void finishStep(StepRun step, StepResult result, LocalDateTime now) {
 		String summary = result.summary() == null ? null : jsonMapper.writeValueAsString(result.summary());
 		mapper.updateStepRun(step.id(), now, result.success() ? "SUCCESS" : "FAILURE", result.processedCount(),
-				summary, sanitize(result.errorMessage()));
+				summary, sanitize(result.errorMessage()), result.windowEndDate(), result.collectBaseDate());
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -72,7 +72,21 @@ public class BatchRunRecorder {
 			// ロックを取れなかった実行は記録を作らない（06 の 5.2）
 			throw new IllegalArgumentException("LOCKED is not recorded");
 		}
-		mapper.updateJobRun(jobRunId, now, result.name(), sanitize(errorMessage));
+		mapper.updateJobRun(jobRunId, now, result.name(), sanitize(jobErrorMessage(jobRunId, result, errorMessage)));
+	}
+
+	/**
+	 * batch_job_run.error_message に書く値（06 の 5.2 の「ジョブの error_message」）。
+	 * 本体の例外を優先する（batch_step_run に残らないため）。なければ最初に失敗したステップの理由。
+	 */
+	private String jobErrorMessage(long jobRunId, JobResult result, String errorMessage) {
+		if (errorMessage != null || result == JobResult.SUCCESS) {
+			return errorMessage;
+		}
+		return mapper.findFirstFailedStep(jobRunId)
+			.map(step -> step.errorMessage() == null ? step.stepName()
+					: step.stepName() + ": " + step.errorMessage())
+			.orElse(null);
 	}
 
 	/** 例外を error_message の形（クラス名とメッセージ。スタックトレースは入れない）にする */

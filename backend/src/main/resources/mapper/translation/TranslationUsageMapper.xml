@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.catticket.translation.TranslationUsageMapper">
+
+  <select id="findChars" resultType="long">
+    SELECT COALESCE(MAX(char_count), 0) FROM translation_usage WHERE usage_month = #{month}
+  </select>
+
+  <!-- 翻訳が成功した分だけ足す（05 の 3.7）。月の行がなければ作る -->
+  <insert id="addUsage">
+    INSERT INTO translation_usage (usage_month, char_count, created_at, updated_at)
+    VALUES (#{month}, #{chars}, #{now}, #{now}) AS n
+    ON DUPLICATE KEY UPDATE
+      char_count = translation_usage.char_count + n.char_count, updated_at = n.updated_at
+  </insert>
+
+</mapper>

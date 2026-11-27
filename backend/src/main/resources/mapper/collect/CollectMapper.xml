@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.catticket.collect.CollectMapper">
+
+  <!-- record なのでコンストラクターで渡す -->
+  <resultMap id="venueRow" type="com.catticket.collect.row.CollectVenueRow">
+    <constructor>
+      <arg column="id" name="id" javaType="_long"/>
+      <arg column="address" name="address" javaType="java.lang.String"/>
+    </constructor>
+  </resultMap>
+
+  <select id="findVenueByKopisId" resultMap="venueRow">
+    SELECT id, address FROM venue WHERE kopis_venue_id = #{kopisVenueId}
+  </select>
+
+  <!-- created_at・updated_at はアプリの時刻（06 の A-05） -->
+  <insert id="upsertVenue">
+    INSERT INTO venue (kopis_venue_id, name, address, district, latitude, longitude, created_at, updated_at)
+    VALUES (#{venue.kopisVenueId}, #{venue.name}, #{venue.address}, #{venue.district}, #{venue.latitude},
+            #{venue.longitude}, #{now}, #{now}) AS n
+    ON DUPLICATE KEY UPDATE
+      name = n.name, address = n.address, district = n.district,
+      latitude = n.latitude, longitude = n.longitude, updated_at = n.updated_at
+  </insert>
+
+  <select id="findPerformanceIdByKopisId" resultType="long">
+    SELECT id FROM performance WHERE kopis_performance_id = #{kopisPerformanceId}
+  </select>
+
+  <!-- 管理者が決める is_hidden、S3 が立てる has_award は更新の列に入れない（F-26 ③④・F-27 ③・F-31） -->
+  <insert id="upsertPerformance">
+    INSERT INTO performance (kopis_performance_id, venue_id, title, start_date, end_date, genre_code,
+                             cast_text, ticket_price, schedule_text, runtime, age_limit, poster_url,
+                             is_open_run, is_seoul, kopis_updated_at, collected_at, created_at, updated_at)
+    VALUES (#{performance.kopisPerformanceId}, #{venueId}, #{performance.title}, #{performance.startDate},
+            #{performance.endDate}, #{performance.genreCode}, #{performance.castText}, #{performance.ticketPrice},
+            #{performance.scheduleText}, #{performance.runtime}, #{performance.ageLimit}, #{performance.posterUrl},
+            #{performance.openRun}, #{seoul}, #{performance.kopisUpdatedAt}, #{now}, #{now}, #{now}) AS n
+    ON DUPLICATE KEY UPDATE
+      venue_id = n.venue_id, title = n.title, start_date = n.start_date, end_date = n.end_date,
+      genre_code = n.genre_code, cast_text = n.cast_text, ticket_price = n.ticket_price,
+      schedule_text = n.schedule_text, runtime = n.runtime, age_limit = n.age_limit, poster_url = n.poster_url,
+      is_open_run = n.is_open_run, is_seoul = n.is_seoul, kopis_updated_at = n.kopis_updated_at,
+      collected_at = n.collected_at, updated_at = n.updated_at
+  </insert>
+
+  <delete id="deleteBookingSites">
+    DELETE FROM booking_site WHERE performance_id = #{performanceId} AND source = #{source}
+  </delete>
+
+  <insert id="insertBookingSites">
+    INSERT INTO booking_site (performance_id, source, name, url, sort_order, created_at, updated_at)
+    VALUES
+    <foreach collection="sites" item="s" separator=",">
+      (#{performanceId}, #{source}, #{s.name}, #{s.url}, #{s.sortOrder}, #{now}, #{now})
+    </foreach>
+  </insert>
+
+  <!-- 立てるだけで消さない（受賞歴は過去の事実。05 の 3.2 の S3） -->
+  <update id="markAwarded">
+    UPDATE performance
+    SET has_award = TRUE, updated_at = #{now}
+    WHERE has_award = FALSE
+      AND kopis_performance_id IN
+      <foreach collection="kopisIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+  </update>
+
+  <select id="findExistingKopisIds" resultType="string">
+    SELECT kopis_performance_id FROM performance
+    WHERE kopis_performance_id IN
+    <foreach collection="kopisIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+  </select>
+
+  <!-- S1 の続き: 基準日の 0 時以降に収集（S1・S4 が保存）した公演（05 の 3.3 の 12.） -->
+  <select id="findKopisIdsCollectedSince" resultType="string">
+    SELECT kopis_performance_id FROM performance
+    WHERE kopis_performance_id IN
+    <foreach collection="kopisIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+      AND collected_at &gt;= #{since}
+  </select>
+
+  <select id="findCollectionId" resultType="long">
+    SELECT id FROM ranking_collection
+    WHERE period_type = #{periodType} AND genre_code = #{genreCode} AND period_start = #{period.start}
+  </select>
+
+  <!-- 組ごとの「収集の完了の記録」（R-62。05 の 3.4）。同じ組なら件数と日時を付け直す -->
+  <insert id="upsertRankingCollection">
+    INSERT INTO ranking_collection (period_type, genre_code, period_start, period_end, row_count, completed_at,
+                                    created_at, updated_at)
+    VALUES (#{key.periodType}, #{key.genreCode}, #{key.period.start}, #{key.period.end}, #{rowCount}, #{now},
+            #{now}, #{now}) AS n
+    ON DUPLICATE KEY UPDATE
+      period_end = n.period_end, row_count = n.row_count, completed_at = n.completed_at, updated_at = n.updated_at
+  </insert>
+
+  <delete id="deleteRankingEntries">
+    DELETE FROM ranking_entry WHERE ranking_collection_id = #{collectionId}
+  </delete>
+
+  <insert id="insertRankingEntries">
+    INSERT INTO ranking_entry (ranking_collection_id, provider_rank, kopis_performance_id, created_at, updated_at)
+    VALUES
+    <foreach collection="entries" item="e" separator=",">
+      (#{collectionId}, #{e.providerRank}, #{e.kopisPerformanceId}, #{now}, #{now})
+    </foreach>
+  </insert>
+
+  <delete id="deleteGenreTrends">
+    DELETE FROM genre_trend WHERE period_start = #{start} AND period_end = #{end}
+  </delete>
+
+  <insert id="insertGenreTrends">
+    INSERT INTO genre_trend (period_start, period_end, genre_code, booking_count, share, basis, created_at, updated_at)
+    VALUES
+    <foreach collection="rows" item="r" separator=",">
+      (#{period.start}, #{period.end}, #{r.genre}, #{r.bookingCount}, #{r.share}, #{basis}, #{now}, #{now})
+    </foreach>
+  </insert>
+
+</mapper>

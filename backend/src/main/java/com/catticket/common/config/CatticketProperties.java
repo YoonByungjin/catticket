@@ -17,12 +17,20 @@ public record CatticketProperties(String publicBaseUrl, Scheduler scheduler, Kop
 	public record Scheduler(boolean enabled) {
 	}
 
-	public record Kopis(String baseUrl, String apiKey, Duration interval) {
+	/**
+	 * @param interval  送信ごとの間隔（05 の 3.5。7 秒）
+	 * @param callLimit 1回の実行の送信の上限（05 の 3.5）。application.yml は開発の値、application-prod.yml は本番の値
+	 */
+	public record Kopis(String baseUrl, String apiKey, Duration interval, CallLimit callLimit) {
 
 		// toString でキーをログに出さない
 		@Override
 		public String toString() {
-			return "Kopis[baseUrl=" + baseUrl + ", interval=" + interval + "]";
+			return "Kopis[baseUrl=" + baseUrl + ", interval=" + interval + ", callLimit=" + callLimit + "]";
+		}
+
+		/** 1回の実行の上限（perRun）と、S1 より後ろのステップごとの上限（05 の 3.5。S1 は残り） */
+		public record CallLimit(int perRun, int s2, int s3, int s4, int s6) {
 		}
 
 	}

@@ -28,6 +28,8 @@
         processed_count = #{processedCount},
         summary = #{summary},
         error_message = #{errorMessage},
+        window_end_date = #{windowEndDate},
+        collect_base_date = #{collectBaseDate},
         updated_at = #{finishedAt}
     WHERE id = #{id}
   </update>
@@ -40,12 +42,45 @@
     </constructor>
   </resultMap>
 
-  <!-- 同じ開始日時の行があっても1行に決まるよう id でも並べる -->
+  <!-- 成功した日は基準日。基準日のない V3 より前の行は開始の日付（04 の DB-10）。
+       同じ開始日時の行があっても1行に決まるよう id でも並べる -->
   <select id="findLastSuccessfulS1" resultMap="lastS1">
-    SELECT DATE(started_at) AS success_date, window_end_date
+    SELECT COALESCE(collect_base_date, DATE(started_at)) AS success_date, window_end_date
     FROM batch_step_run
     WHERE step_name = 'S1' AND result = 'SUCCESS'
     ORDER BY started_at DESC, id DESC
+    LIMIT 1
+  </select>
+
+  <resultMap id="previousS1" type="com.catticket.common.batch.PreviousS1">
+    <constructor>
+      <arg column="result" name="result" javaType="java.lang.String"/>
+      <arg column="collect_base_date" name="collectBaseDate" javaType="java.time.LocalDate"/>
+    </constructor>
+  </resultMap>
+
+  <!-- 続きの S1 が引き継ぐ基準日（05 の 3.3 の 12.）。行は始めるときに入れるので id の順が始めた順 -->
+  <select id="findLatestS1Before" resultMap="previousS1">
+    SELECT result, collect_base_date
+    FROM batch_step_run
+    WHERE step_name = 'S1' AND job_run_id &lt; #{jobRunId}
+    ORDER BY id DESC
+    LIMIT 1
+  </select>
+
+  <resultMap id="failedStep" type="com.catticket.common.batch.FailedStep">
+    <constructor>
+      <arg column="step_name" name="stepName" javaType="java.lang.String"/>
+      <arg column="error_message" name="errorMessage" javaType="java.lang.String"/>
+    </constructor>
+  </resultMap>
+
+  <!-- ステップは始めるときに行を入れるので id の順が始めた順。started_at はジョブの開始時刻と同じことがあるので使わない -->
+  <select id="findFirstFailedStep" resultMap="failedStep">
+    SELECT step_name, error_message
+    FROM batch_step_run
+    WHERE job_run_id = #{jobRunId} AND result = 'FAILURE'
+    ORDER BY id
     LIMIT 1
   </select>
 

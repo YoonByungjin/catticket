@@ -10,9 +10,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.web.client.RestClient;
+
+import com.catticket.common.batch.BatchJob;
+import com.catticket.common.batch.ScheduledTasks;
+import com.catticket.common.batch.TaskName;
 
 /**
  * 本番と同じ構成で起動し、06 の 3.1・8.1 の設定が読み込まれていること（API キーが空でも起動できる。06 の 7.2）。
@@ -28,6 +33,9 @@ class ApplicationConfigTest {
 
 	@Autowired
 	Clock clock;
+
+	@Autowired
+	ApplicationContext context;
 
 	@Autowired
 	ResourceLoader resourceLoader;
@@ -50,7 +58,9 @@ class ApplicationConfigTest {
 		assertThat(props.scheduler().enabled()).isFalse();
 		assertThat(props.task()).isNull();
 		assertThat(props.kopis().baseUrl()).isEqualTo("http://www.kopis.or.kr/openApi/restful");
-		assertThat(props.kopis().interval()).isEqualTo(Duration.ofMillis(500));
+		assertThat(props.kopis().interval()).isEqualTo(Duration.ofSeconds(7));
+		// テストはプロファイルなしなので開発の上限（05 の 3.5）
+		assertThat(props.kopis().callLimit()).isEqualTo(new CatticketProperties.Kopis.CallLimit(20, 4, 2, 2, 1));
 		assertThat(props.azure().requestMaxChars()).isEqualTo(10000);
 		assertThat(props.azure().charsPerMinute()).isEqualTo(30000);
 		assertThat(props.azure().monthlyLimitChars()).isEqualTo(1_800_000);
@@ -93,6 +103,14 @@ class ApplicationConfigTest {
 		assertThat(kopisRestClient).isNotNull();
 		assertThat(azureRestClient).isNotNull();
 		assertThat(recaptchaRestClient).isNotNull();
+	}
+
+	@Test
+	void dailyCollectIsABatchJobAndTheSchedulerIsOffInTests() {
+		// TaskRunner が daily-collect を選べる（06 の 5.1）。テストでは定期実行を作らない
+		assertThat(context.getBeansOfType(BatchJob.class).values()).extracting(BatchJob::name)
+			.contains(TaskName.DAILY_COLLECT, TaskName.IMPORT_SUBWAY);
+		assertThat(context.getBeansOfType(ScheduledTasks.class)).isEmpty();
 	}
 
 }
